@@ -1,0 +1,63 @@
+{
+  "_from": "xml2geojson-lite",
+  "_inBundle": false,
+  "_integrity": "sha512-FGxK8VIn/S86TRwcy9OM64KGOLMOc/952ybsYA9npTXdpfezIfS5khRqW/cC67uu8P0sNuSsk+vx1UbO6VM2jQ==",
+  "_location": "/osm2geojson-lite",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "tag",
+    "registry": true,
+    "raw": "osm2geojson-lite",
+    "name": "osm2geojson-lite",
+    "escapedName": "osm2geojson-lite",
+    "rawSpec": "",
+    "saveSpec": null,
+    "fetchSpec": "latest"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "author": "tibetty",
+  "bugs": {
+    "url": "https://github.com/tibetty/osm2geojson-lite/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {
+  },
+  "deprecated": false,
+  "description": "a lightweight yet faster osm (either in xml or in json formats) to geojson convertor - 4x faster than xmldom + osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency",
+  "homepage": "https://github.com/tibetty/osm2geojson-lite#readme",
+  "keywords": [
+    "openstreetmap",
+    "overpass",
+    "osm",
+    "json",
+    "xml",
+    "node",
+    "way",
+    "relation",
+    "geojson",
+    "linestring",
+    "multilingstring",
+    "polygon",
+    "multipolygon"
+  ],
+  "license": "ISC",
+  "main": "lib/index.js",
+  "name": "osm2geojson-lite",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tibetty/osm2geojson-lite.git"
+  },
+  "scripts": {
+    "test": "test/test.js"
+  },
+  "version": "0.8.0",
+  "directories": {
+    "lib": "lib",
+    "test": "test",
+    "dist": "dist"
+  },
+  "devDependencies": {}
+}
