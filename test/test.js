@@ -23,9 +23,9 @@ for (let file of xmlFiles) {
 }
 
 console.log('=====json processing performance comparison=====');
-const jsonFiles = ['./herne.json', './empty.json', './node.json', './way.json', './relation.json', './map.json'];
+const jsonFiles = ['herne.json', 'empty.json', 'node.json', 'way.json', 'relation.json', 'map.json'];
 for (let file of jsonFiles) {
-	let osm = require(file);
+	let osm = require('./' + file);
 	console.log(`---processing time comparison for ${file}---`);
 	let stime = new Date().getTime();
 	osm2geojson(osm, {allFeatures: true});
