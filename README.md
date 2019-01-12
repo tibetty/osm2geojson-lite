@@ -34,7 +34,7 @@ Usage:
 API
 ---
 
-### `osm2geojson(osm_xml, opts)`
+### `osm2geojson(osm, opts)`
 
 Converts OSM data (XML/JSON) to GeoJSON.
 
