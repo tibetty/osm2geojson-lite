@@ -5,7 +5,7 @@ A lightweight (not as lightweight as xml2geojson though) yet faster convertor fo
 
 History
 -----
-An internal function inside [query-geo-boundary](https://github.com/tibetty/QueryGeoBoundary) -> stripped to handle OSM XML only [xml2geojson-lite](https://github.com/tibetty/xml2geojson-lite) -> this library that supports both OSM XML and JSON
+An internal function inside [query-geo-boundary](https://github.com/tibetty/QueryGeoBoundary) --> stripped to handle OSM XML only [xml2geojson-lite](https://github.com/tibetty/xml2geojson-lite) --> this library that supports both OSM XML and JSON
 
 Usage
 -----
@@ -39,7 +39,10 @@ API
 Converts OSM data (XML/JSON) to GeoJSON.
 
 * `osm`: the OSM XML data in String, or OSM/Overpass JSON object
-* `opts?`: optional - the options object, right now only supports *allFeatures* option, when it is set to `true`, it will return a comprehensive GeoJSON object as `FeatureCollection` rather than a bare `Polygon/MultiPolygon`.  Welcome any proposals from users.
+* `?opts`: optional, the options object, right now supports below properties/fields:
+    - `completeFeature/allFeatures`:  the default value is `false`. When it's set to `true`, the returned geojson will include all elements meets the specified conditions in `FeatureCollection` format; otherwise, only the bare geojson of the first `relation` element will be returned.
+    - `renderTagged`: the default value is `false`. When it's set to `true`, the returned geojson will include all elements with tags (i.e., tagged) until `suppressWay` changes its behavior a bit; otherwise only the unreferenced ones. 
+    - `suppressWay`: by default value os `true`. When it's set to `true`, the return value will not include any referenced ways even though they are tagged; otherwise the features of all tagged `way` will be included, too.
 
 
 Reminder
