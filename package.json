@@ -52,7 +52,7 @@
   "scripts": {
     "test": "test/test.js"
   },
-  "version": "0.4.8",
+  "version": "0.4.9",
   "directories": {
     "lib": "lib",
     "test": "test"
