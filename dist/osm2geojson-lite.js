@@ -1,9 +1,21 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 const {Node, Way, Relation} = require('./osmobjs.js'),
-	{RefElements} = require('./utils.js'),
+	{purgeProps, RefElements} = require('./utils.js'),
 	XmlParser = require('./xmlparser.js');
 
 module.exports = (osm, opts) => {
+	let completeFeature = false, renderTagged = false, suppressWay = true;
+
+	let parseOpts = opts => {
+		if (opts) {
+			completeFeature = opts.completeFeature || opts.allFeatures? true : false;
+			renderTagged = opts.renderTagged? true : false;
+			if (opts.suppressWay !== undefined && !opts.suppressWay) suppressWay = false;
+		}
+	}
+
+	parseOpts(opts);
+
 	let refElements = new RefElements(), featureArray = [];
 
 	let analyzefeaturesFromJson = () => {
@@ -11,14 +23,16 @@ module.exports = (osm, opts) => {
 			switch(elem.type) {
 				case 'node':
 					let node = new Node(elem.id, refElements);
-					if (elem.tags) node.addTags(elem.tags);
+					if (elem.tags)
+						node.addTags(elem.tags);
+					node.addProps(purgeProps(elem, ['id', 'type', 'tags', 'lat', 'lon']));
 					node.setCoords([elem.lon, elem.lat]);
-					node.addTags(elem.tags);
 					break;
 
 				case 'way':
 					let way = new Way(elem.id, refElements);
 					if (elem.tags) way.addTags(elem.tags);
+					way.addProps(purgeProps(elem, ['id', 'type', 'tags', 'nodes', 'geometry']));
 					if (elem.nodes)
 						for (let n of elem.nodes)
 							way.addNodeRef(n);
@@ -29,10 +43,10 @@ module.exports = (osm, opts) => {
 
 				case 'relation':
 					let relation = new Relation(elem.id, refElements);
-					if (elem.bounds)
-						with (elem.bounds)
-							relation.addProperty('bbox', [parseFloat(minlon), parseFloat(minlat), parseFloat(maxlon), parseFloat(maxlat)]);
+					if (elem.bounds) with (elem.bounds)
+						relation.addProp('bbox', [parseFloat(minlon), parseFloat(minlat), parseFloat(maxlon), parseFloat(maxlat)]);
 					if (elem.tags) relation.addTags(elem.tags);
+					relation.addProps(purgeProps(elem, ['id', 'type', 'tags', 'bounds', 'members']));
 					if (elem.members)
 						for (let member of elem.members)
 							relation.addMember(member);
@@ -46,59 +60,64 @@ module.exports = (osm, opts) => {
 	let analyzefeaturesFromXml = () => {
 		const xmlParser = new XmlParser({progressive: true});
 
-		xmlParser.addListener('<osm.relation>', node => {
-				new Relation(node.$id, refElements);
+		xmlParser.on('<osm.node>', node => {
+			new Node(node.$id, refElements);
 		});
 
-		xmlParser.addListener('</osm.way>', node => {
+		xmlParser.on('<osm.way>', node => {
+			new Way(node.$id, refElements);
+		});
+
+		xmlParser.on('<osm.relation>', node => {
+			new Relation(node.$id, refElements);
+		});
+
+		xmlParser.on('</osm.way>', node => {
 			with (node) {
-				let way = new Way($id, refElements);
+				let way = refElements[$id];
+				for (let [k, v] of Object.entries(node))
+					if (k.startsWith('$') && ['$id'].indexOf(k) < 0)
+						way.addProp(k.substring(1), v);
 				if (node.innerNodes) {
-					for (let nd of innerNodes) {
-						if (nd.$lon && nd.$lat)
-							way.addCoords([nd.$lon, nd.$lat]);
-						else if (nd.$ref) {
-							way.addNodeRef(nd.$ref);
-						}
-					}
+					for (let ind of innerNodes)
+						if (ind.$lon && ind.$lat)
+							way.addCoords([ind.$lon, ind.$lat]);
+						else if (ind.$ref)
+							way.addNodeRef(ind.$ref);
+						else if(ind.tag === 'tag')
+							way.addTag(ind.$k, ind.$v);
 				}
 			}
 		});
 
-		xmlParser.addListener('</osm.node>', node => {
+		xmlParser.on('</osm.node>', node => {
 			with (node) {
-				let nd = new Node($id, refElements);
+				let nd = refElements[$id];
+				for (let [k, v] of Object.entries(node))
+					if (k.startsWith('$') && ['$id', '$lon', '$lat'].indexOf(k) < 0)
+						nd.addProp(k.substring(1), v);
 				nd.setCoords([$lon, $lat]);
 				if (node.innerNodes)
-					for (let tag of innerNodes)
-						nd.addTag(tag.$k, tag.$v);
+					for (let ind of innerNodes)
+						if(ind.tag === 'tag')
+							nd.addTag(ind.$k, ind.$v);
 			}
 		});
 
-		xmlParser.addListener('<osm.relation>', (node, parent) => {
-			with (node) {
-				new Relation($id, refElements);
-			}
-		});
-
-		xmlParser.addListener('</osm.relation.member>', (node, parent) => {
+		xmlParser.on('</osm.relation.member>', (node, parent) => {
 			with (node) {
 				let relation = refElements[parent.$id];
 				let member = {
 					type: $type,
 					role: node.$role? $role : '',
-					id: $ref,
 					ref: $ref
 				};
 
 				if (node.$lat && node.$lon) {
-					member.lat = $lat, member.lon = $lon;
-					member.tags = {};
-					let entries = Object.entries(node);
-					for (let [k, v] of entries) {
-						if (k.startsWith('$') && ['$lat', '$lon', '$type'].indexOf(k) < 0)
-							member.tags[k.substring(1)] = v;
-					}
+					member.lat = $lat, member.lon = $lon, member.tags = {};
+					for (let [k, v] of Object.entries(node))
+						if (k.startsWith('$') && ['$type', '$lat', '$lon'].indexOf(k) < 0)
+							member[k.substring(1)] = v;
 				}
 
 				if (node.innerNodes) {
@@ -119,10 +138,14 @@ module.exports = (osm, opts) => {
 			}
 		});
 
-		xmlParser.addListener('</osm.relation.bounds>', (node, parent) => refElements[parent.$id].addProperty('bbox', [parseFloat(node.$minlon), parseFloat(node.$minlat), parseFloat(node.$maxlon), parseFloat(node.$maxlat)]));
+		xmlParser.on('</osm.relation.bounds>', (node, parent) => {
+			with (node)
+				refElements[parent.$id].addProp('bbox', [parseFloat($minlon), parseFloat($minlat), parseFloat($maxlon), parseFloat($maxlat)]);
+		});
 
-		xmlParser.addListener('</osm.relation.tag>', (node, parent) => {
-			refElements[parent.$id].addTag(node.$k, node.$v)
+		xmlParser.on('</osm.relation.tag>', (node, parent) => {
+			let elem = refElements[parent.$id];
+			if (elem) elem.addTag(node.$k, node.$v);
 		});
 		
 		xmlParser.parse(osm);
@@ -133,31 +156,32 @@ module.exports = (osm, opts) => {
 	else
 		analyzefeaturesFromXml(osm);
 
-	let entries = Object.entries(refElements);
-	for (let [k, v] of entries) {
-		if (v && v.refCount <= 0) {
+	for (let [k, v] of Object.entries(refElements)) {
+		if (v && (v.refCount <= 0 || (renderTagged && v.hasTag && !(v instanceof Way && suppressWay)))) {
 			if (v.toFeature) {
 				let feature = v.toFeature();
 				if (feature) featureArray.push(feature);
-			} else if (v.toFeatureArray) {
+			} else if (v.toFeatureArray)
 				featureArray = featureArray.concat(v.toFeatureArray());
-			}
 		}
 	}
 
 	refElements.cleanup();
 
-	if ((!opts || !opts.allFeatures) && featureArray.length > 0)
+	if (!completeFeature && featureArray.length > 0)
 		return featureArray[0].geometry;
 
 	return {type: 'FeatureCollection', features: featureArray};
 }
-},{"./osmobjs.js":2,"./utils.js":3,"./xmlparser.js":4}],2:[function(require,module,exports){
+},{"./osmobjs.js":2,"./utils.js":4,"./xmlparser.js":5}],2:[function(require,module,exports){
 module.exports = (() => {
 	'use strict';
-	const {first, last, coordsToKey, addToMap, removeFromMap, getFirstFromMap, 
+
+	const {first, last, coordsToKey,
+		addToMap, removeFromMap, getFirstFromMap, 
 		isRing, ringDirection, ptInsidePolygon, strToFloat, 
-		LateBinder, WayCollection} = require('./utils.js');
+		LateBinder, WayCollection} = require('./utils.js'),
+		polygonTags = require('./polytags.json');
 
 	class OsmObject {
 		constructor(type, id, refElems) {
@@ -165,29 +189,36 @@ module.exports = (() => {
 			this.id = id;
 			this.refElems = refElems;
 			this.tags = {};
-			this.properties = {id: this.getCompositeId()};
+			this.props = {id: this.getCompositeId()};
 			this.refCount = 0;
+			this.hasTag = false;
 			if (refElems) refElems.add(id, this);
 		}
 
 		addTags(tags) {
 			this.tags = Object.assign(this.tags, tags);
+			this.hasTag = tags? true : false;
 		}
 
 		addTag(k, v) {
 			this.tags[k] = v;
+			this.hasTag = k? true : false;
 		}
 
-		addProperty(k, v) {
-			this.properties[k] = v;
+		addProp(k, v) {
+			this.props[k] = v;
+		}
+
+		addProps(props) {
+			this.props = Object.assign(this.props, props);	
 		}
 
 		getCompositeId() {
 			return `${this.type}/${this.id}`;
 		}
 
-		getProperties() {
-			return Object.assign(this.properties, this.tags);
+		getProps() {
+			return Object.assign(this.props, this.tags);
 		}		
 
 		// to remove circular reference that prevent gc from working
@@ -213,7 +244,7 @@ module.exports = (() => {
 				return {
 					type: 'Feature',
 					id: this.getCompositeId(),
-					properties: this.getProperties(),
+					properties: this.getProps(),
 					geometry: {
 						type: 'Point',
 						coordinates: strToFloat(this.coords)
@@ -231,6 +262,8 @@ module.exports = (() => {
 		constructor(id, refElems) {
 			super('way', id, refElems);
 			this.coordsArray = [];
+			this.isPolygon = false;
+			this.isBound = false;
 		}
 
 		addCoords(coords) {
@@ -247,10 +280,32 @@ module.exports = (() => {
 			}, this, [ref]));
 		}
 
+		analyzeTag(k, v) {
+			let o = polygonTags[k];
+			if (o) {
+				this.isPolygon = true;
+				if (o.whitelist) this.isPolygon = o.whitelist.indexOf(v) >= 0? true : false;
+				else if(o.blacklist) this.isPolygon = o.blacklist.indexOf(v) >= 0? false : true;
+				// console.log(`${k}: ${v} => way/${this.id} is a polygon: ${this.isPolygon}`);
+			}
+		}
+
+		addTags(tags) {
+			super.addTags(tags);
+			for (let [k, v] of Object.entries(tags))
+				this.analyzeTag(k, v);
+		}
+
+		addTag(k, v) {
+			super.addTag(k, v);
+			this.analyzeTag(k, v);
+		}
+
 		bindRefs() {
-			// for (let nd of this.coordsArray)
-				// if (nd instanceof LateBinder) nd.bind();
-			this.coordsArray.reduce((a, v) => v instanceof LateBinder? a.concat([v]) : a, []).forEach(lb => lb.bind());
+			if (!this.isBound) {
+				this.coordsArray.reduce((a, v) => v instanceof LateBinder? a.concat([v]) : a, []).forEach(lb => lb.bind());
+				this.isBound = true;
+			}
 		}
 
 		toCoordsArray() {
@@ -261,12 +316,12 @@ module.exports = (() => {
 		toFeature() {
 			this.bindRefs();
 			if (this.coordsArray.length > 1) {
-				if (isRing(this.coordsArray)) {
+				if (this.isPolygon && isRing(this.coordsArray)) {
 					if (ringDirection(this.coordsArray) !== 'counterclockwise') this.coordsArray.reverse();
 					return {
 						type: 'Feature',
 						id: this.getCompositeId(),
-						properties: this.getProperties(),
+						properties: this.getProps(),
 						geometry: {
 							type: 'Polygon',
 							coordinates: [strToFloat(this.coordsArray)]
@@ -277,7 +332,7 @@ module.exports = (() => {
 				return {
 					type: 'Feature',
 					id: this.getCompositeId(),
-					properties: this.getProperties(),
+					properties: this.getProps(),
 					geometry: {
 						type: 'LineString',
 						coordinates: strToFloat(this.coordsArray)
@@ -292,6 +347,7 @@ module.exports = (() => {
 			super('relation', id, refElems);
 			this.relations = [];
 			this.nodes = [];
+			this.isBound = false;
 		}
 
 		addMember(member) {
@@ -318,7 +374,7 @@ module.exports = (() => {
 						}
 						ways.push(way);
 					} else if (member.nodes) {
-						let way = new Way(member.id, this.refElems);
+						let way = new Way(member.ref, this.refElems);
 						for (let nid of nodes) {
 							way.addNodeRef(nid);
 							way.refCount++;
@@ -338,10 +394,9 @@ module.exports = (() => {
 						node = new Node(member.ref, this.refElems);
 						node.setCoords([member.lon, member.lat]);
 						if (member.tags) node.addTags(member.tags);
-						let entries = Object.entries(member);
-						for (let [k, v] of entries) {
-							if (k !== 'lat' && k !== 'lon' && k !== 'id' && k !== 'tags')
-								node.addTag(k, v);
+						for (let [k, v] of Object.entries(member)) {
+							if (k !== 'id' && k !== 'type' && k !== 'lat' && k !== 'lon')
+								node.addProp(k, v);
 						}
 						node.refCount++;
 						this.nodes.push(node);
@@ -361,16 +416,20 @@ module.exports = (() => {
 		}
 
 		bindRefs() {
-			const fieldsToBind = ['relations', 'nodes', 'outer', 'inner', ''];
-			for (let fieldName of fieldsToBind) {
-				let field = this[fieldName];
-				if (field && field.length > 0) {
-					let clone = field.slice(0);
-					for (let item of clone) {
-						if (item instanceof LateBinder) item.bind();
-						else if (item.bindRefs) item.bindRefs();
+			if (!this.isBound) {
+				const fieldsToBind = ['relations', 'nodes', 'outer', 'inner', ''];
+				for (let fieldName of fieldsToBind) {
+					let field = this[fieldName];
+					if (field && field.length > 0) {
+						// need a clone 'coz bind will remove elements
+						let clone = field.slice(0);
+						for (let item of clone) {
+							if (item instanceof LateBinder) item.bind();
+							else if (item.bindRefs) item.bindRefs();
+						}
 					}
 				}
+				this.isBound = true;
 			}
 		}
 
@@ -430,29 +489,27 @@ module.exports = (() => {
 			this.bindRefs();
 			
 			let polygonFeatures = [], stringFeatures = [], pointFeatures = [];
-			const waysToProcess = ['outer', 'inner', ''];
+			const waysFieldNames = ['outer', 'inner', ''];
 			for (let relation of this.relations) {
-				console.log(relation.constructor.name);
-				console.log(relation.id);
-				if (relation && relation.bindRefs()) {
-					for (let waysName of waysToProcess) {
-						let ways = relation[waysName];
+				if (relation) {
+					relation.bindRefs();
+					for (let fieldName of waysFieldNames) {
+						let ways = relation[fieldName];
 						if (ways) {
-							let thisWays = this[waysName];
+							let thisWays = this[field];
 							if (thisWays) [].splice.apply(thisWays, [thisWays.length, 0].concat(ways));
-							else this[waysName] = ways;
+							else this[fieldName] = ways;
 						}
 					}
 				}
 			}
 
-			for (let waysName of waysToProcess) {
-				let ways = this[waysName];
+			for (let fieldName of waysFieldNames) {
+				let ways = this[fieldName];
 				if (ways) {
-					this[waysName] = new WayCollection();
-					for (let way of ways) {
-						this[waysName].addWay(way);
-					}
+					this[fieldName] = new WayCollection();
+					for (let way of ways)
+						this[fieldName].addWay(way);
 				}
 			}
 
@@ -463,7 +520,7 @@ module.exports = (() => {
 					polygonFeatures.push({
 						type: 'Feature',
 						id: this.getCompositeId(),
-						properties: this.getProperties(),
+						properties: this.getProps(),
 						geometry
 					});
 			}
@@ -473,7 +530,7 @@ module.exports = (() => {
 					stringFeatures.push({
 						type: 'Feature',
 						id: this.getCompositeId(),
-						properties: this.getProperties(),
+						properties: this.getProps(),
 						geometry
 					});
 			}
@@ -487,9 +544,26 @@ module.exports = (() => {
 
 	return {Node, Way, Relation}; 
 })();
-},{"./utils.js":3}],3:[function(require,module,exports){
+},{"./polytags.json":3,"./utils.js":4}],3:[function(require,module,exports){
+module.exports={"building":{},"highway":{"whitelist":["services","rest_area","escape","elevator"]},"natural":{"blacklist":["coastline","cliff","ridge","arete","tree_row"]},"landuse":{},"waterway":{"whitelist":["riverbank","dock","boatyard","dam"]},"amenity":{},"leisure":{},"barrier":{"whitelist":["city_wall","ditch","hedge","retaining_wall","wall","spikes"]},"railway":{"whitelist":["station","turntable","roundhouse","platform"]},"area":{},"boundary":{},"man_made":{"blacklist":["cutline","embankment","pipeline"]},"power":{"whitelist":["plant","substation","generator","transformer"]},"place":{},"shop":{},"aeroway":{"blacklist":["taxiway"]},"tourism":{},"historic":{},"public_transport":{},"office":{},"building:part":{},"military":{},"ruins":{},"area:highway":{},"craft":{},"golf":{},"indoor":{}}
+},{}],4:[function(require,module,exports){
 module.exports = (() => {
 	'use strict';
+
+	let purgeProps = (obj, blacklist) => {
+		if (obj) {
+			let rs = Object.assign({}, obj);
+			for (let prop of blacklist) delete rs[prop];
+			return rs;
+		}
+		return {};
+	}
+
+	let mergeProps = (obj1, obj2) => {
+		obj1 = obj1? obj1 : {};
+		obj2 = obj2? obj2 : {};
+		return Object.assign(obj1, obj2);
+	}
 
 	let first = a => a[0];
 	let last = a => a[a.length - 1];
@@ -512,7 +586,7 @@ module.exports = (() => {
 		return null;
 	}
 
-	let isRing = a => (a.length > 2 && coordsToKey(first(a)) === coordsToKey(last(a)));
+	let isRing = a => a.length > 2 && coordsToKey(first(a)) === coordsToKey(last(a));
 
 	let ringDirection = (a, xIdx, yIdx) => {
 		xIdx = xIdx || 0, yIdx = yIdx || 1;
@@ -544,8 +618,7 @@ module.exports = (() => {
 		}
 
 		cleanup() {
-			let entries = Object.entries(this);
-			for (let [k, v] of entries) {
+			for (let [k, v] of Object.entries(this)) {
 				if (v && v.unlinkRef) v.unlinkRef();
 				delete this[k];
 			}
@@ -566,6 +639,11 @@ module.exports = (() => {
 				let args = [this.container.indexOf(this), 1];
 				if (v) args.push(v);
 				[].splice.apply(this.container, args);
+			} else if (typeof this.container === 'object') {
+				let k = Object.keys(this.container).find(v => this.container[v] === this);
+				if (k)
+					if (v) this.container[k] = v;
+					else delete this.container[k];
 			}
 		}
 	}
@@ -633,12 +711,16 @@ module.exports = (() => {
 		}
 	}
 
-	return {first, last, coordsToKey, addToMap, removeFromMap, getFirstFromMap, 
-		isRing, ringDirection, ptInsidePolygon, strToFloat, 
+	return {purgeProps, mergeProps,
+		first, last, coordsToKey,
+		addToMap, removeFromMap, getFirstFromMap,
+		isRing, ringDirection, ptInsidePolygon, strToFloat,
 		RefElements, LateBinder, WayCollection};
 })();
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 module.exports = (() => {
+	'use strict';
+	
 	function conditioned(evt) {
 		return evt.match(/^(.+?)\[(.+?)\]>$/g) != null;
 	}
@@ -676,14 +758,21 @@ module.exports = (() => {
 					closed = true;
 				}
 
-				let attRegEx = /([^ ]+?)="(.+?)"/g, attMatch = null, hasAttrs = false;
-				while (attMatch = attRegEx.exec(attrText)) {
+				let attRegEx1 = /([^ ]+?)="(.+?)"/g, attRegEx2 = /([^ ]+?)='(.+?)'/g;
+				let attMatch = null, hasAttrs = false;
+				while (attMatch = attRegEx1.exec(attrText)) {
 					hasAttrs = true;
 					node[`$${attMatch[1]}`] = attMatch[2];
 				}
+				if (!hasAttrs)
+					while (attMatch = attRegEx2.exec(attrText)) {
+						hasAttrs = true;
+						node[`$${attMatch[1]}`] = attMatch[2];
+					}
 
 				if (!hasAttrs && attrText !== '') node.text = attrText;
 				if (this.progressive) this.emit(`<${fullTag}>`, node, parent);
+
 
 				if (!closed) {
 					let innerRegEx = new RegExp(`([^]+?)<\/${tag}>`, 'g');
@@ -701,6 +790,7 @@ module.exports = (() => {
 				}
 
 				if (this.progressive) this.emit(`</${fullTag}>`, node, parent);
+
 				nodes.push(node);
 			}
 
