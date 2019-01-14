@@ -5,7 +5,7 @@ A lightweight (not as lightweight as xml2geojson though) yet faster convertor fo
 
 History
 -----
-An internal function inside [query-geo-boundary](https://github.com/tibetty/QueryGeoBoundary) --> stripped to handle OSM XML only [xml2geojson-lite](https://github.com/tibetty/xml2geojson-lite) --> this library that supports both OSM XML and JSON
+An internal function inside [query-geo-boundary](https://github.com/tibetty/QueryGeoBoundary) &rightarrow; stripped to handle OSM XML only [xml2geojson-lite](https://github.com/tibetty/xml2geojson-lite) &rightarrow; this library that supports both OSM XML and JSON
 
 Usage
 -----
