@@ -9,9 +9,9 @@ for (let file of xmlFiles) {
 	let osm = fs.readFileSync(`./data/${file}`, 'utf-8');
 	console.log(`---processing time comparison for ${file}---`);
 	let stime = new Date().getTime();
-	osm2geojson(osm, {allFeatures: true});
+	osm2geojson(osm, {completeFeature: true});
 	let etime = new Date().getTime();
-	console.log(`.${etime - stime}ms costed by osm2geojson-lite@allFeatures`);
+	console.log(`.${etime - stime}ms costed by osm2geojson-lite@completeFeature`);
 
 	stime = new Date().getTime();
 	const osmdom = new DOMParser().parseFromString(osm);
@@ -28,9 +28,9 @@ for (let file of jsonFiles) {
 	let osm = require(`./data/${file}`);
 	console.log(`---processing time comparison for ${file}---`);
 	let stime = new Date().getTime();
-	osm2geojson(osm, {allFeatures: true});
+	osm2geojson(osm, {completeFeature: true});
 	let etime = new Date().getTime();
-	console.log(`.${etime - stime}ms costed by osm2geojson-lite@allFeatures`);
+	console.log(`.${etime - stime}ms costed by osm2geojson-lite@completeFeature`);
 
 	stime = new Date().getTime();
 	osmtogeojson(osm);
