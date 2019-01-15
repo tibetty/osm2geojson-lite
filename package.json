@@ -38,7 +38,7 @@
     "relation",
     "geojson",
     "linestring",
-    "multilingstring",
+    "multilinestring",
     "polygon",
     "multipolygon"
   ],
