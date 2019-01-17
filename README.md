@@ -40,9 +40,9 @@ Converts OSM data (XML/JSON) to GeoJSON.
 
 * `osm`: the OSM XML data in String, or OSM/Overpass JSON object
 * `opts?`: optional, the options object, right now supports below properties/fields:
-    - `completeFeature/allFeatures`:  the default value is `false`. When it's set to `true`, the returned geojson will include all elements meets the specified conditions in `FeatureCollection` format; otherwise, only the bare geometry of the first `relation` element will be returned.
+    - `completeFeature/allFeatures`:  the default value is `false`. When it's set to `true`, the returned geojson will include all elements that meet the specified conditions in `FeatureCollection` format; otherwise, only the bare geometry of the first `relation` element will be returned.
     - `renderTagged`: the default value is `false`. When it's set to `true`, the returned geojson will include all elements with tags (i.e., tagged) until `suppressWay` changes its behavior a bit; otherwise only the unreferenced ones get returned.
-    - `suppressWay/excludeWay`: by default value is `true`. When it's set to `true`, the return value will exclude any referenced ways even though they are tagged; otherwise the features of all tagged `way` will be included, too.
+    - `suppressWay/excludeWay`: the default value is `true`. When it's set to `true`, the returned `FeatureCollection` will exclude any referenced ways even though they are tagged; otherwise the features of all tagged `way` will be included, too.
 
 
 Reminder

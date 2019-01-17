@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const fs = require('fs'),
 	DOMParser = require('xmldom').DOMParser,
 	osmtogeojson = require('osmtogeojson'),

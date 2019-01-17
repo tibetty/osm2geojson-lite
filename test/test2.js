@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const fs = require('fs'),
 	osm2geojson = require('../lib/index.js');
 
