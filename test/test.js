@@ -3,7 +3,7 @@ const fs = require('fs'),
 	osmtogeojson = require('osmtogeojson'),
 	osm2geojson = require('../lib/index.js');
 
-console.log('=====xml processing performance comparison=====');
+console.log('==========xml processing performance comparison==========');
 const xmlFiles = ['zhucheng.osm', 'hebei.osm', 'tokyodo.osm', 'usa.osm', 'original.osm'];
 for (let file of xmlFiles) {
 	let osm = fs.readFileSync(`./data/${file}`, 'utf-8');
@@ -22,7 +22,7 @@ for (let file of xmlFiles) {
 	console.log(`.${etime - stime}ms costed by xmldom + osmtogeojson`);
 }
 
-console.log('=====json processing performance comparison=====');
+console.log('==========json processing performance comparison==========');
 const jsonFiles = ['herne.json', 'empty.json', 'node.json', 'way.json', 'relation.json', 'map.json'];
 for (let file of jsonFiles) {
 	let osm = require(`./data/${file}`);

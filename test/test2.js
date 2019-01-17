@@ -10,9 +10,7 @@ for (let file of xmlFiles) {
 
 const jsonFiles = ['herne.json', 'empty.json', 'node.json', 'way.json', 'relation.json', 'map.json'];
 for (let file of jsonFiles) {
-	let file = 'map.json';
 	console.log(`------------------------------${file}------------------------------`);
 	let osm = require(`./data/${file}`);
 	console.log(JSON.stringify(osm2geojson(osm, {completeFeature: true, renderTagged: true})));
 }
-
