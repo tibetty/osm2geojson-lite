@@ -47,15 +47,23 @@ Converts OSM data (XML/JSON) to GeoJSON.
 
 Perf Advantages Over `osmtogeojson` (with `xmldom` for XML)
 ---
-* xml
-zhucheng    hebei       tokyodo     usa
->2.5x           >4.0x       >3.0x       >3.0x
 
-* json
-zhucheng    hebei       tokyodo     usa
->2.5x           >11.0x      >7.0x       >5.0x
+```
+1. XML
+-----------------------------------------------------
+|  zhucheng  |   hebei    |  tokyodo   |    usa     |
++------------+------------+------------+------------+
+|  >2.5x     |  >4.0x     |  >3.0x     |  >3.0x     |
+-----------------------------------------------------
+2. Overpass JSON
+-----------------------------------------------------
+|  zhucheng  |   hebei    |  tokyodo   |    usa     |
++------------+------------+------------+------------+
+|  >2.5x     |  >11.0x    |  >7.0x     |  >5.0x     |
+-----------------------------------------------------
 
-    The benchmark scripts are in bench folder
+* You can find the benchmark scripts in the 'bench' folder
+```
 
 Node.JS version
 ---
