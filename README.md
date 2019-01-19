@@ -5,7 +5,7 @@ A lightweight (not as lightweight as xml2geojson though) yet faster convertor fo
 
 History
 -----
-An internal function inside [query-geo-boundary](https://www.npmjs.com/package/query-geo-boundary) &rightarrow; stripped to handle OSM XML only [xml2geojson-lite](https://www.npmjs.com/package/xml2geojson-lite) &rightarrow; this library that supports both OSM XML and JSON
+An internal function inside [query-geo-boundary](https://www.npmjs.com/package/query-geo-boundary) &rightarrow; stripped out to handle OSM XML only [xml2geojson-lite](https://www.npmjs.com/package/xml2geojson-lite) &rightarrow; this library that supports both OSM XML and OSM/Overpass JSON
 
 Usage
 -----
@@ -45,9 +45,17 @@ Converts OSM data (XML/JSON) to GeoJSON.
     - `suppressWay/excludeWay`: the default value is `true`. When it's set to `true`, the returned `FeatureCollection` will exclude any referenced ways even though they are tagged; otherwise the features of all tagged `way` will be included, too.
 
 
-Reminder
+Perf Advantages Over `osmtogeojson` (with `xmldom` for XML)
 ---
-Please fasten your seat-belt before run the test script (node test.js)
+* xml
+zhucheng    hebei       tokyodo     usa
+>2.5x           >4.0x       >3.0x       >3.0x
+
+* json
+zhucheng    hebei       tokyodo     usa
+>2.5x           >11.0x      >7.0x       >5.0x
+
+    The benchmark scripts are in bench folder
 
 Node.JS version
 ---
