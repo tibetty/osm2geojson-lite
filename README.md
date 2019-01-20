@@ -47,11 +47,11 @@ Converts OSM data (XML/JSON) to GeoJSON.
 
 Benchmark
 ---
-Performance vs. `osmtogeojson` (with `xmldom` for XML processing) 
-    - Workloads include the XML and JSON of 4 administrive areas (zhucheng, hebei, tokyodo, usa)
-    - Call each conversion for 100 rounds to mitigate the impacts of GC and other factors
-    - For each scripts, run as many as times seperately and then calculate the average cost time (in abbr., ACT)
-    - The speedup is a coarse lowest number of dividing the ACT of `osmtogeojson` by the one of this library      
+### Performance vs. `osmtogeojson` (with `xmldom` for XML processing) 
+    * Workloads include the XML and JSON of 4 administrive areas (zhucheng, hebei, tokyodo, usa)
+    * Call each conversion for 100 rounds to mitigate the impacts of GC and other factors
+    * For each scripts, run as many as times seperately and then calculate the average cost time (in abbr., ACT)
+    * The speedup is a coarse lowest number of dividing the ACT of `osmtogeojson` by the one of this library      
 ```
 $ cd bench
 $ node o2gl-bench.js
