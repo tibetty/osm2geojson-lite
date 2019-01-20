@@ -45,10 +45,18 @@ Converts OSM data (XML/JSON) to GeoJSON.
     - `suppressWay/excludeWay`: the default value is `true`. When it's set to `true`, the returned `FeatureCollection` will exclude any referenced ways even though they are tagged; otherwise the features of all tagged `way` will be included, too.
 
 
-Perf Advantages Over `osmtogeojson` (with `xmldom` for XML)
+Benchmark
 ---
-
+Performance vs. `osmtogeojson` (with `xmldom` for XML processing) 
+    - Workloads include the XML and JSON of 4 administrive areas (zhucheng, hebei, tokyodo, usa)
+    - Call each conversion for 100 rounds to mitigate the impacts of GC and other factors
+    - For each scripts, run as many as times seperately and then calculate the average cost time (in abbr., ACT)
+    - The speedup is a coarse lowest number of dividing the ACT of `osmtogeojson` by the one of this library      
 ```
+$ cd bench
+$ node o2gl-bench.js
+$ node otg-bench.js
+
 1. XML
 -----------------------------------------------------
 |  zhucheng  |   hebei    |  tokyodo   |    usa     |
@@ -61,8 +69,6 @@ Perf Advantages Over `osmtogeojson` (with `xmldom` for XML)
 +------------+------------+------------+------------+
 |  >2.5x     |  >11.0x    |  >7.0x     |  >5.0x     |
 -----------------------------------------------------
-
-* You can find the benchmark scripts in the 'bench' folder
 ```
 
 Node.JS version
