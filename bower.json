@@ -1,6 +1,6 @@
 {
   "name": "osm2geojson-lite",
-  "description": "a lightweight yet faster osm (either in xml or in json formats) to geojson convertor - 4x faster than xmldom + osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency",
+  "description": "a lightweight yet faster osm (xml/json) to geojson convertor implemented in pure JavaScript",
   "main": "dist/osm2geojson-lite.js",
   "authors": [
     "tibetty"
