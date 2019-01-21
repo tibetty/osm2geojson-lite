@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+
+const fs = require('fs'),
+	osm2geojson = require('../.');
+
+process.on('uncaughtException', err => console.error(err));
+
+const fileName = process.argv[2];
+if (fileName) {
+	let osm = fs.readFileSync(fileName, 'utf-8');
+	if (fileName.toLowerCase().endsWith('.json'))
+		osm = JSON.parse(osm);
+	let featureCollection = osm2geojson(osm, {completeFeature: true});
+	console.log(JSON.stringify(featureCollection, null, 2));
+	return;
+}
+
+console.log(`Usage: ${process.argv[0]} ${process.argv[1]} <xml/json> file`);
+
+

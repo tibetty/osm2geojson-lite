@@ -3,7 +3,7 @@
 const fs = require('fs'),
 	DOMParser = require('xmldom').DOMParser,
 	osmtogeojson = require('osmtogeojson'),
-	osm2geojson = require('../lib/index.js');
+	osm2geojson = require('../.');
 
 console.log('==========xml processing performance comparison==========');
 const xmlFiles = ['zhucheng.osm', 'hebei.osm', 'tokyodo.osm', 'usa.osm', 'original.osm'];
