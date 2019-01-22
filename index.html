@@ -11,7 +11,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
     <script type="text/javascript">
         function toGeo(e) {
             e.preventDefault();
-            var data = document.getElementById('osmxml').value || "<osm></osm>",
+            var data = document.getElementById('osmdata').value || "<osm></osm>",
                 geojson;
             try {
                 data = JSON.parse(data);
