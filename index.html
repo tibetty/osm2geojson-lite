@@ -1,0 +1,190 @@
+<!--
+demo page / introduction for osm2geojson-lite
+https://github.com/tibetty/osm2geojson-lite
+this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Lidman, WTFPL
+-->
+<html>
+<head>
+    <title>osm2geojson-lite</title>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script type="text/javascript" src="dist/osm2geojson-lite.js"></script>
+    <script type="text/javascript">
+        function toGeo(e) {
+            e.preventDefault();
+            var data = document.getElementById('osmxml').value || "<osm></osm>",
+                geojson;
+            try {
+                data = JSON.parse(data);
+            } catch(e) {
+            }
+            geojson = osm2geojson(data, {completeFeature: true});
+            document.getElementById('geojson').value = JSON.stringify(geojson, null, 2);
+            console.log(geojson);
+        }
+        $(function() {
+            $("#toGeo").click(toGeo);
+        });
+    </script>
+
+    <style type="text/css">
+        body {
+            font-size: 18px;
+            background: white;
+            font-family: "Helvetica Neue", Helvetica, sans-serif;
+            width: 960px;
+            margin: 50px auto;
+            color: #000022;
+            line-height: 1.7em
+        }
+
+        a { color: black; }
+
+        li {
+            line-height: 1.7em;
+            text-align: left;
+            list-style: none;
+        } 
+
+        textarea, input { outline: none; }
+
+        #left {
+            width: 49%;
+            float: left;
+            text-align: center;
+        }
+
+        #osmdata, #geojson {
+            width: 100%;
+            background: white;
+            border: 1px solid #ccc;
+            height: 320px;
+            overflow: auto;
+            margin-bottom: 20px;
+            resize: none;
+        }
+
+        #right {
+            width: 49%;
+            float: right;
+            text-align: center;
+        }
+
+        .button {
+            display: inline-block;
+            text-shadow: 0px 0px 1px black;
+            border-radius: 3px;
+            color: white;
+            background: #0c74a9;
+            padding: 10px 15px;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .button:hover { 
+            background: #0c5489;
+        }
+
+        .button:active {
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.75);
+        }
+
+        textarea {
+            font-size: 13px;
+            line-height: 1.5em;
+            padding: 7px 10px;
+        }
+
+        #top {
+            font-size: 22px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        #name {
+            font-size: 44px;
+            letter-spacing: -1px;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        #example {
+            clear: both;
+            width: 100%;
+            height: 500px;
+            text-align: center;
+        }
+
+        #about {
+            width: 720px;
+            margin: 0 auto;
+        }
+
+        #download {
+            margin: 50px auto 0 auto;
+            text-align: center;
+        }
+
+        #dl {
+            background: #569834;
+            padding: 7px 10px;
+            border-radius: 3px;
+            color: white;
+            font-weight: bold;
+            font-size: 32px;
+        }
+        .disc { list-style: disc; }
+    </style>
+</head>
+<body>
+        <a href="https://github.com/tibetty/osm2geojson-lite"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s.cdpn.io/31787/forkme_right_blue.png" alt="Fork me on GitHub"></a>
+        <div id="top">
+            <span id="name">osm2geojson-lite</span> converts OSM data to GeoJSON.
+        </div>
+        <div id="example">
+            <div id="left">
+                <h3>OSM Data</h3>
+                <textarea id="osmdata" contenteditable="true"></textarea>
+            </div>
+            <div id="right">
+                <h3>GeoJSON</h3>
+                <textarea id="geojson" contenteditable="true"></textarea>
+            </div>
+            <a class="button" href="" id="toGeo">Convert to GeoJSON &rarr;</a>
+        </div>
+        <div id="about">
+            <p>osm2geojson-lite is a lightweight (not as lightweight as xml2geojson-lite though) yet faster convertor for OSM data in XML or JSON formats to GeoJSON - much faster (the more complex the data source is, the more performance advantages it posesses) than osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency, please find more details from its <a href="https://www.npmjs.com/package/osm2geojson-lite">npm homepage</a></p>
+            <span style="font-weight: bold;">Usage: </span>
+            <ul>
+                <li>In the browser:
+                    <ul>
+                        <li><code>
+                            &lt;script src='osm2geojson-lite.js'>&lt;/script>
+                        </code></li>
+                        <li><code>
+                            osm2geojson(osm, opts);
+                        </code></li>
+                    </ul>
+                </li>
+                <li>As a nodejs library:
+                    <ul>
+                        <li><code>
+                            $ npm install osm2geojson-lite
+                        </code></li>
+                        <li><code>
+                            const osm2geojson = require('osm2geojson-lite');<br>
+                            osm2geojson(osm, opts);
+                        </code></li>
+                    </ul>
+                </li>
+            </ul>
+            Read more about the API in the official <a href="https://github.com/tibetty/osm2geojson-lite#api">documentation</a>.
+            <div id="download">
+                <p><a class="button" href="https://raw.githubusercontent.com/tibetty/osm2geojson-lite/master/dist/osm2geojson-lite.js">Download osm2geojson-lite.js</a><br/><br/>
+                    github: <a href="https://github.com/tibetty/osm2geojson-lite">tibetty/osm2geojson-lite</a><br/>
+                    npm: <a href="https://npmjs.org/package/osm2geojson-lite">osm2geojson-lite</a><br/>
+                </p>
+            </div>
+        </div>
+    </table>
+</body>
+</html>
