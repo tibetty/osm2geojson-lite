@@ -11,10 +11,11 @@ if (fileName) {
 	if (fileName.toLowerCase().endsWith('.json'))
 		osm = JSON.parse(osm);
 	let featureCollection = osm2geojson(osm, {completeFeature: true});
-	console.log(JSON.stringify(featureCollection, null, 2));
+	if (process.argv.indexOf('--silent') < 0 && process.argv.indexOf('-s') < 0)
+		console.log(JSON.stringify(featureCollection, null, 2));
 	return;
 }
 
-console.log(`Usage: ${process.argv[0]} ${process.argv[1]} <xml/json> file`);
+console.log(`Usage: osm2geojson <xml/json file> [-s/--silent]`);
 
 
