@@ -10,7 +10,7 @@ An internal function inside [query-geo-boundary](https://www.npmjs.com/package/q
 Usage
 -----
 
-### In Node.JS
+### As a Node.JS Library
 
 Installation:
 
@@ -23,12 +23,12 @@ Usage:
     let geojson = osm2geojson(osm);
 ```
 
-### In Browser
+### In the Browser
 ```html
-    <script src='your/path/to/osm2geojson-lite.js'></script>
+    <script src='your/path/to/osm2geojson-lite.js'/>
 ```
 ```js
-    let geojson = osm2geojson(osm);
+    let geojson = osm2geojson(osm, opts);
 ```
 
 API
