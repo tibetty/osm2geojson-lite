@@ -38,7 +38,7 @@ API
 
 Converts OSM data (XML/JSON) to GeoJSON.
 
-* `osm`: the OSM XML data in String, or OSM/Overpass JSON object
+* `osm`: the OSM XML data in String, or OSM/Overpass JSON as object or in String
 * `opts?`: optional, the options object, right now supports below properties/fields:
     - `completeFeature/allFeatures`:  the default value is `false`. When it's set to `true`, the returned geojson will include all elements that meet the specified conditions in `FeatureCollection` format; otherwise, only the bare geometry of the first `relation` element will be returned.
     - `renderTagged`: the default value is `false`. When it's set to `true`, the returned geojson will include all elements with tags (i.e., tagged) until `suppressWay` changes its behavior a bit; otherwise only the unreferenced ones get returned.
@@ -47,11 +47,11 @@ Converts OSM data (XML/JSON) to GeoJSON.
 
 Benchmark
 ---
-### Performance vs. `osmtogeojson` (with `xmldom` for XML processing) 
-    * Workloads include the XML and JSON of 4 administrive areas (zhucheng, hebei, tokyodo, usa)
-    * Call each conversion for 100 rounds to mitigate the impacts of GC and other factors
-    * For each scripts, run as many as times seperately and then calculate the average cost time (in abbr., ACT)
-    * The speedup is a coarse lowest number of dividing the ACT of 'osmtogeojson' by the one of this library      
+### Performance vs. `osmtogeojson` (with `xmldom` for XML processing)
+1. Workloads include the boundary XML and JSON of 4 administrive areas (zhucheng, hebei, tokyodo, usa)
+2. Call each conversion for 100 rounds to mitigate the impacts of GC and other factors
+3. For each script, run as many as times seperately and then calculate the average cost time (ACT for short)
+4. The speedup# listed in blow table are coarse lowest value of dividing the ACT of `osmtogeojson` by the one of this library
 ```
 $ cd bench
 $ node o2gl-bench.js

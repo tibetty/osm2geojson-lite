@@ -5,37 +5,23 @@ const fs = require('fs'),
 	osmtogeojson = require('osmtogeojson'),
 	osm2geojson = require('../.');
 
-console.log('==========xml processing performance comparison==========');
+console.log('========== xml conversion results side by side ==========');
 const xmlFiles = ['zhucheng.osm', 'hebei.osm', 'tokyodo.osm', 'usa.osm', 'original.osm'];
 for (let file of xmlFiles) {
 	let osm = fs.readFileSync(`./data/${file}`, 'utf-8');
-	console.log(`---processing time comparison for ${file}---`);
-	let stime = new Date().getTime();
-	osm2geojson(osm, {completeFeature: true});
-	let etime = new Date().getTime();
-	console.log(`.${etime - stime}ms costed by osm2geojson-lite@completeFeature`);
-
-	stime = new Date().getTime();
+	console.log(`---------- osm2geojson-lite from ${file} ----------`);
+	console.log(JSON.stringify(osm2geojson(osm, {completeFeature: true})));
+	console.log(`---------- osmtogeojson from ${file} ----------`);
 	const osmdom = new DOMParser().parseFromString(osm);
-	etime = new Date().getTime();
-	console.log(`.${etime - stime}ms costed by xmldom only`);
-	osmtogeojson(osmdom);
-	etime = new Date().getTime();
-	console.log(`.${etime - stime}ms costed by xmldom + osmtogeojson`);
+	console.log(JSON.stringify(osmtogeojson(osmdom)));
 }
 
-console.log('==========json processing performance comparison==========');
+console.log('========== json conversion results side by side ==========');
 const jsonFiles = ['herne.json', 'empty.json', 'node.json', 'way.json', 'relation.json', 'map.json'];
 for (let file of jsonFiles) {
 	let osm = require(`./data/${file}`);
-	console.log(`---processing time comparison for ${file}---`);
-	let stime = new Date().getTime();
-	osm2geojson(osm, {completeFeature: true});
-	let etime = new Date().getTime();
-	console.log(`.${etime - stime}ms costed by osm2geojson-lite@completeFeature`);
-
-	stime = new Date().getTime();
-	osmtogeojson(osm);
-	etime = new Date().getTime();
-	console.log(`.${etime - stime}ms costed by osmtogeojson`);
+	console.log(`---------- osm2geojson-lite from ${file} ----------`);
+        console.log(JSON.stringify(osm2geojson(osm, {completeFeature: true})));
+        console.log(`---------- osmtogeojson from ${file} ----------`);
+	console.log(JSON.stringify(osmtogeojson(osm)));
 }

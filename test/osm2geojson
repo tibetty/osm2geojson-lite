@@ -8,8 +8,6 @@ process.on('uncaughtException', err => console.error(err));
 const fileName = process.argv[2];
 if (fileName) {
 	let osm = fs.readFileSync(fileName, 'utf-8');
-	if (fileName.toLowerCase().endsWith('.json'))
-		osm = JSON.parse(osm);
 	let featureCollection = osm2geojson(osm, {completeFeature: true});
 	if (process.argv.indexOf('--silent') < 0 && process.argv.indexOf('-s') < 0)
 		console.log(JSON.stringify(featureCollection, null, 2));
