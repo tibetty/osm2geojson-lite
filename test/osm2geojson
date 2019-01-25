@@ -5,15 +5,32 @@ const fs = require('fs'),
 
 process.on('uncaughtException', err => console.error(err));
 
-const fileName = process.argv[2];
+const args = process.argv.slice(2);
+
+const sidx1 = args.indexOf('--silent'), sidx2 = args.indexOf('-s');
+
+let shouldBeSilent = sidx1 >= 0 || sidx2 >= 0;
+if (sidx1 >= 0) args.splice(sidx1, 1);
+if (sidx2 >= 0) args.splice(sidx2, 1);
+
+const pidx1 = args.indexOf('--profile'), pidx2 = args.indexOf('-p');
+
+const profile = pidx1 >= 0 || pidx2 >= 0;
+if (pidx1 >= 0) args.splice(pidx1, 1);
+if (pidx2 >= 0) args.splice(pidx2, 1);
+if (profile) shouldBeSilent = true;
+
+const fileName = args[0];
 if (fileName) {
 	let osm = fs.readFileSync(fileName, 'utf-8');
+	let stime = new Date().getTime();
 	let featureCollection = osm2geojson(osm, {completeFeature: true});
-	if (process.argv.indexOf('--silent') < 0 && process.argv.indexOf('-s') < 0)
+	let etime = new Date().getTime();
+	if (profile)
+		console.log(`${etime - stime}ms cost by conversion`);
+	if (!shouldBeSilent)
 		console.log(JSON.stringify(featureCollection, null, 2));
 	return;
 }
 
-console.log(`Usage: osm2geojson <xml/json file> [-s/--silent]`);
-
-
+console.log(`Usage: osm2geojson <xml/json file> [-s/--silent] [-p/--profile]`);
