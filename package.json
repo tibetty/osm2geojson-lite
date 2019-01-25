@@ -52,7 +52,7 @@
   "scripts": {
     "test": "npm run --prefix test test"
   },
-  "version": "0.7.5",
+  "version": "0.7.6",
   "directories": {
     "lib": "lib",
     "test": "test"
