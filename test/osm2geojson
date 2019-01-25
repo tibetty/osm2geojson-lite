@@ -15,21 +15,30 @@ if (sidx2 >= 0) args.splice(sidx2, 1);
 
 const pidx1 = args.indexOf('--profile'), pidx2 = args.indexOf('-p');
 
+let rounds = 1;
 const profile = pidx1 >= 0 || pidx2 >= 0;
 if (pidx1 >= 0) args.splice(pidx1, 1);
 if (pidx2 >= 0) args.splice(pidx2, 1);
-if (profile) shouldBeSilent = true;
+if (profile) {
+	shouldBeSilent = true;
+	rounds = parseInt(args[1]) || 1;
+}
 
 const fileName = args[0];
 if (fileName) {
 	let osm = fs.readFileSync(fileName, 'utf-8');
-	let stime = new Date().getTime();
-	let featureCollection = osm2geojson(osm, {completeFeature: true});
-	let etime = new Date().getTime();
-	if (profile)
-		console.log(`${etime - stime}ms cost by conversion`);
-	if (!shouldBeSilent)
-		console.log(JSON.stringify(featureCollection, null, 2));
+	if (profile) {
+		let stime = new Date().getTime();
+		for (let i = 0; i < rounds; i++)
+			osm2geojson(osm, {completeFeature: true});
+		let etime = new Date().getTime();
+		console.log(`${etime - stime}ms cost by ${rounds} rounds of conversion`);
+	} else {
+		let featureCollection = osm2geojson(osm, {completeFeature: true});
+		if (!shouldBeSilent)
+                	console.log(JSON.stringify(featureCollection, null, 2));
+	}
+	
 	return;
 }
 
