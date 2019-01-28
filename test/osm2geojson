@@ -3,7 +3,7 @@
 const fs = require('fs'),
 	osm2geojson = require('../.');
 
-process.on('uncaughtException', err => console.error(err));
+process.on('uncaughtException', err => console.error(err.message));
 
 const args = process.argv.slice(2);
 
@@ -42,4 +42,4 @@ if (fileName) {
 	return;
 }
 
-console.log(`Usage: osm2geojson <xml/json file> [-s/--silent] [-p/--profile]`);
+console.log(`Usage: osm2geojson <xml/json file> <rounds to profile> [-s|--silent] [-p|--profile]`);
