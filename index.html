@@ -11,16 +11,26 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
     <script type="text/javascript">
         function toGeo(e) {
             e.preventDefault();
-            var data = document.getElementById('osmdata').value || "<osm></osm>",
+            let data = document.getElementById('osmdata').value || "<osm></osm>",
                 geojson;
             try {
                 data = JSON.parse(data);
             } catch(e) {
             }
+
+            let stime = new Date().getTime();
             geojson = osm2geojson(data, {completeFeature: true});
+            let etime = new Date().getTime();
+            let x = document.getElementById("snackbar");
+            x.className = "show";
+            let msg = `${etime - stime}ms cost by this conversion`;
+            x.innerText = msg;
+            console.log(msg);
+            setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
             document.getElementById('geojson').value = JSON.stringify(geojson, null, 2);
             console.log(geojson);
         }
+
         $(function() {
             $("#toGeo").click(toGeo);
         });
@@ -133,9 +143,52 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             font-size: 32px;
         }
         .disc { list-style: disc; }
+
+        #snackbar {
+          visibility: hidden;
+          min-width: 250px;
+          margin-left: -125px;
+          background-color: #333;
+          color: #fff;
+          text-align: center;
+          border-radius: 2px;
+          padding: 16px;
+          position: fixed;
+          z-index: 1;
+          left: 49%;
+          bottom: 50%;
+          opacity: 0.75;
+        }
+
+        #snackbar.show {
+          visibility: visible;
+          -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+          animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        @-webkit-keyframes fadein {
+          from {bottom: 0; opacity: 0;} 
+          to {bottom: 50%; opacity: 0.75;}
+        }
+
+        @keyframes fadein {
+          from {bottom: 0; opacity: 0;}
+          to {bottom: 50%; opacity: 0.75;}
+        }
+
+        @-webkit-keyframes fadeout {
+          from {bottom: 50%; opacity: 0.75;} 
+          to {bottom: 0; opacity: 0;}
+        }
+
+        @keyframes fadeout {
+          from {bottom: 50%; opacity: 0.75;}
+          to {bottom: 0; opacity: 0;}
+        }
     </style>
 </head>
 <body>
+        <div id="snackbar"> Used to display millisenconds cost by conversion </div>
         <a href="https://github.com/tibetty/osm2geojson-lite"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s.cdpn.io/31787/forkme_right_blue.png" alt="Fork me on GitHub"></a>
         <div id="top">
             <span id="name">osm2geojson-lite</span> converts OSM data to GeoJSON.
