@@ -21,13 +21,13 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             let stime = new Date().getTime();
             geojson = osm2geojson(data, {completeFeature: true});
             let etime = new Date().getTime();
+            document.getElementById('geojson').value = JSON.stringify(geojson, null, 2);
             let x = document.getElementById("snackbar");
             x.className = "show";
             let msg = `${etime - stime}ms cost by this conversion`;
             x.innerText = msg;
             console.log(msg);
             setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
-            document.getElementById('geojson').value = JSON.stringify(geojson, null, 2);
             console.log(geojson);
         }
 
