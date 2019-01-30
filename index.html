@@ -47,15 +47,13 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             line-height: 1.7em
         }
 
-        a { color: black; }
-
         li {
             line-height: 1.7em;
             text-align: left;
             list-style: none;
         } 
 
-        textarea, input { outline: none; }
+        textarea { outline: none; }
 
         #left {
             width: 49%;
@@ -134,57 +132,66 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             text-align: center;
         }
 
-        #dl {
-            background: #569834;
-            padding: 7px 10px;
-            border-radius: 3px;
-            color: white;
-            font-weight: bold;
-            font-size: 32px;
-        }
-        .disc { list-style: disc; }
-
         #snackbar {
-          visibility: hidden;
-          min-width: 250px;
-          margin-left: -125px;
-          background-color: #333;
-          color: #fff;
-          text-align: center;
-          border-radius: 2px;
-          padding: 16px;
-          position: fixed;
-          z-index: 1;
-          left: 49%;
-          bottom: 50%;
-          opacity: 0.75;
+			visibility: hidden;
+			min-width: 250px;
+			margin-left: -125px;
+			background-color: #333;
+			color: #fff;
+			text-align: center;
+			border-radius: 2px;
+			padding: 16px;
+			position: fixed;
+			z-index: 1;
+			left: 49%;
+			bottom: 50%;
+			opacity: 0.75;
         }
 
         #snackbar.show {
-          visibility: visible;
-          -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
-          animation: fadein 0.5s, fadeout 0.5s 2.5s;
+			visibility: visible;
+			-webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+			animation: fadein 0.5s, fadeout 0.5s 2.5s;
         }
 
         @-webkit-keyframes fadein {
-          from {bottom: 0; opacity: 0;} 
-          to {bottom: 50%; opacity: 0.75;}
+			from {bottom: 0; opacity: 0;} 
+			to {bottom: 50%; opacity: 0.75;}
         }
 
         @keyframes fadein {
-          from {bottom: 0; opacity: 0;}
-          to {bottom: 50%; opacity: 0.75;}
+			from {bottom: 0; opacity: 0;}
+			to {bottom: 50%; opacity: 0.75;}
         }
 
         @-webkit-keyframes fadeout {
-          from {bottom: 50%; opacity: 0.75;} 
-          to {bottom: 0; opacity: 0;}
+			from {bottom: 50%; opacity: 0.75;} 
+			to {bottom: 0; opacity: 0;}
         }
 
         @keyframes fadeout {
           from {bottom: 50%; opacity: 0.75;}
           to {bottom: 0; opacity: 0;}
         }
+
+        .link:link {
+			color: #0c74a9;
+			text-decoration: none;
+		}
+
+		.link:visited {
+			text-decoration: none;
+		}
+
+		.link:hover {
+			color: #0c5489;
+			text-decoration: underline;
+		  
+		}
+
+		.link:active {
+			text-decoration: underline;
+		}
     </style>
 </head>
 <body>
@@ -205,7 +212,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             <a class="button" href="" id="toGeo">Convert to GeoJSON &rarr;</a>
         </div>
         <div id="about">
-            <p>osm2geojson-lite is a lightweight (not as lightweight as xml2geojson-lite though) yet faster convertor for OSM data in XML or JSON formats to GeoJSON - much faster (the more complex the data source is, the more performance advantages it posesses) than osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency, please find more details from its <a href="https://www.npmjs.com/package/osm2geojson-lite">npm homepage</a></p>
+            <p>osm2geojson-lite is a lightweight (not as lightweight as xml2geojson-lite though) yet faster convertor for OSM data in XML or JSON formats to GeoJSON - much faster (the more complex the data source is, the more performance advantages it posesses) than osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency, please find more details from its <a class="link" target="_blank" href="https://www.npmjs.com/package/osm2geojson-lite">npm homepage</a></p>
             <span style="font-weight: bold;">Usage: </span>
             <ul>
                 <li>In the browser:
@@ -230,11 +237,11 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
                     </ul>
                 </li>
             </ul>
-            Read more about the API in the official <a href="https://github.com/tibetty/osm2geojson-lite#api">documentation</a>.
+            Read more about the API in the official <a class="link" target="_blank" href="https://github.com/tibetty/osm2geojson-lite#api">documentation</a>.
             <div id="download">
                 <p><a class="button" href="https://raw.githubusercontent.com/tibetty/osm2geojson-lite/master/dist/osm2geojson-lite.js">Download osm2geojson-lite.js</a><br/><br/>
-                    github: <a href="https://github.com/tibetty/osm2geojson-lite">tibetty/osm2geojson-lite</a><br/>
-                    npm: <a href="https://npmjs.org/package/osm2geojson-lite">osm2geojson-lite</a><br/>
+                    github: <a class="link" target="_blank" href="https://github.com/tibetty/osm2geojson-lite">tibetty/osm2geojson-lite</a><br/>
+                    npm: <a class="link" target="_blank" href="https://npmjs.org/package/osm2geojson-lite">osm2geojson-lite</a><br/>
                 </p>
             </div>
         </div>
