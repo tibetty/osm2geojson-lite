@@ -6,53 +6,51 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
 <html>
 <head>
     <title>osm2geojson-lite</title>
-    <script type="text/javascript" src="https://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
     <script type="text/javascript" src="dist/osm2geojson-lite.js"></script>
     <script type="text/javascript">
-        function toGeo(e) {
-            e.preventDefault();
-            let g = $('#geojson');
-            let osm = $('#osmdata').val() || '<osm></osm>';
-            try {
-                osm = JSON.parse(osm);
-            } catch(e) {
-                // do nothing
-            }
+        $(() => {
+            $("#toGeo").click(e => {
+                e.preventDefault();
+                let g = $('#geojson');
+                let osm = $('#osmdata').val() || '<osm></osm>';
+                try {
+                    osm = JSON.parse(osm);
+                } catch(e) {
+                    // do nothing
+                }
 
-            let geojson = osm2geojson(osm, {completeFeature: true});
-            console.log(geojson);
+                let geojson = osm2geojson(osm, {completeFeature: true});
+                console.log(geojson);
 
-            let s = $('#snackbar');
-            $.ajax({
-                url: 'http://geojsonlint.com/validate',
-                type: 'post',
-                data: JSON.stringify(geojson),
-                dataType: 'json',
-                success: res => {
-                    if (res.status === 'ok') {
-                        s.html(`Converted json passed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
-                        s.attr('class', 'show');
-                        setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
-                    } else if (res.status === 'error') {
-                        console.log(res.message);
-                        s.html(`Converted json failed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
+                let s = $('#snackbar');
+                $.ajax({
+                    url: 'http://geojsonlint.com/validate',
+                    type: 'post',
+                    data: JSON.stringify(geojson),
+                    dataType: 'json',
+                    success: res => {
+                        if (res.status === 'ok') {
+                            s.html(`Converted geojson passed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
+                            s.attr('class', 'show');
+                            setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
+                        } else if (res.status === 'error') {
+                            console.log(res.message);
+                            s.html(`Converted geojson failed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
+                            s.css('color', 'red');
+                            s.attr('class', 'show');
+                            setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
+                        }
+                    },
+                    error: () => {
+                        s.html(`Error happened when calling <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s web service`);
                         s.css('color', 'red');
                         s.attr('class', 'show');
                         setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
                     }
-                },
-                error: () => {
-                    s.html(`Error happened when called for <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s service`);
-                    s.css('color', 'red');
-                    s.attr('class', 'show');
-                    setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
-                }
+                });
+                g.val(JSON.stringify(geojson, null, 2));
             });
-            g.val(JSON.stringify(geojson, null, 2));
-        }
-
-        $(function() {
-            $("#toGeo").click(toGeo);
         });
     </script>
 
@@ -164,7 +162,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             padding: 16px;
             position: fixed;
             z-index: 1;
-            left: 44%;
+            left: 43%;
             bottom: 50%;
             opacity: 0.75;
         }
