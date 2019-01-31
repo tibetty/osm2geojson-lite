@@ -11,24 +11,44 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
     <script type="text/javascript">
         function toGeo(e) {
             e.preventDefault();
-            let data = document.getElementById('osmdata').value || "<osm></osm>",
-                geojson;
+            let g = $('#geojson');
+            let osm = $('#osmdata').val() || '<osm></osm>';
             try {
-                data = JSON.parse(data);
+                osm = JSON.parse(osm);
             } catch(e) {
+            	// do nothing
             }
 
-            let stime = new Date().getTime();
-            geojson = osm2geojson(data, {completeFeature: true});
-            let etime = new Date().getTime();
-            document.getElementById('geojson').value = JSON.stringify(geojson, null, 2);
-            let x = document.getElementById("snackbar");
-            x.className = "show";
-            let msg = `${etime - stime}ms cost by this conversion`;
-            x.innerText = msg;
-            console.log(msg);
-            setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
+            let geojson = osm2geojson(osm, {completeFeature: true});
             console.log(geojson);
+
+			let s = $('#snackbar');
+            $.ajax({
+            	url: 'http://geojsonlint.com/validate',
+            	type: 'post',
+            	data: JSON.stringify(geojson),
+            	dataType: 'json',
+            	success: res => {
+            		if (res.status === 'ok') {
+	            		s.html(`Converted json passed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
+	            		s.attr('class', 'show');
+	            		setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
+	            	} else if (res.status === 'error') {
+	            		console.log(res.message);
+	            		s.html(`Converted json failed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
+	            		s.css('color', 'red');
+	            		s.attr('class', 'show');
+	            		setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
+	            	}
+            	},
+            	error: () => {
+            		s.html(`Error happened when called for <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s service`);
+            		s.css('color', 'red');
+            		s.attr('class', 'show');
+            		setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
+            	}
+            });
+			g.val(JSON.stringify(geojson, null, 2));
         }
 
         $(function() {
@@ -51,9 +71,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             line-height: 1.7em;
             text-align: left;
             list-style: none;
-        } 
-
-        textarea { outline: none; }
+        }
 
         #left {
             width: 49%;
@@ -97,9 +115,11 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
         }
 
         textarea {
-            font-size: 13px;
+            font-size: 14px;
+            font-family: "Courier New", "Lucida Console", Monospace;
             line-height: 1.5em;
             padding: 7px 10px;
+            outline: none;
         }
 
         #top {
@@ -136,14 +156,15 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
 			visibility: hidden;
 			min-width: 250px;
 			margin-left: -125px;
-			background-color: #333;
-			color: #fff;
+			background-color: #ccc;
+			color: black;
+			text-shadow: 0px 0px 1px white;
 			text-align: center;
 			border-radius: 2px;
 			padding: 16px;
 			position: fixed;
 			z-index: 1;
-			left: 49%;
+			left: 44%;
 			bottom: 50%;
 			opacity: 0.75;
         }
@@ -176,6 +197,8 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
 
         .link:link {
 			color: #0c74a9;
+			font-weight: bold;
+			font-style: italic;
 			text-decoration: none;
 		}
 
@@ -195,7 +218,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
     </style>
 </head>
 <body>
-        <div id="snackbar"> Used to display millisenconds cost by conversion </div>
+        <div id="snackbar"> [Used to display the result of the geojsonlint's validation] </div>
         <a href="https://github.com/tibetty/osm2geojson-lite"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s.cdpn.io/31787/forkme_right_blue.png" alt="Fork me on GitHub"></a>
         <div id="top">
             <span id="name">osm2geojson-lite</span> converts OSM data to GeoJSON.
