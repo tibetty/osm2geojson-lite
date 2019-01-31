@@ -16,39 +16,39 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             try {
                 osm = JSON.parse(osm);
             } catch(e) {
-            	// do nothing
+                // do nothing
             }
 
             let geojson = osm2geojson(osm, {completeFeature: true});
             console.log(geojson);
 
-			let s = $('#snackbar');
+            let s = $('#snackbar');
             $.ajax({
-            	url: 'http://geojsonlint.com/validate',
-            	type: 'post',
-            	data: JSON.stringify(geojson),
-            	dataType: 'json',
-            	success: res => {
-            		if (res.status === 'ok') {
-	            		s.html(`Converted json passed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
-	            		s.attr('class', 'show');
-	            		setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
-	            	} else if (res.status === 'error') {
-	            		console.log(res.message);
-	            		s.html(`Converted json failed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
-	            		s.css('color', 'red');
-	            		s.attr('class', 'show');
-	            		setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
-	            	}
-            	},
-            	error: () => {
-            		s.html(`Error happened when called for <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s service`);
-            		s.css('color', 'red');
-            		s.attr('class', 'show');
-            		setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
-            	}
+                url: 'http://geojsonlint.com/validate',
+                type: 'post',
+                data: JSON.stringify(geojson),
+                dataType: 'json',
+                success: res => {
+                    if (res.status === 'ok') {
+                        s.html(`Converted json passed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
+                        s.attr('class', 'show');
+                        setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
+                    } else if (res.status === 'error') {
+                        console.log(res.message);
+                        s.html(`Converted json failed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
+                        s.css('color', 'red');
+                        s.attr('class', 'show');
+                        setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
+                    }
+                },
+                error: () => {
+                    s.html(`Error happened when called for <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s service`);
+                    s.css('color', 'red');
+                    s.attr('class', 'show');
+                    setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
+                }
             });
-			g.val(JSON.stringify(geojson, null, 2));
+            g.val(JSON.stringify(geojson, null, 2));
         }
 
         $(function() {
@@ -153,41 +153,41 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
         }
 
         #snackbar {
-			visibility: hidden;
-			min-width: 250px;
-			margin-left: -125px;
-			background-color: #ccc;
-			color: black;
-			text-shadow: 0px 0px 1px white;
-			text-align: center;
-			border-radius: 2px;
-			padding: 16px;
-			position: fixed;
-			z-index: 1;
-			left: 44%;
-			bottom: 50%;
-			opacity: 0.75;
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #ccc;
+            color: black;
+            text-shadow: 0px 0px 1px white;
+            text-align: center;
+            border-radius: 2px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 44%;
+            bottom: 50%;
+            opacity: 0.75;
         }
 
         #snackbar.show {
-			visibility: visible;
-			-webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
-			animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            visibility: visible;
+            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
         }
 
         @-webkit-keyframes fadein {
-			from {bottom: 0; opacity: 0;} 
-			to {bottom: 50%; opacity: 0.75;}
+            from {bottom: 0; opacity: 0;} 
+            to {bottom: 50%; opacity: 0.75;}
         }
 
         @keyframes fadein {
-			from {bottom: 0; opacity: 0;}
-			to {bottom: 50%; opacity: 0.75;}
+            from {bottom: 0; opacity: 0;}
+            to {bottom: 50%; opacity: 0.75;}
         }
 
         @-webkit-keyframes fadeout {
-			from {bottom: 50%; opacity: 0.75;} 
-			to {bottom: 0; opacity: 0;}
+            from {bottom: 50%; opacity: 0.75;} 
+            to {bottom: 0; opacity: 0;}
         }
 
         @keyframes fadeout {
@@ -196,25 +196,25 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
         }
 
         .link:link {
-			color: #0c74a9;
-			font-weight: bold;
-			font-style: italic;
-			text-decoration: none;
-		}
+            color: #0c74a9;
+            font-weight: bold;
+            font-style: italic;
+            text-decoration: none;
+        }
 
-		.link:visited {
-			text-decoration: none;
-		}
+        .link:visited {
+            text-decoration: none;
+        }
 
-		.link:hover {
-			color: #0c5489;
-			text-decoration: underline;
-		  
-		}
+        .link:hover {
+            color: #0c5489;
+            text-decoration: underline;
+          
+        }
 
-		.link:active {
-			text-decoration: underline;
-		}
+        .link:active {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
