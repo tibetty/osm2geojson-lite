@@ -14,12 +14,6 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
                 e.preventDefault();
                 let g = $('#geojson');
                 let osm = $('#osmdata').val() || '<osm></osm>';
-                try {
-                    osm = JSON.parse(osm);
-                } catch(e) {
-                    // do nothing
-                }
-
                 let geojson = osm2geojson(osm, {completeFeature: true});
                 console.log(geojson);
 
@@ -32,6 +26,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
                     success: res => {
                         if (res.status === 'ok') {
                             s.html(`Converted geojson passed <a class="link" target="_blank" href="http://geojsonlint.com/">geojsonlint</a>'s validation`);
+                            s.css('color', 'black');
                             s.attr('class', 'show');
                             setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
                         } else if (res.status === 'error') {
@@ -114,7 +109,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
 
         textarea {
             font-size: 14px;
-            font-family: "Courier New", "Lucida Console", Monospace;
+            font-family: "Lucida Console", "Courier New", Monospace;
             line-height: 1.5em;
             padding: 7px 10px;
             outline: none;
