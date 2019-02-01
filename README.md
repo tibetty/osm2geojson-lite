@@ -20,7 +20,7 @@ Usage:
 
 ```js
     const osm2geojson = require('osm2geojson-lite');
-    let geojson = osm2geojson(osm);
+    let geojson = osm2geojson(osm, opts);
 ```
 
 ### In the Browser
@@ -42,7 +42,7 @@ Converts OSM data (XML/JSON) to GeoJSON.
 * `opts?`: optional, the options object, right now supports below properties/fields:
     - `completeFeature/allFeatures`:  the default value is `false`. When it's set to `true`, the returned geojson will include all elements that meet the specified conditions in `FeatureCollection` format; otherwise, only the bare geometry of the first `relation` element will be returned.
     - `renderTagged`: the default value is `false`. When it's set to `true`, the returned geojson will include all elements with tags (i.e., tagged) until `suppressWay` changes its behavior a bit; otherwise only the unreferenced ones get returned.
-    - `suppressWay/excludeWay`: the default value is `true`. When it's set to `true`, the returned `FeatureCollection` will exclude any referenced ways even though they are tagged; otherwise the features of all tagged `way` will be included, too.
+    - `suppressWay/excludeWay`: the default value is `true`. When it's set to `true`, the returned `FeatureCollection` will exclude all referenced `way`s even though they are tagged; otherwise the features of those `way`s will be included in the resulted result as well.
 
 
 Benchmark
@@ -51,7 +51,7 @@ Benchmark
 1. Workloads include the boundary XML and JSON of 4 administrive areas (zhucheng, hebei, tokyodo, usa)
 2. Call each conversion for 100 rounds to mitigate the impacts of GC and other factors
 3. For each script, run as many as times seperately and then calculate the average cost time (ACT for short)
-4. The speedup# listed in blow table are coarse lowest value of dividing the ACT of `osmtogeojson` by the one of this library
+4. The # listed in the table below are coarse lowest values of dividing the ACT of `osmtogeojson` by the one of this library
 ```
 $ cd bench
 $ node o2gl-bench.js
@@ -70,6 +70,12 @@ $ node otg-bench.js
 |  >2.5x     |  >11.0x    |  >7.0x     |  >5.0x     |
 -----------------------------------------------------
 ```
+
+Correctness
+---
+You can copy the converted results to [geojsonlint](http://geojsonlint.com) for the correctness validation.  Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also quite representative) in the `data` subfolers under `test` and `bench` directories, which also outperforms `osmtogeojson`. 
+
+The client side example shipped along with this package, `index.html` will call `geojsonlint` validation service directly after each conversion, you can wait for a while to see what happens when run it.  
 
 Node.JS version
 ---
