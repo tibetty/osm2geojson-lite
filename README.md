@@ -45,9 +45,8 @@ Converts OSM data (XML/JSON) to GeoJSON.
     - `suppressWay/excludeWay`: the default value is `true`. When it's set to `true`, the returned `FeatureCollection` will exclude all referenced `way`s even though they are tagged; otherwise the features of those `way`s will be included in the resulted result as well.
 
 
-Benchmark
+Performance
 ---
-### Performance vs. `osmtogeojson` (with `xmldom` for XML processing)
 1. Workloads include the boundary XML and JSON of 4 administrive areas (zhucheng, hebei, tokyodo, usa)
 2. Call each conversion for 100 rounds to mitigate the impacts of GC and other factors
 3. For each script, run as many as times seperately and then calculate the average cost time (ACT for short)
@@ -75,7 +74,7 @@ Correctness
 ---
 You can copy the converted results to [geojsonlint](http://geojsonlint.com) for the correctness validation.  Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also quite representative) in the `data` subfolers under `test` and `bench` directories, which also outperforms `osmtogeojson`. 
 
-The client side example shipped along with this package, `index.html` will call `geojsonlint` validation service directly after each conversion, you can wait for a while to see what happens when run it.  
+The client side example shipped along with this package, `index.html` will automatically call `geojsonlint` validation service directly after each conversion, you can wait for a while to see the validation result after click the conversion button.
 
 Node.JS version
 ---
