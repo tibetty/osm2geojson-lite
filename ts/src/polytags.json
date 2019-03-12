@@ -1,0 +1,84 @@
+{
+  "building": {},
+  "highway": {
+    "whitelist": [
+      "services",
+      "rest_area",
+      "escape",
+      "elevator"
+    ]
+  },
+  "natural": {
+    "blacklist": [
+      "coastline",
+      "cliff",
+      "ridge",
+      "arete",
+      "tree_row"
+    ]
+  },
+  "landuse": {},
+  "waterway": {
+    "whitelist": [
+      "riverbank",
+      "dock",
+      "boatyard",
+      "dam"
+    ]
+  },
+  "amenity": {},
+  "leisure": {},
+  "barrier": {
+    "whitelist": [
+      "city_wall",
+      "ditch",
+      "hedge",
+      "retaining_wall",
+      "wall",
+      "spikes"
+    ]
+  },
+  "railway": {
+    "whitelist": [
+      "station",
+      "turntable",
+      "roundhouse",
+      "platform"
+    ]
+  },
+  "area": {},
+  "boundary": {},
+  "man_made": {
+    "blacklist": [
+      "cutline",
+      "embankment",
+      "pipeline"
+    ]
+  },
+  "power": {
+    "whitelist": [
+      "plant",
+      "substation",
+      "generator",
+      "transformer"
+    ]
+  },
+  "place": {},
+  "shop": {},
+  "aeroway": {
+    "blacklist": [
+      "taxiway"
+    ]
+  },
+  "tourism": {},
+  "historic": {},
+  "public_transport": {},
+  "office": {},
+  "building:part": {},
+  "military": {},
+  "ruins": {},
+  "area:highway": {},
+  "craft": {},
+  "golf": {},
+  "indoor": {}
+}

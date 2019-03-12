@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+	"moduleResolution": "node",
+	"strictNullChecks": true,
+	"outDir": "./release",
+	"target": "es2017",
+    	"lib": ["es2017"]
+    },
+
+    "include": [
+        "src/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "**/*.spec.ts"
+    ]
+}
+
