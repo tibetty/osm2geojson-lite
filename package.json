@@ -52,6 +52,10 @@
   "scripts": {
     "test": "npm run --prefix test test"
   },
+  "optionalDependencies": {
+    "@types/geojson": "^1.0.2"
+  },
+  "types": "lib/index.d.ts",
   "version": "0.8.13",
   "directories": {
     "lib": "lib",

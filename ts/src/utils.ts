@@ -1,6 +1,6 @@
 import {Way} from "./osmobjs";
 
-export function purgeProps(obj: object, blacklist: string[]): object {
+export function purgeProps(obj: {[k: string]: any}, blacklist: string[]): {[k: string]: any} {
 	if (obj) {
 		let rs = Object.assign({}, obj);
 		if (blacklist)
@@ -10,17 +10,17 @@ export function purgeProps(obj: object, blacklist: string[]): object {
 	return {};
 }
 
-export function mergeProps(obj1: object, obj2: object): object {
+export function mergeProps(obj1: {[k: string]: any}, obj2: {[k: string]: any}): {[k: string]: any} {
 	obj1 = obj1? obj1 : {};
 	obj2 = obj2? obj2 : {};
 	return Object.assign(obj1, obj2);
 }
 
-export function addPropToFeature(f: any, k: string, v: string) {
+export function addPropToFeature(f: {[k: string]: any}, k: string, v: any) {
 	if (f.properties && k && v) f.properties[k] = v;
 }
 
-export function addPropToFeatures(fs: any[], k: string, v: string) {
+export function addPropToFeatures(fs: {[k: string]: any}[], k: string, v: any) {
 	for (let f of fs) addPropToFeature(f, k, v);
 }
 
@@ -28,20 +28,20 @@ export const first = a => a[0];
 export const last = a => a[a.length - 1];
 export const coordsToKey = a => a.join(',');
 
-export function addToMap(m: object, k: string, v: any) {
+export function addToMap(m: {[k: string]: any}, k: string, v: any) {
 	let a = m[k];
 	if (a) a.push(v);
 	else m[k] = [v];
 }
 
-export function removeFromMap(m: object, k: string, v: any) {
+export function removeFromMap(m: {[k: string]: any}, k: string, v: any) {
 	let a = m[k];
 	let idx = null;
 	if (a && (idx = a.indexOf(v)) >= 0)
 		a.splice(idx, 1);
 }
 
-export function getFirstFromMap(m: object, k: string): any {
+export function getFirstFromMap(m: {[k: string]: any}, k: string): any {
 	let a = m[k];
 	if (a && a.length > 0) return a[0];
 	return null;

@@ -9,8 +9,8 @@ class OsmObject {
 	type: string;
 	id: string;
 	refElems: RefElements;
-	tags: object;
-	props: object;
+	tags: {[k: string]: string};
+	props: {[k: string]: string};
 	refCount: number;
 	hasTag: boolean;
 
@@ -25,21 +25,21 @@ class OsmObject {
 		if (refElems) refElems.add(this.getCompositeId(), this);
 	}
 
-	addTags(tags) {
+	addTags(tags: {[k: string]: string}) {
 		this.tags = Object.assign(this.tags, tags);
 		this.hasTag = tags? true : false;
 	}
 
-	addTag(k, v) {
+	addTag(k: string, v: string) {
 		this.tags[k] = v;
 		this.hasTag = k? true : false;
 	}
 
-	addProp(k, v) {
+	addProp(k: string, v: any) {
 		this.props[k] = v;
 	}
 
-	addProps(props) {
+	addProps(props: {[k: string]: string}) {
 		this.props = Object.assign(this.props, props);	
 	}
 
@@ -64,7 +64,7 @@ export class Node extends OsmObject {
 		this.latLng = null;
 	}
 
-	setLatLng(latLng) {
+	setLatLng(latLng: any) {
 		this.latLng = latLng;
 	}
 
@@ -107,7 +107,7 @@ export class Way extends OsmObject {
 	}
 
 	addNodeRef(ref: string) {
-		let binder = new LateBinder(this.latLngArray, function(id) {
+		let binder = new LateBinder(this.latLngArray, function(id: string) {
 			let node = this.refElems.get(`node/${id}`);
 			if (node) {
 				node.refCount++;
@@ -128,7 +128,7 @@ export class Way extends OsmObject {
 		}
 	}
 
-	addTags(tags: object) {
+	addTags(tags: {[k: string]: string}) {
 		super.addTags(tags);
 		for (let [k, v] of Object.entries(tags))
 			this.analyzeTag(k, v);
@@ -188,11 +188,11 @@ export class Relation extends OsmObject {
 		this.bounds = <any>null;
 	}
 
-	setBounds(bounds) {
+	setBounds(bounds: any[]) {
 		this.bounds = bounds;
 	}
 
-	addMember(member) {
+	addMember(member: {[k: string]: any}) {
 		switch (member.type) {
 			// super relation, need to do combination
 			case 'relation':
@@ -267,7 +267,7 @@ export class Relation extends OsmObject {
 	}
 
 	toFeatureArray() {
-		const constructStringGeometry = (ws) => {
+		const constructStringGeometry = (ws: WayCollection) => {
 			let strings = ws? ws.toStrings() : [];
 			if (strings.length > 0) {
 				if (strings.length === 1) return {
@@ -282,7 +282,7 @@ export class Relation extends OsmObject {
 			}
 			return null;			}
 
-		const constructPolygonGeometry = (ows, iws) => {
+		const constructPolygonGeometry = (ows: WayCollection, iws: WayCollection) => {
 			let outerRings = ows? ows.toRings('counterclockwise') : [],
 				innerRings = iws? iws.toRings('clockwise') : [];
 							

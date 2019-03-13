@@ -1,11 +1,20 @@
+import {FeatureCollection, GeometryObject} from 'geojson';
 import {Node, Way, Relation} from './osmobjs';
 import {purgeProps, RefElements} from './utils';
 import XmlParser from './xmlparser';
 
-export default (osm, opts) => {
+interface Options {
+	completeFeature?: boolean;
+	allFeatures?: boolean;
+	renderTagged?: boolean;
+	excludeWay?: boolean;
+	suppressWay?: boolean;
+}
+
+export default (osm: string | {[k: string]: any}, opts?: Options): FeatureCollection<GeometryObject> => {
 	let completeFeature = false, renderTagged = false, excludeWay = true;
 
-	const parseOpts = opts => {
+	const parseOpts = (opts: Options) => {
 		if (opts) {
 			completeFeature = opts.completeFeature || opts.allFeatures? true : false;
 			renderTagged = opts.renderTagged? true : false;
@@ -14,10 +23,10 @@ export default (osm, opts) => {
 		}
 	}
 
-	parseOpts(opts);
+	if (opts) parseOpts(opts);
 
-	const detectFormat = osm => {
-		if (osm.elements) return 'json';
+	const detectFormat = (osm: string | {[k: string]: any}): string => {
+		if ((<{[k: string]: any}>osm).elements) return 'json';
 		if (osm.indexOf('<osm') >= 0) return 'xml';
 		if (osm.trim().startsWith('{')) return 'json-raw';
 		return 'invalid';
@@ -25,22 +34,22 @@ export default (osm, opts) => {
 
 	let format = detectFormat(osm);
 
-	let refElements = new RefElements(), featureArray = [];
+	let refElements = new RefElements(), featureArray: any[] = [];
 
-	const analyzeFeaturesFromJson = osm => {
-		for (let elem of osm.elements) {
+	const analyzeFeaturesFromJson = (osm: string | {[k: string]: any}) => {
+		for (let elem of (<{[k: string]: any}>osm).elements) {
 			switch(elem.type) {
 				case 'node':
 					let node = new Node(elem.id, refElements);
 					if (elem.tags) node.addTags(elem.tags);
-					node.addProps(purgeProps(elem, ['id', 'type', 'tags', 'lat', 'lon']));
+					node.addProps(purgeProps(<{[k: string]: string}>elem, ['id', 'type', 'tags', 'lat', 'lon']));
 					node.setLatLng(elem);
 					break;
 
 				case 'way':
 					let way = new Way(elem.id, refElements);
 					if (elem.tags) way.addTags(elem.tags);
-					way.addProps(purgeProps(elem, ['id', 'type', 'tags', 'nodes', 'geometry']));
+					way.addProps(purgeProps(<{[k: string]: string}>elem, ['id', 'type', 'tags', 'nodes', 'geometry']));
 					if (elem.nodes)
 						for (let n of elem.nodes)
 							way.addNodeRef(n);
@@ -53,7 +62,7 @@ export default (osm, opts) => {
 					if (elem.bounds)
 						relation.setBounds([parseFloat(elem.bounds.minlon), parseFloat(elem.bounds.minlat), parseFloat(elem.bounds.maxlon), parseFloat(elem.bounds.maxlat)]);
 					if (elem.tags) relation.addTags(elem.tags);
-					relation.addProps(purgeProps(elem, ['id', 'type', 'tags', 'bounds', 'members']));
+					relation.addProps(purgeProps(<{[k: string]: string}>elem, ['id', 'type', 'tags', 'bounds', 'members']));
 					if (elem.members)
 						for (let member of elem.members)
 							relation.addMember(member);
@@ -65,10 +74,10 @@ export default (osm, opts) => {
 		}
 	}
 
-	const analyzeFeaturesFromXml = osm => {
+	const analyzeFeaturesFromXml = (osm: string | {[k: string]: any}) => {
 		const xmlParser = new XmlParser({progressive: true});
 
-		xmlParser.on('</osm.node>', node => {
+		xmlParser.on('</osm.node>', (node: {[k: string]: any}) => {
 			let nd = new Node(node.id, refElements);
 			for (let [k, v] of Object.entries(node))
 				if (!k.startsWith('$') && ['id', 'lon', 'lat'].indexOf(k) < 0)
@@ -80,7 +89,7 @@ export default (osm, opts) => {
 						nd.addTag(ind.k, ind.v);
 		});
 
-		xmlParser.on('</osm.way>', node => {
+		xmlParser.on('</osm.way>', (node: {[k: string]: any}) => {
 			let way = new Way(node.id, refElements);
 			for (let [k, v] of Object.entries(node))
 				if (!k.startsWith('$') && ['id'].indexOf(k) < 0)
@@ -97,11 +106,11 @@ export default (osm, opts) => {
 			}
 		});
 
-		xmlParser.on('<osm.relation>', node => {
+		xmlParser.on('<osm.relation>', (node: {[k: string]: any}) => {
 			new Relation(node.id, refElements);
 		});
 
-		xmlParser.on('</osm.relation.member>', (node, parent) => {
+		xmlParser.on('</osm.relation.member>', (node: {[k: string]: any}, parent: {[k: string]: any}) => {
 			let relation = refElements.get(`relation/${parent.id}`);
 			let member: {[k: string]: any} = {
 				type: node.type,
@@ -133,20 +142,20 @@ export default (osm, opts) => {
 			relation.addMember(member);
 		});
 
-		xmlParser.on('</osm.relation.bounds>', (node, parent) => {
+		xmlParser.on('</osm.relation.bounds>', (node: {[k: string]: any}, parent: {[k: string]: any}) => {
 			refElements.get(`relation/${parent.id}`).setBounds([parseFloat(node.minlon), parseFloat(node.minlat), parseFloat(node.maxlon), parseFloat(node.maxlat)]);
 		});
 
-		xmlParser.on('</osm.relation.tag>', (node, parent) => {
+		xmlParser.on('</osm.relation.tag>', (node: {[k: string]: any}, parent: {[k: string]: any}) => {
 			refElements.get(`relation/${parent.id}`).addTag(node.k, node.v);
 		});
 		
-		xmlParser.parse(osm);
+		xmlParser.parse(<string>osm);
 	}
 
 	if (format === 'json-raw') {
-		osm = JSON.parse(osm);
-		if (osm.elements) format = 'json';
+		osm = <{[k: string]: any}>JSON.parse(<string>osm);
+		if ((<{[k: string]: any}>osm.elements)) format = 'json';
 		else format = 'invalid';
 	}
 
