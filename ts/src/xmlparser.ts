@@ -2,11 +2,11 @@ function conditioned(evt: string): boolean {
 	return evt.match(/^(.+?)\[(.+?)\]>$/g) != null;
 }
 
-function parseEvent(evt: string): {[k: string]: any} {
+function parseEvent(evt: string): {evt: string, exp?: string} {
 	let match = /^(.+?)\[(.+?)\]>$/g.exec(evt);
 	if (match)
 		return {evt: match[1] + '>', exp: match[2]};
-	return {evt: evt};
+	return {evt};
 }
 
 function genConditionFunc(cond: string): Function {
@@ -95,8 +95,8 @@ export default class {
 	addListener(evt: string, func: Function) {
 		if (conditioned(evt)) {
 			// func.prototype = evt;
-			let ev = parseEvent(evt);	
-			(<{[k: string]: any}>func).condition = genConditionFunc(ev.exp);
+			let ev = parseEvent(evt);
+			if (ev.exp)	(<{[k: string]: any}>func).condition = genConditionFunc(ev.exp);
 			evt = ev.evt;
 		}
 		this.$addListener(evt, func);

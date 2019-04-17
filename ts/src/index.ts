@@ -82,7 +82,7 @@ export default (osm: string | {[k: string]: any}, opts?: Options): FeatureCollec
 			for (let [k, v] of Object.entries(node))
 				if (!k.startsWith('$') && ['id', 'lon', 'lat'].indexOf(k) < 0)
 					nd.addProp(k, v);
-			nd.setLatLng(node);
+			nd.setLatLng(<{lat: string, lon: string}>node);
 			if (node.$innerNodes)
 				for (let ind of node.$innerNodes)
 					if(ind.$tag === 'tag')

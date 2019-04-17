@@ -75,7 +75,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
         #osmdata, #geojson {
             width: 100%;
             background: white;
-            border: 1px solid #ccc;
+            border: 1px solid #cccccc;
             height: 320px;
             overflow: auto;
             margin-bottom: 20px;
@@ -113,6 +113,10 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             line-height: 1.5em;
             padding: 7px 10px;
             outline: none;
+        }
+
+        textarea:focus {
+            box-shadow: 0 0 2px 1px #0c74a97f;
         }
 
         #top {
@@ -219,11 +223,11 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
         <div id="example">
             <div id="left">
                 <h3>OSM Data</h3>
-                <textarea id="osmdata" contenteditable="true"></textarea>
+                <textarea class="ta" id="osmdata" contenteditable="true"></textarea>
             </div>
             <div id="right">
                 <h3>GeoJSON</h3>
-                <textarea id="geojson" contenteditable="true"></textarea>
+                <textarea class="ta" id="geojson" contenteditable="true"></textarea>
             </div>
             <a class="button" href="" id="toGeo">Convert to GeoJSON &rarr;</a>
         </div>

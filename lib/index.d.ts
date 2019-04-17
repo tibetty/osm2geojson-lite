@@ -10,6 +10,7 @@ declare namespace osm2geojson {
         completeFeature?: boolean;
         allFeatures?: boolean;
         renderTagged?: boolean;
+        excludeWay?: boolean;
         suppressWay?: boolean;
     }
 

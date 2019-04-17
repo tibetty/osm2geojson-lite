@@ -24,17 +24,17 @@ export function addPropToFeatures(fs: {[k: string]: any}[], k: string, v: any) {
 	for (let f of fs) addPropToFeature(f, k, v);
 }
 
-export const first = a => a[0];
-export const last = a => a[a.length - 1];
-export const coordsToKey = a => a.join(',');
+export const first = (a: any[]): any => a[0];
+export const last = (a: any[]): any => a[a.length - 1];
+export const coordsToKey = (a: number[]): any => a.join(',');
 
-export function addToMap(m: {[k: string]: any}, k: string, v: any) {
+export function addToMap(m: {[k: string]: any}, k: string, v: any): void {
 	let a = m[k];
 	if (a) a.push(v);
 	else m[k] = [v];
 }
 
-export function removeFromMap(m: {[k: string]: any}, k: string, v: any) {
+export function removeFromMap(m: {[k: string]: any}, k: string, v: any): void {
 	let a = m[k];
 	let idx = null;
 	if (a && (idx = a.indexOf(v)) >= 0)
@@ -48,12 +48,12 @@ export function getFirstFromMap(m: {[k: string]: any}, k: string): any {
 }
 
 // need 3+ different points to form a ring, here using > 3 is 'coz a the first and the last points are actually the same
-export const isRing = a => a.length > 3 && coordsToKey(first(a)) === coordsToKey(last(a));
+export const isRing = (a: number[][]): boolean => a.length > 3 && coordsToKey(first(a)) === coordsToKey(last(a));
 
-export const ringDirection = (a, xIdx?, yIdx?) => {
+export const ringDirection = (a: number[][], xIdx?: number, yIdx?: number): string => {
 	xIdx = xIdx || 0, yIdx = yIdx || 1;
 	// get the index of the point which has the maximum x value
-	let m = a.reduce((maxxIdx, v, idx) => a[maxxIdx][xIdx] > v[xIdx] ? maxxIdx : idx, 0);
+	let m = a.reduce((maxxIdx: number, v: number[], idx: number): number => a[maxxIdx][xIdx || 0] > v[xIdx || 0] ? maxxIdx : idx, 0);
 	// 'coz the first point is virtually the same one as the last point, 
 	// we need to skip a.length - 1 for left when m = 0,
 	// and skip 0 for right when m = a.length - 1;
@@ -64,7 +64,7 @@ export const ringDirection = (a, xIdx?, yIdx?) => {
 	return det < 0 ? 'clockwise' : 'counterclockwise';
 }
 
-export const ptInsidePolygon = (pt, polygon, xIdx?, yIdx?) => {
+export const ptInsidePolygon = (pt: number[], polygon: number[][], xIdx?: number, yIdx?: number): boolean => {
 	xIdx = xIdx || 0, yIdx = yIdx || 1;
 	let result = false;
 	for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -76,15 +76,15 @@ export const ptInsidePolygon = (pt, polygon, xIdx?, yIdx?) => {
 	return result;
 }
 
-export const strToFloat = el => el instanceof Array? el.map(strToFloat) : parseFloat(el);
+export const strToFloat = (el: string[] | string): any => el instanceof Array? el.map(strToFloat) : parseFloat(el);
 
 export class LateBinder {
-	container: Object;
-	valueFunc: Function;
-	ctx: Object;
-	args: Object[];
+	container: any[] | {[k: string]: any};
+	valueFunc: (...args) => any;
+	ctx: any;
+	args: any[];
 
-	constructor(container: Object, valueFunc: Function, ctx: Object, args: Object[]) {
+	constructor(container: any[] | {[k: string]: any}, valueFunc: (...args) => any, ctx: any, args: any[]) {
 		this.container = container;
 		this.valueFunc = valueFunc;
 		this.ctx = ctx;
@@ -131,8 +131,8 @@ export class RefElements extends Map {
 }
 
 export class WayCollection extends Array {
-	firstMap: Object;
-	lastMap: Object;
+	firstMap: {[k: string]: any};
+	lastMap: {[k: string]: any};
 
 	constructor() {
 		super();
@@ -149,7 +149,7 @@ export class WayCollection extends Array {
 		}
 	}
 
-	toStrings(): any[] {
+	toStrings(): number[][][] {
 		let strings: any[] = [], way = null;
 		while (way = this.shift()) {
 			removeFromMap(this.firstMap, coordsToKey(first(way)), way);
@@ -184,13 +184,13 @@ export class WayCollection extends Array {
 		return strings;
 	}
 
-	toRings(direction: String): any[] {
+	toRings(direction: string): number[][][] {
 		let strings = this.toStrings();
-		let rings: any[] = [], string: any[];
-		while (string = strings.shift()) {
-			if (isRing(string)) {
-				if (ringDirection(string) !== direction) string.reverse();
-				rings.push(string);
+		let rings: number[][][] = [], str: number[][] | undefined;
+		while (str = strings.shift()) {
+			if (isRing(str)) {
+				if (ringDirection(str) !== direction) str.reverse();
+				rings.push(str);
 			}	
 		}
 		return rings;

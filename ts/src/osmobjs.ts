@@ -1,8 +1,11 @@
+import {Point, MultiPoint,
+	LineString, MultiLineString,
+	Polygon, MultiPolygon, 
+	GeometryObject, Feature} from 'geojson';
 import {first, last, coordsToKey,
 	addToMap, removeFromMap, getFirstFromMap, 
 	isRing, ringDirection, ptInsidePolygon, strToFloat, 
 	LateBinder, WayCollection, RefElements} from './utils';
-
 import polygonTags from './polytags.json';
 
 class OsmObject {
@@ -47,28 +50,28 @@ class OsmObject {
 		return `${this.type}/${this.id}`;
 	}
 
-	getProps(): Object {
+	getProps(): {[k: string]: string} {
 		return Object.assign(this.props, this.tags);
 	}		
 
-	toFeatureArray(): any[] {
+	toFeatureArray(): Feature<any, any>[] {
 		return [];
 	}
 }
 
 export class Node extends OsmObject {
-	latLng: any;
+	latLng: {lon: string, lat: string} | null;
 
 	constructor(id: string, refElems: RefElements) {
 		super('node', id, refElems);
 		this.latLng = null;
 	}
 
-	setLatLng(latLng: any) {
+	setLatLng(latLng: {lat: string, lon: string}) {
 		this.latLng = latLng;
 	}
 
-	toFeatureArray(): any[] {
+	toFeatureArray(): Feature<any, any>[] {
 		if (this.latLng)
 			return [{
 				type: 'Feature',
@@ -83,13 +86,13 @@ export class Node extends OsmObject {
 		return [];
 	}
 
-	getLatLng(): any {
+	getLatLng(): {lat: string, lon: string} | null {
 		return this.latLng;
 	}
 }
 
 export class Way extends OsmObject {
-	latLngArray: any[];
+	latLngArray: ({lon: string, lat: string} | LateBinder)[] ;
 	isPolygon: boolean;
 
 	constructor(id: string, refElems: RefElements) {
@@ -98,11 +101,11 @@ export class Way extends OsmObject {
 		this.isPolygon = false;
 	}
 
-	addLatLng(latLng: any) {
+	addLatLng(latLng: {lat: string, lon: string}) {
 		this.latLngArray.push(latLng);
 	}
 
-	setLatLngArray(latLngArray: any[]) {
+	setLatLngArray(latLngArray: {lat: string, lon: string, [k: string]: any}[]) {
 		this.latLngArray = latLngArray;
 	}
 
@@ -120,7 +123,7 @@ export class Way extends OsmObject {
 	}
 
 	analyzeTag(k: string, v: string) {
-		let o = (<any>polygonTags)[k];
+		let o = (<{k: string, v: any}>polygonTags)[k];
 		if (o) {
 			this.isPolygon = true;
 			if (o.whitelist) this.isPolygon = o.whitelist.indexOf(v) >= 0? true : false;
@@ -139,15 +142,15 @@ export class Way extends OsmObject {
 		this.analyzeTag(k, v);
 	}
 
-	toCoordsArray(): any[] {
-		return this.latLngArray.map(latLng => [latLng.lon, latLng.lat]);
+	toCoordsArray(): string[][] {
+		return (<{lon: string, lat: string}[]>this.latLngArray).map(latLng => [latLng.lon, latLng.lat]);
 	}
 
-	toFeatureArray(): any[] {
-		let coordsArray = this.toCoordsArray();
+	toFeatureArray(): Feature<any, any>[] {
+		let coordsArray: any[] = this.toCoordsArray();
 		if (coordsArray.length > 1) {
 			coordsArray = strToFloat(coordsArray);
-			let feature = {
+			let feature: Feature<any, any> = {
 				type: 'Feature',
 				id: this.getCompositeId(),
 				properties: this.getProps(),
@@ -266,8 +269,8 @@ export class Relation extends OsmObject {
 		}
 	}
 
-	toFeatureArray() {
-		const constructStringGeometry = (ws: WayCollection) => {
+	toFeatureArray(): Feature<any, any>[] {
+		const constructStringGeometry = (ws: WayCollection) : LineString | MultiLineString | null => {
 			let strings = ws? ws.toStrings() : [];
 			if (strings.length > 0) {
 				if (strings.length === 1) return {
@@ -280,16 +283,17 @@ export class Relation extends OsmObject {
 					coordinates: strings
 				}
 			}
-			return null;			}
+			return null;
+		}
 
-		const constructPolygonGeometry = (ows: WayCollection, iws: WayCollection) => {
+		const constructPolygonGeometry = (ows: WayCollection, iws: WayCollection) : Polygon | MultiPolygon | null => {
 			let outerRings = ows? ows.toRings('counterclockwise') : [],
 				innerRings = iws? iws.toRings('clockwise') : [];
 							
 			if (outerRings.length > 0) {
 				let compositPolyons: any[] = [];
 
-				let ring = null;
+				let ring: number[][] | undefined = undefined;
 				for (ring of outerRings) 
 					compositPolyons.push([ring]);
 				
@@ -318,7 +322,7 @@ export class Relation extends OsmObject {
 			return null;
 		}
 
-		let polygonFeatures: any[] = [], stringFeatures: any[] = [], pointFeatures: any[] = [];
+		let polygonFeatures: (Feature<Polygon | MultiPolygon, any>)[] = [], stringFeatures: (Feature<LineString | MultiLineString, any>)[] = [], pointFeatures: (Feature<Point | MultiPoint, any>)[] = [];
 		const waysFieldNames = ['outer', 'inner', ''];
 		// need to do combination when there're nested relations
 		for (let relation of this.relations) {
@@ -343,13 +347,14 @@ export class Relation extends OsmObject {
 			}
 		}
 
-		let geometry: any = null;
+		let geometry: GeometryObject | null = null;
 		
-		let feature: {[k: string]: any} = {
+		let feature: Feature<any, any> = {
 			type: 'Feature',
 			id: this.getCompositeId(),
 			bbox: this.bounds,
-			properties: this.getProps()
+			properties: this.getProps(),
+			geometry: null
 		};
 
 		if (!this.bounds)
@@ -359,20 +364,20 @@ export class Relation extends OsmObject {
 			geometry = constructPolygonGeometry(this.outer, this.inner);
 			if (geometry){
 				feature.geometry = geometry;
-				polygonFeatures.push(feature);
+				polygonFeatures.push(<Feature<Polygon | MultiPolygon, any>>feature);
 			}
 		}
 		else if (this['']) {
 			geometry = constructStringGeometry(this['']);
 			if (geometry) {
 				feature.geometry = geometry;
-				stringFeatures.push(feature);
+				stringFeatures.push(<Feature<LineString | MultiLineString, any>>feature);
 			}
 		}
 
 		for (let node of this.nodes)
 			pointFeatures = pointFeatures.concat(node.toFeatureArray());
 
-		return polygonFeatures.concat(stringFeatures).concat(pointFeatures);
+		return [...polygonFeatures, ...stringFeatures, ...pointFeatures];
 	}
 }
