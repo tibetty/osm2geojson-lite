@@ -56,7 +56,7 @@
     "@types/geojson": "^1.0.6"
   },
   "types": "lib/index.d.ts",
-  "version": "0.8.14",
+  "version": "0.8.15",
   "directories": {
     "lib": "lib",
     "test": "test"
