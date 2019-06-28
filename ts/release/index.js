@@ -4,125 +4,156 @@ const osmobjs_1 = require("./osmobjs");
 const utils_1 = require("./utils");
 const xmlparser_1 = require("./xmlparser");
 exports.default = (osm, opts) => {
-    let completeFeature = false, renderTagged = false, excludeWay = true;
-    const parseOpts = (opts) => {
-        if (opts) {
-            completeFeature = opts.completeFeature || opts.allFeatures ? true : false;
-            renderTagged = opts.renderTagged ? true : false;
-            let wayOpt = opts.suppressWay || opts.excludeWay;
-            if (wayOpt !== undefined && !wayOpt)
+    let completeFeature = false;
+    let renderTagged = false;
+    let excludeWay = true;
+    const parseOpts = (os) => {
+        if (os) {
+            completeFeature = os.completeFeature || os.allFeatures ? true : false;
+            renderTagged = os.renderTagged ? true : false;
+            const wayOpt = os.suppressWay || os.excludeWay;
+            if (wayOpt !== undefined && !wayOpt) {
                 excludeWay = false;
+            }
         }
     };
-    if (opts)
+    if (opts) {
         parseOpts(opts);
-    const detectFormat = (osm) => {
-        if (osm.elements)
+    }
+    const detectFormat = (o) => {
+        if (o.elements) {
             return 'json';
-        if (osm.indexOf('<osm') >= 0)
+        }
+        if (o.indexOf('<osm') >= 0) {
             return 'xml';
-        if (osm.trim().startsWith('{'))
+        }
+        if (o.trim().startsWith('{')) {
             return 'json-raw';
+        }
         return 'invalid';
     };
     let format = detectFormat(osm);
-    let refElements = new utils_1.RefElements(), featureArray = [];
-    const analyzeFeaturesFromJson = (osm) => {
-        for (let elem of osm.elements) {
+    const refElements = new utils_1.RefElements();
+    let featureArray = [];
+    const analyzeFeaturesFromJson = (o) => {
+        for (const elem of osm.elements) {
             switch (elem.type) {
                 case 'node':
-                    let node = new osmobjs_1.Node(elem.id, refElements);
-                    if (elem.tags)
+                    const node = new osmobjs_1.Node(elem.id, refElements);
+                    if (elem.tags) {
                         node.addTags(elem.tags);
+                    }
                     node.addProps(utils_1.purgeProps(elem, ['id', 'type', 'tags', 'lat', 'lon']));
                     node.setLatLng(elem);
                     break;
                 case 'way':
-                    let way = new osmobjs_1.Way(elem.id, refElements);
-                    if (elem.tags)
+                    const way = new osmobjs_1.Way(elem.id, refElements);
+                    if (elem.tags) {
                         way.addTags(elem.tags);
+                    }
                     way.addProps(utils_1.purgeProps(elem, ['id', 'type', 'tags', 'nodes', 'geometry']));
-                    if (elem.nodes)
-                        for (let n of elem.nodes)
+                    if (elem.nodes) {
+                        for (const n of elem.nodes) {
                             way.addNodeRef(n);
-                    else if (elem.geometry)
+                        }
+                    }
+                    else if (elem.geometry) {
                         way.setLatLngArray(elem.geometry);
+                    }
                     break;
                 case 'relation':
-                    let relation = new osmobjs_1.Relation(elem.id, refElements);
-                    if (elem.bounds)
+                    const relation = new osmobjs_1.Relation(elem.id, refElements);
+                    if (elem.bounds) {
                         relation.setBounds([parseFloat(elem.bounds.minlon), parseFloat(elem.bounds.minlat), parseFloat(elem.bounds.maxlon), parseFloat(elem.bounds.maxlat)]);
-                    if (elem.tags)
+                    }
+                    if (elem.tags) {
                         relation.addTags(elem.tags);
+                    }
                     relation.addProps(utils_1.purgeProps(elem, ['id', 'type', 'tags', 'bounds', 'members']));
-                    if (elem.members)
-                        for (let member of elem.members)
+                    if (elem.members) {
+                        for (const member of elem.members) {
                             relation.addMember(member);
-                    break;
+                        }
+                    }
                 default:
                     break;
             }
         }
     };
-    const analyzeFeaturesFromXml = (osm) => {
+    const analyzeFeaturesFromXml = (o) => {
         const xmlParser = new xmlparser_1.default({ progressive: true });
         xmlParser.on('</osm.node>', (node) => {
-            let nd = new osmobjs_1.Node(node.id, refElements);
-            for (let [k, v] of Object.entries(node))
-                if (!k.startsWith('$') && ['id', 'lon', 'lat'].indexOf(k) < 0)
+            const nd = new osmobjs_1.Node(node.id, refElements);
+            for (const [k, v] of Object.entries(node)) {
+                if (!k.startsWith('$') && ['id', 'lon', 'lat'].indexOf(k) < 0) {
                     nd.addProp(k, v);
+                }
+            }
             nd.setLatLng(node);
-            if (node.$innerNodes)
-                for (let ind of node.$innerNodes)
-                    if (ind.$tag === 'tag')
-                        nd.addTag(ind.k, ind.v);
-        });
-        xmlParser.on('</osm.way>', (node) => {
-            let way = new osmobjs_1.Way(node.id, refElements);
-            for (let [k, v] of Object.entries(node))
-                if (!k.startsWith('$') && ['id'].indexOf(k) < 0)
-                    way.addProp(k, v);
             if (node.$innerNodes) {
-                for (let ind of node.$innerNodes)
-                    if (ind.$tag === 'nd') {
-                        if (ind.lon && ind.lat)
-                            way.addLatLng(ind);
-                        else if (ind.ref)
-                            way.addNodeRef(ind.ref);
+                for (const ind of node.$innerNodes) {
+                    if (ind.$tag === 'tag') {
+                        nd.addTag(ind.k, ind.v);
                     }
-                    else if (ind.$tag === 'tag')
-                        way.addTag(ind.k, ind.v);
+                }
             }
         });
-        xmlParser.on('<osm.relation>', (node) => {
-            new osmobjs_1.Relation(node.id, refElements);
+        xmlParser.on('</osm.way>', (node) => {
+            const way = new osmobjs_1.Way(node.id, refElements);
+            for (const [k, v] of Object.entries(node)) {
+                if (!k.startsWith('$') && ['id'].indexOf(k) < 0) {
+                    way.addProp(k, v);
+                }
+            }
+            if (node.$innerNodes) {
+                for (const ind of node.$innerNodes) {
+                    if (ind.$tag === 'nd') {
+                        if (ind.lon && ind.lat) {
+                            way.addLatLng(ind);
+                        }
+                        else if (ind.ref) {
+                            way.addNodeRef(ind.ref);
+                        }
+                    }
+                    else if (ind.$tag === 'tag') {
+                        way.addTag(ind.k, ind.v);
+                    }
+                }
+            }
         });
+        xmlParser.on('<osm.relation>', (node) => new osmobjs_1.Relation(node.id, refElements));
         xmlParser.on('</osm.relation.member>', (node, parent) => {
-            let relation = refElements.get(`relation/${parent.id}`);
-            let member = {
+            const relation = refElements.get(`relation/${parent.id}`);
+            const member = {
                 type: node.type,
                 role: node.role ? node.role : '',
-                ref: node.ref
+                ref: node.ref,
             };
             if (node.lat && node.lon) {
                 member.lat = node.lat, member.lon = node.lon, member.tags = {};
-                for (let [k, v] of Object.entries(node))
-                    if (!k.startsWith('$') && ['type', 'lat', 'lon'].indexOf(k) < 0)
+                for (const [k, v] of Object.entries(node)) {
+                    if (!k.startsWith('$') && ['type', 'lat', 'lon'].indexOf(k) < 0) {
                         member[k] = v;
+                    }
+                }
             }
             if (node.$innerNodes) {
-                let geometry = [];
-                let nodes = [];
-                for (let ind of node.$innerNodes) {
-                    if (ind.lat && ind.lon)
+                const geometry = [];
+                const nodes = [];
+                for (const ind of node.$innerNodes) {
+                    if (ind.lat && ind.lon) {
                         geometry.push(ind);
-                    else if (ind.ref)
+                    }
+                    else if (ind.ref) {
                         nodes.push(ind.ref);
+                    }
                 }
-                if (geometry.length > 0)
+                if (geometry.length > 0) {
                     member.geometry = geometry;
-                else if (nodes.length > 0)
+                }
+                else if (nodes.length > 0) {
                     member.nodes = nodes;
+                }
             }
             relation.addMember(member);
         });
@@ -132,26 +163,31 @@ exports.default = (osm, opts) => {
         xmlParser.on('</osm.relation.tag>', (node, parent) => {
             refElements.get(`relation/${parent.id}`).addTag(node.k, node.v);
         });
-        xmlParser.parse(osm);
+        xmlParser.parse(o);
     };
     if (format === 'json-raw') {
         osm = JSON.parse(osm);
-        if (osm.elements)
+        if (osm.elements) {
             format = 'json';
-        else
+        }
+        else {
             format = 'invalid';
+        }
     }
-    if (format === 'json')
+    if (format === 'json') {
         analyzeFeaturesFromJson(osm);
-    else if (format === 'xml')
+    }
+    else if (format === 'xml') {
         analyzeFeaturesFromXml(osm);
+    }
     refElements.bindAll();
-    for (let v of refElements.values()) {
+    for (const v of refElements.values()) {
         if (v.refCount <= 0 || (v.hasTag && renderTagged && !(v instanceof osmobjs_1.Way && excludeWay))) {
-            let features = v.toFeatureArray();
+            const features = v.toFeatureArray();
             // return the first geometry of the first relation element
-            if (v instanceof osmobjs_1.Relation && !completeFeature && features.length > 0)
+            if (v instanceof osmobjs_1.Relation && !completeFeature && features.length > 0) {
                 return features[0].geometry;
+            }
             featureArray = featureArray.concat(features);
         }
     }

@@ -1,383 +1,413 @@
-import {Point, MultiPoint,
-	LineString, MultiLineString,
-	Polygon, MultiPolygon, 
-	GeometryObject, Feature} from 'geojson';
-import {first, last, coordsToKey,
-	addToMap, removeFromMap, getFirstFromMap, 
-	isRing, ringDirection, ptInsidePolygon, strToFloat, 
-	LateBinder, WayCollection, RefElements} from './utils';
+import {Feature, GeometryObject, LineString,
+    MultiLineString, MultiPoint, MultiPolygon,
+    Point, Polygon} from 'geojson';
+
+import {first, isRing, last, ptInsidePolygon, ringDirection, strToFloat} from './utils';
+import {LateBinder, RefElements, WayCollection} from './utils';
+
 import polygonTags from './polytags.json';
 
 class OsmObject {
-	type: string;
-	id: string;
-	refElems: RefElements;
-	tags: {[k: string]: string};
-	props: {[k: string]: string};
-	refCount: number;
-	hasTag: boolean;
+    public refCount: number;
 
-	constructor(type: string, id: string, refElems: RefElements) {
-		this.type = type;
-		this.id = id;
-		this.refElems = refElems;
-		this.tags = {};
-		this.props = {id: this.getCompositeId()};
-		this.refCount = 0;
-		this.hasTag = false;
-		if (refElems) refElems.add(this.getCompositeId(), this);
-	}
+    protected refElems: RefElements;
 
-	addTags(tags: {[k: string]: string}) {
-		this.tags = Object.assign(this.tags, tags);
-		this.hasTag = tags? true : false;
-	}
+    private type: string;
+    private id: string;
+    private tags: {[k: string]: string};
+    private props: {[k: string]: string};
+    private hasTag: boolean;
 
-	addTag(k: string, v: string) {
-		this.tags[k] = v;
-		this.hasTag = k? true : false;
-	}
+    constructor(type: string, id: string, refElems: RefElements) {
+        this.type = type;
+        this.id = id;
+        this.refElems = refElems;
+        this.tags = {};
+        this.props = {id: this.getCompositeId()};
+        this.refCount = 0;
+        this.hasTag = false;
+        if (refElems) {
+            refElems.add(this.getCompositeId(), this);
+        }
+    }
 
-	addProp(k: string, v: any) {
-		this.props[k] = v;
-	}
+    public addTags(tags: {[k: string]: string}) {
+        this.tags = Object.assign(this.tags, tags);
+        this.hasTag = tags ? true : false;
+    }
 
-	addProps(props: {[k: string]: string}) {
-		this.props = Object.assign(this.props, props);	
-	}
+    public addTag(k: string, v: string) {
+        this.tags[k] = v;
+        this.hasTag = k ? true : false;
+    }
 
-	getCompositeId(): string {
-		return `${this.type}/${this.id}`;
-	}
+    public addProp(k: string, v: any) {
+        this.props[k] = v;
+    }
 
-	getProps(): {[k: string]: string} {
-		return Object.assign(this.props, this.tags);
-	}		
+    public addProps(props: {[k: string]: string}) {
+        this.props = Object.assign(this.props, props);
+    }
 
-	toFeatureArray(): Feature<any, any>[] {
-		return [];
-	}
+    public getCompositeId(): string {
+        return `${this.type}/${this.id}`;
+    }
+
+    public getProps(): {[k: string]: string} {
+        return Object.assign(this.props, this.tags);
+    }
+
+    public toFeatureArray(): Array<Feature<any, any>> {
+        return [];
+    }
 }
 
 export class Node extends OsmObject {
-	latLng: {lon: string, lat: string} | null;
+    private latLng: {lon: string, lat: string} | null;
 
-	constructor(id: string, refElems: RefElements) {
-		super('node', id, refElems);
-		this.latLng = null;
-	}
+    constructor(id: string, refElems: RefElements) {
+        super('node', id, refElems);
+        this.latLng = null;
+    }
 
-	setLatLng(latLng: {lat: string, lon: string}) {
-		this.latLng = latLng;
-	}
+    public setLatLng(latLng: {lat: string, lon: string}) {
+        this.latLng = latLng;
+    }
 
-	toFeatureArray(): Feature<any, any>[] {
-		if (this.latLng)
-			return [{
-				type: 'Feature',
-				id: this.getCompositeId(),
-				properties: this.getProps(),
-				geometry: {
-					type: 'Point',
-					coordinates: strToFloat([this.latLng.lon, this.latLng.lat])
-				}
-			}];
+    public toFeatureArray(): Array<Feature<any, any>> {
+        if (this.latLng) {
+            return [{
+                type: 'Feature',
+                id: this.getCompositeId(),
+                properties: this.getProps(),
+                geometry: {
+                    type: 'Point',
+                    coordinates: strToFloat([this.latLng.lon, this.latLng.lat]),
+                },
+            }];
+        }
+        return [];
+    }
 
-		return [];
-	}
-
-	getLatLng(): {lat: string, lon: string} | null {
-		return this.latLng;
-	}
+    public getLatLng(): {lat: string, lon: string} | null {
+        return this.latLng;
+    }
 }
 
 export class Way extends OsmObject {
-	latLngArray: ({lon: string, lat: string} | LateBinder)[] ;
-	isPolygon: boolean;
+    private latLngArray: Array<{lon: string, lat: string} | LateBinder>;
+    private isPolygon: boolean;
 
-	constructor(id: string, refElems: RefElements) {
-		super('way', id, refElems);
-		this.latLngArray = [];
-		this.isPolygon = false;
-	}
+    constructor(id: string, refElems: RefElements) {
+        super('way', id, refElems);
+        this.latLngArray = [];
+        this.isPolygon = false;
+    }
 
-	addLatLng(latLng: {lat: string, lon: string}) {
-		this.latLngArray.push(latLng);
-	}
+    public addLatLng(latLng: {lat: string, lon: string}) {
+        this.latLngArray.push(latLng);
+    }
 
-	setLatLngArray(latLngArray: {lat: string, lon: string, [k: string]: any}[]) {
-		this.latLngArray = latLngArray;
-	}
+    public setLatLngArray(latLngArray: Array<{lat: string, lon: string, [k: string]: any}>) {
+        this.latLngArray = latLngArray;
+    }
 
-	addNodeRef(ref: string) {
-		let binder = new LateBinder(this.latLngArray, function(id: string) {
-			let node = this.refElems.get(`node/${id}`);
-			if (node) {
-				node.refCount++;
-				return node.getLatLng();
-			}
-		}, this, [ref]);
+    public addNodeRef(ref: string) {
+        const binder = new LateBinder(this.latLngArray, function(id: string) {
+            const node = this.refElems.get(`node/${id}`);
+            if (node) {
+                node.refCount++;
+                return node.getLatLng();
+            }
+        }, this, [ref]);
 
-		this.latLngArray.push(binder);
-		this.refElems.addBinder(binder);
-	}
+        this.latLngArray.push(binder);
+        this.refElems.addBinder(binder);
+    }
 
-	analyzeTag(k: string, v: string) {
-		let o = (<{k: string, v: any}>polygonTags)[k];
-		if (o) {
-			this.isPolygon = true;
-			if (o.whitelist) this.isPolygon = o.whitelist.indexOf(v) >= 0? true : false;
-			else if(o.blacklist) this.isPolygon = o.blacklist.indexOf(v) >= 0? false : true;
-		}
-	}
+    public addTags(tags: {[k: string]: string}) {
+        super.addTags(tags);
+        for (const [k, v] of Object.entries(tags)) {
+            this.analyzeTag(k, v);
+        }
+    }
 
-	addTags(tags: {[k: string]: string}) {
-		super.addTags(tags);
-		for (let [k, v] of Object.entries(tags))
-			this.analyzeTag(k, v);
-	}
+    public addTag(k: string, v: string) {
+        super.addTag(k, v);
+        this.analyzeTag(k, v);
+    }
 
-	addTag(k: string, v: string) {
-		super.addTag(k, v);
-		this.analyzeTag(k, v);
-	}
+    public toCoordsArray(): string[][] {
+        return (this.latLngArray as Array<{lon: string, lat: string}>).map((latLng) => [latLng.lon, latLng.lat]);
+    }
 
-	toCoordsArray(): string[][] {
-		return (<{lon: string, lat: string}[]>this.latLngArray).map(latLng => [latLng.lon, latLng.lat]);
-	}
+    public toFeatureArray(): Array<Feature<any, any>> {
+        let coordsArray: any[] = this.toCoordsArray();
+        if (coordsArray.length > 1) {
+            coordsArray = strToFloat(coordsArray);
+            const feature: Feature<any, any> = {
+                type: 'Feature',
+                id: this.getCompositeId(),
+                properties: this.getProps(),
+                geometry: {
+                    type: 'LineString',
+                    coordinates: coordsArray,
+                },
+            };
 
-	toFeatureArray(): Feature<any, any>[] {
-		let coordsArray: any[] = this.toCoordsArray();
-		if (coordsArray.length > 1) {
-			coordsArray = strToFloat(coordsArray);
-			let feature: Feature<any, any> = {
-				type: 'Feature',
-				id: this.getCompositeId(),
-				properties: this.getProps(),
-				geometry: {
-					type: 'LineString',
-					coordinates: coordsArray
-				}
-			};
+            if (this.isPolygon && isRing(coordsArray)) {
+                if (ringDirection(coordsArray) !== 'counterclockwise') {
+                    coordsArray.reverse();
+                }
 
-			if (this.isPolygon && isRing(coordsArray)) {
-				if (ringDirection(coordsArray) !== 'counterclockwise') coordsArray.reverse();
+                feature.geometry = {
+                    type: 'Polygon',
+                    coordinates: [coordsArray],
+                };
 
-				feature.geometry = {
-					type: 'Polygon',
-					coordinates: [coordsArray]
-				};
+                return [feature];
+            }
 
-				return [feature];
-			}
+            return [feature];
+        }
 
-			return [feature];
-		}
+        return [];
+    }
 
-		return [];
-	}
+    private analyzeTag(k: string, v: string) {
+        const o = (polygonTags as {k: string, v: any})[k];
+        if (o) {
+            this.isPolygon = true;
+            if (o.whitelist) {
+                this.isPolygon = o.whitelist.indexOf(v) >= 0 ? true : false;
+            } else if (o.blacklist) {
+                this.isPolygon = o.blacklist.indexOf(v) >= 0 ? false : true;
+            }
+        }
+    }
 }
 
 export class Relation extends OsmObject {
-	relations: any[];
-	nodes: any[];
-	bounds: any[];
-	[k: string]: any;
+    private relations: any[];
+    private nodes: any[];
+    private bounds: number[] | undefined;
 
-	constructor(id: string, refElems: RefElements) {
-		super('relation', id, refElems);
-		this.relations = [];
-		this.nodes = [];
-		this.bounds = <any>null;
-	}
+    [k: string]: any;
 
-	setBounds(bounds: any[]) {
-		this.bounds = bounds;
-	}
+    constructor(id: string, refElems: RefElements) {
+        super('relation', id, refElems);
+        this.relations = [];
+        this.nodes = [];
+        this.bounds = undefined;
+    }
 
-	addMember(member: {[k: string]: any}) {
-		switch (member.type) {
-			// super relation, need to do combination
-			case 'relation':
-				let binder = new LateBinder(this.relations, function(id) {
-					let relation = this.refElems.get(`relation/${id}`);
-					if (relation) {
-						relation.refCount++;
-						return relation;
-					}
-				}, this, [member.ref]);
-				this.relations.push(binder);
-				this.refElems.addBinder(binder);
-				break;
+    public setBounds(bounds: any[]) {
+        this.bounds = bounds;
+    }
 
-			case 'way':
-				if (!member.role) member.role === '';
-				let ways = this[member.role];
-				if (!ways) ways = this[member.role] = [];
-				if (member.geometry) {
-					let way = new Way(member.ref, this.refElems);
-					way.setLatLngArray(member.geometry);
-					way.refCount++;
-					ways.push(way);
-				} else if (member.nodes) {
-					let way = new Way(member.ref, this.refElems);
-					for (let nid of member.nodes) {
-						way.addNodeRef(nid);
-					}
-					way.refCount++;
-					ways.push(way);
-				} else {
-					let binder = new LateBinder(ways, function(id) {
-						let way = this.refElems.get(`way/${id}`);
-						if (way) {
-							way.refCount++;
-							return way;
-						}
-					}, this, [member.ref]);
-					ways.push(binder);
-					this.refElems.addBinder(binder);
-				}
-				break;
+    public addMember(member: {[k: string]: any}) {
+        switch (member.type) {
+            // super relation, need to do combination
+            case 'relation':
+                let binder = new LateBinder(this.relations, function(id) {
+                    const relation = this.refElems.get(`relation/${id}`);
+                    if (relation) {
+                        relation.refCount++;
+                        return relation;
+                    }
+                }, this, [member.ref]);
+                this.relations.push(binder);
+                this.refElems.addBinder(binder);
+                break;
 
-			case 'node':
-				let node = <any>null;
-				if (member.lat && member.lon) {
-					node = new Node(member.ref, this.refElems);
-					node.setLatLng({lon: member.lon, lat: member.lat});
-					if (member.tags) node.addTags(member.tags);
-					for (let [k, v] of Object.entries(member))
-						if (['id', 'type', 'lat', 'lon'].indexOf(k) < 0)
-							node.addProp(k, v);
+            case 'way':
+                if (!member.role) {
+                    member.role = '';
+                }
+                let ways = this[member.role];
+                if (!ways) {
+                    ways = this[member.role] = [];
+                }
+                if (member.geometry) {
+                    const way = new Way(member.ref, this.refElems);
+                    way.setLatLngArray(member.geometry);
+                    way.refCount++;
+                    ways.push(way);
+                } else if (member.nodes) {
+                    const way = new Way(member.ref, this.refElems);
+                    for (const nid of member.nodes) {
+                        way.addNodeRef(nid);
+                    }
+                    way.refCount++;
+                    ways.push(way);
+                } else {
+                    binder = new LateBinder(ways, function(nid) {
+                        const way = this.refElems.get(`way/${nid}`);
+                        if (way) {
+                            way.refCount++;
+                            return way;
+                        }
+                    }, this, [member.ref]);
+                    ways.push(binder);
+                    this.refElems.addBinder(binder);
+                }
+                break;
 
-					node.refCount++;
-					this.nodes.push(node);
-				} else {
-					let binder = new LateBinder(this.nodes, function(id) {
-						let node = this.refElems.get(`node/${id}`);
-						if (node) {
-							node.refCount++;
-							return node;
-						}
-					}, this, [member.ref]);
-					this.nodes.push(binder);
-					this.refElems.addBinder(binder);
-				}
-				break;
-				
-			default: 
-				break;
-		}
-	}
+            case 'node':
+                let node: Node | null = null;
+                if (member.lat && member.lon) {
+                    node = new Node(member.ref, this.refElems);
+                    node.setLatLng({lon: member.lon, lat: member.lat});
+                    if (member.tags) {
+                        node.addTags(member.tags);
+                    }
+                    for (const [k, v] of Object.entries(member)) {
+                        if (['id', 'type', 'lat', 'lon'].indexOf(k) < 0) {
+                            node.addProp(k, v);
+                        }
+                    }
 
-	toFeatureArray(): Feature<any, any>[] {
-		const constructStringGeometry = (ws: WayCollection) : LineString | MultiLineString | null => {
-			let strings = ws? ws.toStrings() : [];
-			if (strings.length > 0) {
-				if (strings.length === 1) return {
-					type: 'LineString',
-					coordinates: strings[0]
-				}
+                    node.refCount++;
+                    this.nodes.push(node);
+                } else {
+                    binder = new LateBinder(this.nodes, function(id) {
+                        const nn = this.refElems.get(`node/${id}`);
+                        if (nn) {
+                            nn.refCount++;
+                            return nn;
+                        }
+                    }, this, [member.ref]);
+                    this.nodes.push(binder);
+                    this.refElems.addBinder(binder);
+                }
+            default:
+                break;
+        }
+    }
 
-				return {
-					type: 'MultiLineString',
-					coordinates: strings
-				}
-			}
-			return null;
-		}
+    public toFeatureArray(): Array<Feature<any, any>> {
+        function constructStringGeometry(ws: WayCollection): LineString | MultiLineString | null {
+            const strings = ws ? ws.toStrings() : [];
+            if (strings.length > 0) {
+                if (strings.length === 1) {
+                    return {
+                        type: 'LineString',
+                        coordinates: strings[0],
+                    };
+                }
 
-		const constructPolygonGeometry = (ows: WayCollection, iws: WayCollection) : Polygon | MultiPolygon | null => {
-			let outerRings = ows? ows.toRings('counterclockwise') : [],
-				innerRings = iws? iws.toRings('clockwise') : [];
-							
-			if (outerRings.length > 0) {
-				let compositPolyons: any[] = [];
+                return {
+                    type: 'MultiLineString',
+                    coordinates: strings,
+                };
+            }
+            return null;
+        }
 
-				let ring: number[][] | undefined = undefined;
-				for (ring of outerRings) 
-					compositPolyons.push([ring]);
-				
-				// link inner polygons to outer containers
-				while (ring = innerRings.shift()) {
-					for (let idx in outerRings) {
-						if (ptInsidePolygon(first(ring), outerRings[idx])) {
-							compositPolyons[idx].push(ring);
-							break;
-						}
-					}
-				}
+        function constructPolygonGeometry(ows: WayCollection, iws: WayCollection): Polygon | MultiPolygon | null {
+            const outerRings = ows ? ows.toRings('counterclockwise') : [];
+            const innerRings = iws ? iws.toRings('clockwise') : [];
 
-				// construct the Polygon/MultiPolygon geometry
-				if (compositPolyons.length === 1) return {
-					type: 'Polygon',
-					coordinates: compositPolyons[0]
-				};
+            if (outerRings.length > 0) {
+                const compositPolyons: any[] = [];
 
-				return {
-					type: 'MultiPolygon',
-					coordinates: compositPolyons
-				}
-			}
+                let ring: number[][] | undefined;
+                for (ring of outerRings) {
+                    compositPolyons.push([ring]);
+                }
 
-			return null;
-		}
+                // link inner polygons to outer containers
+                ring = innerRings.shift();
+                while (ring) {
+                    for (const idx in outerRings) {
+                        if (ptInsidePolygon(first(ring), outerRings[idx])) {
+                            compositPolyons[idx].push(ring);
+                            break;
+                        }
+                    }
+                    ring = innerRings.shift();
+                }
 
-		let polygonFeatures: (Feature<Polygon | MultiPolygon, any>)[] = [], stringFeatures: (Feature<LineString | MultiLineString, any>)[] = [], pointFeatures: (Feature<Point | MultiPoint, any>)[] = [];
-		const waysFieldNames = ['outer', 'inner', ''];
-		// need to do combination when there're nested relations
-		for (let relation of this.relations) {
-			if (relation) {
-				for (let fieldName of waysFieldNames) {
-					let ways = relation[fieldName];
-					if (ways) {
-						let thisWays = this[fieldName];
-						if (thisWays) [].splice.apply(thisWays, [thisWays.length, 0].concat(ways));
-						else this[fieldName] = ways;
-					}
-				}
-			}
-		}
+                // construct the Polygon/MultiPolygon geometry
+                if (compositPolyons.length === 1) {
+                    return {
+                        type: 'Polygon',
+                        coordinates: compositPolyons[0],
+                    };
+                }
 
-		for (let fieldName of waysFieldNames) {
-			let ways = this[fieldName];
-			if (ways) {
-				this[fieldName] = new WayCollection();
-				for (let way of ways)
-					this[fieldName].addWay(way);
-			}
-		}
+                return {
+                    type: 'MultiPolygon',
+                    coordinates: compositPolyons,
+                };
+            }
 
-		let geometry: GeometryObject | null = null;
-		
-		let feature: Feature<any, any> = {
-			type: 'Feature',
-			id: this.getCompositeId(),
-			bbox: this.bounds,
-			properties: this.getProps(),
-			geometry: null
-		};
+            return null;
+        }
 
-		if (!this.bounds)
-			delete feature.bbox;
+        const polygonFeatures: Array<Feature<Polygon | MultiPolygon, any>> = [];
+        const stringFeatures: Array<Feature<LineString | MultiLineString, any>> = [];
+        let pointFeatures: Array<Feature<Point | MultiPoint, any>> = [];
+        const waysFieldNames = ['outer', 'inner', ''];
+        // need to do combination when there're nested relations
+        for (const relation of this.relations) {
+            if (relation) {
+                for (const fieldName of waysFieldNames) {
+                    const ways = relation[fieldName];
+                    if (ways) {
+                        const thisWays = this[fieldName];
+                        if (thisWays) {
+                            [].splice.apply(thisWays, [thisWays.length, 0].concat(ways));
+                        } else {
+                            this[fieldName] = ways;
+                        }
+                    }
+                }
+            }
+        }
 
-		if (this.outer) {
-			geometry = constructPolygonGeometry(this.outer, this.inner);
-			if (geometry){
-				feature.geometry = geometry;
-				polygonFeatures.push(<Feature<Polygon | MultiPolygon, any>>feature);
-			}
-		}
-		else if (this['']) {
-			geometry = constructStringGeometry(this['']);
-			if (geometry) {
-				feature.geometry = geometry;
-				stringFeatures.push(<Feature<LineString | MultiLineString, any>>feature);
-			}
-		}
+        for (const fieldName of waysFieldNames) {
+            const ways = this[fieldName];
+            if (ways) {
+                this[fieldName] = new WayCollection();
+                for (const way of ways) {
+                    this[fieldName].addWay(way);
+                }
+            }
+        }
 
-		for (let node of this.nodes)
-			pointFeatures = pointFeatures.concat(node.toFeatureArray());
+        let geometry: GeometryObject | null = null;
 
-		return [...polygonFeatures, ...stringFeatures, ...pointFeatures];
-	}
+        const feature: Feature<any, any> = {
+            type: 'Feature',
+            id: this.getCompositeId(),
+            bbox: this.bounds,
+            properties: this.getProps(),
+            geometry: null,
+        };
+
+        if (!this.bounds) {
+            delete feature.bbox;
+        }
+
+        if (this.outer) {
+            geometry = constructPolygonGeometry(this.outer, this.inner);
+            if (geometry) {
+                feature.geometry = geometry;
+                polygonFeatures.push(feature as Feature<Polygon | MultiPolygon, any>);
+            }
+        } else if (this['']) {
+            geometry = constructStringGeometry(this['']);
+            if (geometry) {
+                feature.geometry = geometry;
+                stringFeatures.push(feature as Feature<LineString | MultiLineString, any>);
+            }
+        }
+
+        for (const node of this.nodes) {
+            pointFeatures = pointFeatures.concat(node.toFeatureArray());
+        }
+
+        return [...polygonFeatures, ...stringFeatures, ...pointFeatures];
+    }
 }

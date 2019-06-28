@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
+const utils_2 = require("./utils");
 const polytags_json_1 = require("./polytags.json");
 class OsmObject {
     constructor(type, id, refElems) {
@@ -11,8 +12,9 @@ class OsmObject {
         this.props = { id: this.getCompositeId() };
         this.refCount = 0;
         this.hasTag = false;
-        if (refElems)
+        if (refElems) {
             refElems.add(this.getCompositeId(), this);
+        }
     }
     addTags(tags) {
         this.tags = Object.assign(this.tags, tags);
@@ -47,16 +49,17 @@ class Node extends OsmObject {
         this.latLng = latLng;
     }
     toFeatureArray() {
-        if (this.latLng)
+        if (this.latLng) {
             return [{
                     type: 'Feature',
                     id: this.getCompositeId(),
                     properties: this.getProps(),
                     geometry: {
                         type: 'Point',
-                        coordinates: utils_1.strToFloat([this.latLng.lon, this.latLng.lat])
-                    }
+                        coordinates: utils_1.strToFloat([this.latLng.lon, this.latLng.lat]),
+                    },
                 }];
+        }
         return [];
     }
     getLatLng() {
@@ -77,8 +80,8 @@ class Way extends OsmObject {
         this.latLngArray = latLngArray;
     }
     addNodeRef(ref) {
-        let binder = new utils_1.LateBinder(this.latLngArray, function (id) {
-            let node = this.refElems.get(`node/${id}`);
+        const binder = new utils_2.LateBinder(this.latLngArray, function (id) {
+            const node = this.refElems.get(`node/${id}`);
             if (node) {
                 node.refCount++;
                 return node.getLatLng();
@@ -87,53 +90,57 @@ class Way extends OsmObject {
         this.latLngArray.push(binder);
         this.refElems.addBinder(binder);
     }
-    analyzeTag(k, v) {
-        let o = polytags_json_1.default[k];
-        if (o) {
-            this.isPolygon = true;
-            if (o.whitelist)
-                this.isPolygon = o.whitelist.indexOf(v) >= 0 ? true : false;
-            else if (o.blacklist)
-                this.isPolygon = o.blacklist.indexOf(v) >= 0 ? false : true;
-        }
-    }
     addTags(tags) {
         super.addTags(tags);
-        for (let [k, v] of Object.entries(tags))
+        for (const [k, v] of Object.entries(tags)) {
             this.analyzeTag(k, v);
+        }
     }
     addTag(k, v) {
         super.addTag(k, v);
         this.analyzeTag(k, v);
     }
     toCoordsArray() {
-        return this.latLngArray.map(latLng => [latLng.lon, latLng.lat]);
+        return this.latLngArray.map((latLng) => [latLng.lon, latLng.lat]);
     }
     toFeatureArray() {
         let coordsArray = this.toCoordsArray();
         if (coordsArray.length > 1) {
             coordsArray = utils_1.strToFloat(coordsArray);
-            let feature = {
+            const feature = {
                 type: 'Feature',
                 id: this.getCompositeId(),
                 properties: this.getProps(),
                 geometry: {
                     type: 'LineString',
-                    coordinates: coordsArray
-                }
+                    coordinates: coordsArray,
+                },
             };
             if (this.isPolygon && utils_1.isRing(coordsArray)) {
-                if (utils_1.ringDirection(coordsArray) !== 'counterclockwise')
+                if (utils_1.ringDirection(coordsArray) !== 'counterclockwise') {
                     coordsArray.reverse();
+                }
                 feature.geometry = {
                     type: 'Polygon',
-                    coordinates: [coordsArray]
+                    coordinates: [coordsArray],
                 };
                 return [feature];
             }
             return [feature];
         }
         return [];
+    }
+    analyzeTag(k, v) {
+        const o = polytags_json_1.default[k];
+        if (o) {
+            this.isPolygon = true;
+            if (o.whitelist) {
+                this.isPolygon = o.whitelist.indexOf(v) >= 0 ? true : false;
+            }
+            else if (o.blacklist) {
+                this.isPolygon = o.blacklist.indexOf(v) >= 0 ? false : true;
+            }
+        }
     }
 }
 exports.Way = Way;
@@ -142,7 +149,7 @@ class Relation extends OsmObject {
         super('relation', id, refElems);
         this.relations = [];
         this.nodes = [];
-        this.bounds = null;
+        this.bounds = undefined;
     }
     setBounds(bounds) {
         this.bounds = bounds;
@@ -151,8 +158,8 @@ class Relation extends OsmObject {
         switch (member.type) {
             // super relation, need to do combination
             case 'relation':
-                let binder = new utils_1.LateBinder(this.relations, function (id) {
-                    let relation = this.refElems.get(`relation/${id}`);
+                let binder = new utils_2.LateBinder(this.relations, function (id) {
+                    const relation = this.refElems.get(`relation/${id}`);
                     if (relation) {
                         relation.refCount++;
                         return relation;
@@ -162,28 +169,30 @@ class Relation extends OsmObject {
                 this.refElems.addBinder(binder);
                 break;
             case 'way':
-                if (!member.role)
-                    member.role === '';
+                if (!member.role) {
+                    member.role = '';
+                }
                 let ways = this[member.role];
-                if (!ways)
+                if (!ways) {
                     ways = this[member.role] = [];
+                }
                 if (member.geometry) {
-                    let way = new Way(member.ref, this.refElems);
+                    const way = new Way(member.ref, this.refElems);
                     way.setLatLngArray(member.geometry);
                     way.refCount++;
                     ways.push(way);
                 }
                 else if (member.nodes) {
-                    let way = new Way(member.ref, this.refElems);
-                    for (let nid of member.nodes) {
+                    const way = new Way(member.ref, this.refElems);
+                    for (const nid of member.nodes) {
                         way.addNodeRef(nid);
                     }
                     way.refCount++;
                     ways.push(way);
                 }
                 else {
-                    let binder = new utils_1.LateBinder(ways, function (id) {
-                        let way = this.refElems.get(`way/${id}`);
+                    binder = new utils_2.LateBinder(ways, function (nid) {
+                        const way = this.refElems.get(`way/${nid}`);
                         if (way) {
                             way.refCount++;
                             return way;
@@ -198,110 +207,124 @@ class Relation extends OsmObject {
                 if (member.lat && member.lon) {
                     node = new Node(member.ref, this.refElems);
                     node.setLatLng({ lon: member.lon, lat: member.lat });
-                    if (member.tags)
+                    if (member.tags) {
                         node.addTags(member.tags);
-                    for (let [k, v] of Object.entries(member))
-                        if (['id', 'type', 'lat', 'lon'].indexOf(k) < 0)
+                    }
+                    for (const [k, v] of Object.entries(member)) {
+                        if (['id', 'type', 'lat', 'lon'].indexOf(k) < 0) {
                             node.addProp(k, v);
+                        }
+                    }
                     node.refCount++;
                     this.nodes.push(node);
                 }
                 else {
-                    let binder = new utils_1.LateBinder(this.nodes, function (id) {
-                        let node = this.refElems.get(`node/${id}`);
-                        if (node) {
-                            node.refCount++;
-                            return node;
+                    binder = new utils_2.LateBinder(this.nodes, function (id) {
+                        const nn = this.refElems.get(`node/${id}`);
+                        if (nn) {
+                            nn.refCount++;
+                            return nn;
                         }
                     }, this, [member.ref]);
                     this.nodes.push(binder);
                     this.refElems.addBinder(binder);
                 }
-                break;
             default:
                 break;
         }
     }
     toFeatureArray() {
-        const constructStringGeometry = (ws) => {
-            let strings = ws ? ws.toStrings() : [];
+        function constructStringGeometry(ws) {
+            const strings = ws ? ws.toStrings() : [];
             if (strings.length > 0) {
-                if (strings.length === 1)
+                if (strings.length === 1) {
                     return {
                         type: 'LineString',
-                        coordinates: strings[0]
+                        coordinates: strings[0],
                     };
+                }
                 return {
                     type: 'MultiLineString',
-                    coordinates: strings
+                    coordinates: strings,
                 };
             }
             return null;
-        };
-        const constructPolygonGeometry = (ows, iws) => {
-            let outerRings = ows ? ows.toRings('counterclockwise') : [], innerRings = iws ? iws.toRings('clockwise') : [];
+        }
+        function constructPolygonGeometry(ows, iws) {
+            const outerRings = ows ? ows.toRings('counterclockwise') : [];
+            const innerRings = iws ? iws.toRings('clockwise') : [];
             if (outerRings.length > 0) {
-                let compositPolyons = [];
-                let ring = undefined;
-                for (ring of outerRings)
+                const compositPolyons = [];
+                let ring;
+                for (ring of outerRings) {
                     compositPolyons.push([ring]);
+                }
                 // link inner polygons to outer containers
-                while (ring = innerRings.shift()) {
-                    for (let idx in outerRings) {
+                ring = innerRings.shift();
+                while (ring) {
+                    for (const idx in outerRings) {
                         if (utils_1.ptInsidePolygon(utils_1.first(ring), outerRings[idx])) {
                             compositPolyons[idx].push(ring);
                             break;
                         }
                     }
+                    ring = innerRings.shift();
                 }
                 // construct the Polygon/MultiPolygon geometry
-                if (compositPolyons.length === 1)
+                if (compositPolyons.length === 1) {
                     return {
                         type: 'Polygon',
-                        coordinates: compositPolyons[0]
+                        coordinates: compositPolyons[0],
                     };
+                }
                 return {
                     type: 'MultiPolygon',
-                    coordinates: compositPolyons
+                    coordinates: compositPolyons,
                 };
             }
             return null;
-        };
-        let polygonFeatures = [], stringFeatures = [], pointFeatures = [];
+        }
+        const polygonFeatures = [];
+        const stringFeatures = [];
+        let pointFeatures = [];
         const waysFieldNames = ['outer', 'inner', ''];
         // need to do combination when there're nested relations
-        for (let relation of this.relations) {
+        for (const relation of this.relations) {
             if (relation) {
-                for (let fieldName of waysFieldNames) {
-                    let ways = relation[fieldName];
+                for (const fieldName of waysFieldNames) {
+                    const ways = relation[fieldName];
                     if (ways) {
-                        let thisWays = this[fieldName];
-                        if (thisWays)
+                        const thisWays = this[fieldName];
+                        if (thisWays) {
                             [].splice.apply(thisWays, [thisWays.length, 0].concat(ways));
-                        else
+                        }
+                        else {
                             this[fieldName] = ways;
+                        }
                     }
                 }
             }
         }
-        for (let fieldName of waysFieldNames) {
-            let ways = this[fieldName];
+        for (const fieldName of waysFieldNames) {
+            const ways = this[fieldName];
             if (ways) {
-                this[fieldName] = new utils_1.WayCollection();
-                for (let way of ways)
+                this[fieldName] = new utils_2.WayCollection();
+                for (const way of ways) {
                     this[fieldName].addWay(way);
+                }
             }
         }
         let geometry = null;
-        let feature = {
+        const feature = {
             type: 'Feature',
             id: this.getCompositeId(),
             bbox: this.bounds,
             properties: this.getProps(),
-            geometry: null
+            geometry: null,
         };
-        if (!this.bounds)
+        if (!this.bounds) {
             delete feature.bbox;
+        }
         if (this.outer) {
             geometry = constructPolygonGeometry(this.outer, this.inner);
             if (geometry) {
@@ -316,8 +339,9 @@ class Relation extends OsmObject {
                 stringFeatures.push(feature);
             }
         }
-        for (let node of this.nodes)
+        for (const node of this.nodes) {
             pointFeatures = pointFeatures.concat(node.toFeatureArray());
+        }
         return [...polygonFeatures, ...stringFeatures, ...pointFeatures];
     }
 }

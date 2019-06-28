@@ -1,12 +1,11 @@
 import {FeatureCollection, GeometryObject} from 'geojson';
 
 export = osm2geojson;
-export as namespace osm2geojson;
 
-declare var osm2geojson: osm2geojson.Default;
+declare let osm2geojson: osm2geojson.IDefault;
 
 declare namespace osm2geojson {
-    interface Options {
+    interface IOptions {
         completeFeature?: boolean;
         allFeatures?: boolean;
         renderTagged?: boolean;
@@ -14,8 +13,5 @@ declare namespace osm2geojson {
         suppressWay?: boolean;
     }
 
-    export interface Default {
-        // tslint:disable-next-line:no-any
-        (osm: string | {[k: string]: any}, opts?: Options): FeatureCollection<GeometryObject>;
-    }
+    export type IDefault = (osm: string | {[k: string]: any}, opts?: IOptions) => FeatureCollection<GeometryObject>;
 }
