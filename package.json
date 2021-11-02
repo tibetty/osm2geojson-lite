@@ -19,6 +19,9 @@
     "/"
   ],
   "author": "tibetty",
+  "bin": {
+    "osm2geojson-lite": "osm2geojson-lite"
+  },
   "bugs": {
     "url": "https://github.com/tibetty/osm2geojson-lite/issues"
   },
