@@ -64,5 +64,8 @@
     "lib": "lib",
     "test": "test"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "browserify": "^17.0.0",
+    "uglify-js": "^3.14.5"
+  }
 }
