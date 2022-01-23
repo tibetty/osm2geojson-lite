@@ -16,5 +16,5 @@ const jsonFiles = ['herne.json', 'empty.json', 'node.json', 'way.json', 'relatio
 for (let file of jsonFiles) {
 	let osm = require(`./data/${file}`);
 	console.log(`---------- result converted from ${file} ----------`);
-        console.log(JSON.stringify(osm2geojson(osm, {completeFeature: true})));
+	console.log(JSON.stringify(osm2geojson(osm, {completeFeature: true})));
 }
