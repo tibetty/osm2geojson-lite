@@ -7,4 +7,4 @@ const data = fs.readFileSync("/dev/stdin", "utf-8");
 
 const geojson = osm2geojson(data, {});
 
-process.stdout.write(JSON.stringify(geojson));
+console.log(JSON.stringify(geojson));
