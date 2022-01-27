@@ -8,8 +8,4 @@
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "osmtogeojson": "^3.0.0-beta.3",
-    "xmldom": "^0.1.27"
-  }
 }
