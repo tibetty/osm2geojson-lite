@@ -348,10 +348,12 @@ export class Relation extends OsmObject {
         const polygonFeatures: Array<Feature<Polygon | MultiPolygon, any>> = [];
         const stringFeatures: Array<Feature<LineString | MultiLineString, any>> = [];
         let pointFeatures: Array<Feature<Point | MultiPoint, any>> = [];
-        const waysFieldNames = ['outer', 'inner', ''];
+
         // need to do combination when there're nested relations
+        const notWayFields = ['type', 'id', 'refElems', 'tags', 'props', 'refCount', 'hasTag', 'relations', 'nodes', 'bounds'];
         for (const relation of this.relations) {
             if (relation) {
+                let waysFieldNames = Object.keys(relation).filter(fieldName => notWayFields.indexOf(fieldName) < 0);
                 for (const fieldName of waysFieldNames) {
                     const ways = relation[fieldName];
                     if (ways) {
@@ -366,6 +368,7 @@ export class Relation extends OsmObject {
             }
         }
 
+        let waysFieldNames = Object.keys(this).filter(fieldName => notWayFields.indexOf(fieldName) < 0);
         for (const fieldName of waysFieldNames) {
             const ways = this[fieldName];
             if (ways) {
@@ -378,33 +381,58 @@ export class Relation extends OsmObject {
 
         let geometry: GeometryObject | null = null;
 
-        const feature: Feature<any, any> = {
+        let templateFeature: Feature<any, any> = {
             type: 'Feature',
             id: this.getCompositeId(),
             bbox: this.bounds,
             properties: this.getProps(),
-            geometry: null,
+            geometry: null
         };
 
         if (!this.bounds) {
-            delete feature.bbox;
+            delete templateFeature.bbox;
         }
 
         if (this.outer) {
-            geometry = constructPolygonGeometry(this.outer, this.inner);
+            let feature = Object.assign({}, templateFeature);
+            let geometry = constructPolygonGeometry(this.outer, this.inner);
             if (geometry) {
                 feature.geometry = geometry;
-                polygonFeatures.push(feature as Feature<Polygon | MultiPolygon, any>);
-            }
-        } else if (this['']) {
-            geometry = constructStringGeometry(this['']);
-            if (geometry) {
-                feature.geometry = geometry;
-                stringFeatures.push(feature as Feature<LineString | MultiLineString, any>);
+                polygonFeatures.push(feature);
             }
         }
+        else {
+            let multiLineGeometry: MultiLineString = {
+                type: 'MultiLineString',
+                coordinates: []
+            };
 
-        for (const node of this.nodes) {
+            for (let way of waysFieldNames) {
+                if (way != null && way !== 'inner') {
+                    let ws = this[way];
+                    if (ws) {
+                        let geometry = constructStringGeometry(ws);
+                        if (geometry) {
+                            if (geometry.type === 'LineString') {
+                                multiLineGeometry.coordinates.push(geometry.coordinates);
+                            } else if (geometry.type === 'MultiLineString') {
+                                let feature = Object.assign({}, templateFeature);
+                                feature.geometry = geometry;
+                                stringFeatures.push(feature);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (multiLineGeometry.coordinates.length > 0) {
+                let feature = Object.assign({}, templateFeature);
+                feature.geometry = multiLineGeometry;
+                stringFeatures.push(feature);
+            }
+    }
+
+        for (let node of this.nodes) {
             pointFeatures = pointFeatures.concat(node.toFeatureArray());
         }
 
