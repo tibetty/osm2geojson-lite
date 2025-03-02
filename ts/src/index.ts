@@ -1,4 +1,4 @@
-import {FeatureCollection, GeometryObject} from 'geojson';
+import {Feature, FeatureCollection, GeometryObject} from 'geojson';
 import {Node, Relation, Way} from './osmobjs';
 import {purgeProps, RefElements} from './utils';
 import XmlParser from './xmlparser';
@@ -47,22 +47,22 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
     let format = detectFormat(osm);
 
     const refElements = new RefElements();
-    let featureArray: any[] = [];
+    let featureArray: Feature<any, any>[] = [];
 
     const analyzeFeaturesFromJson = (o: string | {[k: string]: any}) => {
         for (const elem of (osm as {[k: string]: any}).elements) {
             switch (elem.type) {
                 case 'node':
-                    const node = new Node(elem.id, refElements);
+                    const node = new Node(elem.id as string, refElements);
                     if (elem.tags) {
                         node.addTags(elem.tags);
                     }
                     node.addProps(purgeProps(elem as {[k: string]: string}, ['id', 'type', 'tags', 'lat', 'lon']));
-                    node.setLatLng(elem);
+                    node.setLatLng(elem as {lat: string, lon: string});
                     break;
 
                 case 'way':
-                    const way = new Way(elem.id, refElements);
+                    const way = new Way(elem.id as string, refElements);
                     if (elem.tags) {
                         way.addTags(elem.tags);
                     }
@@ -77,7 +77,7 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
                     break;
 
                 case 'relation':
-                    const relation = new Relation(elem.id, refElements);
+                    const relation = new Relation(elem.id as string, refElements);
                     if (elem.bounds) {
                         relation.setBounds([parseFloat(elem.bounds.minlon), parseFloat(elem.bounds.minlat), parseFloat(elem.bounds.maxlon), parseFloat(elem.bounds.maxlat)]);
                     }
