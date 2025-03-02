@@ -6,6 +6,6 @@
   "scripts": {
     "test": "node test.js"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "tibetty",
+  "license": "isc"
 }
