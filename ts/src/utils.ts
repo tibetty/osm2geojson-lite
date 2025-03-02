@@ -55,12 +55,12 @@ export function removeFromMap<T>(m: {[k: string]: T[]}, k: string, v: T): void {
     }
 }
 
-export function getFirstFromMap<T>(m: {[k: string]: T[]}, k: string): T | undefined {
+export function getFirstFromMap<T>(m: {[k: string]: T[]}, k: string): T | null {
     const a = m[k];
     if (a && a.length > 0) {
         return a[0];
     }
-    return undefined;
+    return null;
 }
 
 // need 3+ different points to form a ring, here using > 3 is 'coz a the first and the last points are actually the same
@@ -171,20 +171,20 @@ export class WayCollection extends Array {
     public addWay(way: Way) {
         const w = way.toCoordsArray();
         if (w.length > 0) {
-            this.push(way);
+            this.push(w);
             addToMap(this.firstMap, coordsToKey(first(w)), w);
             addToMap(this.lastMap, coordsToKey(last(w)), w);
         }
     }
 
     public toStrings(): number[][][] {
-        const strings: any[] = [];
-        let way = this.shift();
+        const strings: number[][][] = [];
+        let way: string[][] = this.shift();
         while (way) {
             removeFromMap(this.firstMap, coordsToKey(first(way)), way);
             removeFromMap(this.lastMap, coordsToKey(last(way)), way);
-            let current: any[] = way;
-            let next: any[] | undefined;
+            let current = way;
+            let next: string[][] | null;
             do {
                 const key = coordsToKey(last(current));
                 let shouldReverse = false;
