@@ -59,7 +59,7 @@
   "optionalDependencies": {
     "@types/geojson": "^7946.0.16"
   },
-  "version": "0.9.9",
+  "version": "1.0.0",
   "directories": {
     "lib": "lib",
     "test": "test"
@@ -71,6 +71,7 @@
   "files": [
     "ts/release/**/*.js",
     "ts/release/**/*.d.ts",
+    "ts/release/**/*.json",
     "dist/osm2geojson-lite.js"
   ]
 }
