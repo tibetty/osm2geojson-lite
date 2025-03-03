@@ -140,8 +140,8 @@ function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): Featu
 
         xmlParser.on('<osm.relation>', (node: { [k: string]: any }) => new Relation(node.id, refElements));
 
-        xmlParser.on('</osm.relation.member>', (node: { [k: string]: any }, parent: { [k: string]: any }) => {
-            const relation = refElements.get(`relation/${parent.id}`);
+        xmlParser.on('</osm.relation.member>', (node: { [k: string]: any }, parent?: { [k: string]: any }) => {
+            const relation = refElements.get(`relation/${parent?.id}`);
             const member: { [k: string]: any } = {
                 type: node.type,
                 role: node.role ? node.role : '',
@@ -176,12 +176,12 @@ function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): Featu
             relation.addMember(member);
         });
 
-        xmlParser.on('</osm.relation.bounds>', (node: { [k: string]: any }, parent: { [k: string]: any }) => {
-            refElements.get(`relation/${parent.id}`).setBounds([parseFloat(node.minlon), parseFloat(node.minlat), parseFloat(node.maxlon), parseFloat(node.maxlat)]);
+        xmlParser.on('</osm.relation.bounds>', (node: { [k: string]: any }, parent?: { [k: string]: any }) => {
+            refElements.get(`relation/${parent?.id}`).setBounds([parseFloat(node.minlon), parseFloat(node.minlat), parseFloat(node.maxlon), parseFloat(node.maxlat)]);
         });
 
-        xmlParser.on('</osm.relation.tag>', (node: { [k: string]: any }, parent: { [k: string]: any }) => {
-            refElements.get(`relation/${parent.id}`).addTag(node.k, node.v);
+        xmlParser.on('</osm.relation.tag>', (node: { [k: string]: any }, parent?: { [k: string]: any }) => {
+            refElements.get(`relation/${parent?.id}`).addTag(node.k, node.v);
         });
 
         xmlParser.parse(o as string);
