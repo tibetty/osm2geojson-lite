@@ -67,12 +67,12 @@ function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): Featu
                         way.addTags(elem.tags);
                     }
                     way.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'nodes', 'geometry']));
-                    if (elem.nodes) {
+                    if (elem.geometry) {
+                        way.setLatLngArray(elem.geometry);
+                    } else if (elem.nodes) {
                         for (const n of elem.nodes) {
                             way.addNodeRef(n);
                         }
-                    } else if (elem.geometry) {
-                        way.setLatLngArray(elem.geometry);
                     }
                     break;
 
