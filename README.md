@@ -7,6 +7,12 @@ History
 -----
 An internal function inside [query-geo-boundary](https://www.npmjs.com/package/query-geo-boundary) &rightarrow; stripped out to handle OSM XML only [xml2geojson-lite](https://www.npmjs.com/package/xml2geojson-lite) &rightarrow; this library that supports both OSM XML and OSM/Overpass JSON
 
+Changelog:
+-----
+* Late 2018: this repository was created and the initial version was pushed to github - almost around specific usages for myself.
+* 2019-2025: quite a few contributors had fixed quite a few bugs and also contributed some good ideas - thanks for their efforts!
+* 2025-03-03: fixed a few bugs around non-*Polygon features processing and convert it to a pure TypeScript project (codes published to [NPM](https://npmjs.org/) have become TSC compiled from now on).
+
 Usage
 -----
 
@@ -55,26 +61,25 @@ Performance
 $ cd bench
 $ node o2gl-bench.js
 $ node otg-bench.js
-
-1. XML
------------------------------------------------------
-|  zhucheng  |   hebei    |  tokyodo   |    usa     |
-+------------+------------+------------+------------+
-|  >2.5x     |  >4.0x     |  >3.0x     |  >3.0x     |
------------------------------------------------------
-2. Overpass JSON
------------------------------------------------------
-|  zhucheng  |   hebei    |  tokyodo   |    usa     |
-+------------+------------+------------+------------+
-|  >2.5x     |  >11.0x    |  >7.0x     |  >5.0x     |
------------------------------------------------------
 ```
+1. XML
+   
+| zhucheng  | hebei    | tokyodo | usa  |
+|-----------|----------|---------|------|
+| >2.5x     | >4.0x    | >3.0x   | >3.0x|
+
+2. Overpass JSON
+   
+| zhucheng  | hebei    | tokyodo | usa  |
+|-----------|----------|---------|------|
+| >2.5x     | >11.0x   | >7.0x   | >5.0x|
+
 
 Correctness
 ---
 You can copy the converted results to [geojsonlint](http://geojsonlint.com) for the correctness validation.  Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also quite representative) in the `data` subfolers under `test` and `bench` directories, which also outperforms `osmtogeojson`. 
 
-The client side example shipped along with this package, `index.html` will automatically call `geojsonlint` validation service directly after each conversion, you can wait for a while to see the validation result after click the conversion button.
+The client side example shipped along with this package, `test/index.html` ~~will automatically call `geojsonlint` validation service directly after each conversion, you can wait for a while to see the validation result after click the conversion button.~~ - because the CORS limitation, the direct post to geojsonlint was blocked, so I added a "copy to clipboard" button for you to ease the validation.
 
 Node.JS version
 ---
@@ -86,4 +91,10 @@ Dependencies
 
 License
 ---
-Written in 2018 by tibetty <xihua.duan@gmail.com>
+Copyleft
+
+Collaborators
+---
+* tibetty
+* HarelM
+
