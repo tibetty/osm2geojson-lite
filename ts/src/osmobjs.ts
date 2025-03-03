@@ -1,9 +1,11 @@
-import {Feature, GeometryObject, LineString,
+import {
+    Feature, GeometryObject, LineString,
     MultiLineString, MultiPoint, MultiPolygon,
-    Point, Polygon} from 'geojson';
+    Point, Polygon
+} from 'geojson';
 
-import {first, isRing, last, ptInsidePolygon, ringDirection, strToFloat} from './utils';
-import {LateBinder, RefElements, WayCollection} from './utils';
+import { first, isRing, last, ptInsidePolygon, ringDirection, strToFloat } from './utils';
+import { LateBinder, RefElements, WayCollection } from './utils';
 
 import polygonTags from './polytags.json';
 
@@ -14,8 +16,8 @@ class OsmObject {
 
     private type: string;
     private id: string;
-    private tags: {[k: string]: string};
-    private props: {[k: string]: string};
+    private tags: { [k: string]: string };
+    private props: { [k: string]: string };
     private hasTag: boolean;
 
     constructor(type: string, id: string, refElems: RefElements) {
@@ -23,7 +25,7 @@ class OsmObject {
         this.id = id;
         this.refElems = refElems;
         this.tags = {};
-        this.props = {id: this.getCompositeId()};
+        this.props = { id: this.getCompositeId() };
         this.refCount = 0;
         this.hasTag = false;
         if (refElems) {
@@ -31,7 +33,7 @@ class OsmObject {
         }
     }
 
-    public addTags(tags: {[k: string]: string}) {
+    public addTags(tags: { [k: string]: string }) {
         this.tags = Object.assign(this.tags, tags);
         this.hasTag = tags ? true : false;
     }
@@ -45,7 +47,7 @@ class OsmObject {
         this.props[k] = v;
     }
 
-    public addProps(props: {[k: string]: string}) {
+    public addProps(props: { [k: string]: string }) {
         this.props = Object.assign(this.props, props);
     }
 
@@ -53,7 +55,7 @@ class OsmObject {
         return `${this.type}/${this.id}`;
     }
 
-    public getProps(): {[k: string]: string} {
+    public getProps(): { [k: string]: string } {
         return Object.assign(this.props, this.tags);
     }
 
@@ -63,14 +65,14 @@ class OsmObject {
 }
 
 export class Node extends OsmObject {
-    private latLng: {lon: string, lat: string} | null;
+    private latLng: { lon: string, lat: string } | null;
 
     constructor(id: string, refElems: RefElements) {
         super('node', id, refElems);
         this.latLng = null;
     }
 
-    public setLatLng(latLng: {lat: string, lon: string}) {
+    public setLatLng(latLng: { lat: string, lon: string }) {
         this.latLng = latLng;
     }
 
@@ -89,13 +91,13 @@ export class Node extends OsmObject {
         return [];
     }
 
-    public getLatLng(): {lat: string, lon: string} | null {
+    public getLatLng(): { lat: string, lon: string } | null {
         return this.latLng;
     }
 }
 
 export class Way extends OsmObject {
-    private latLngArray: Array<{lon: string, lat: string} | LateBinder>;
+    private latLngArray: Array<{ lon: string, lat: string } | LateBinder>;
     private isPolygon: boolean;
 
     constructor(id: string, refElems: RefElements) {
@@ -104,16 +106,16 @@ export class Way extends OsmObject {
         this.isPolygon = false;
     }
 
-    public addLatLng(latLng: {lat: string, lon: string}) {
+    public addLatLng(latLng: { lat: string, lon: string }) {
         this.latLngArray.push(latLng);
     }
 
-    public setLatLngArray(latLngArray: Array<{lat: string, lon: string, [k: string]: any}>) {
+    public setLatLngArray(latLngArray: Array<{ lat: string, lon: string, [k: string]: any }>) {
         this.latLngArray = latLngArray;
     }
 
     public addNodeRef(ref: string) {
-        const binder = new LateBinder(this.latLngArray, function(id: string) {
+        const binder = new LateBinder(this.latLngArray, function (id: string) {
             const node = this.refElems.get(`node/${id}`);
             if (node) {
                 node.refCount++;
@@ -125,7 +127,7 @@ export class Way extends OsmObject {
         this.refElems.addBinder(binder);
     }
 
-    public addTags(tags: {[k: string]: string}) {
+    public addTags(tags: { [k: string]: string }) {
         super.addTags(tags);
         for (const [k, v] of Object.entries(tags)) {
             this.analyzeTag(k, v);
@@ -138,7 +140,7 @@ export class Way extends OsmObject {
     }
 
     public toCoordsArray(): string[][] {
-        return (this.latLngArray as Array<{lon: string, lat: string}>).map((latLng) => [latLng.lon, latLng.lat]);
+        return (this.latLngArray as Array<{ lon: string, lat: string }>).map((latLng) => [latLng.lon, latLng.lat]);
     }
 
     public toFeatureArray(): Array<Feature<any, any>> {
@@ -175,7 +177,7 @@ export class Way extends OsmObject {
     }
 
     private analyzeTag(k: string, v: string) {
-        const o = (polygonTags as {k: string, v: any})[k];
+        const o = (polygonTags as Record<string, { whitelist?: string[], blacklist?: string[] } >)[k];
         if (o) {
             this.isPolygon = true;
             if (o.whitelist) {
@@ -205,11 +207,11 @@ export class Relation extends OsmObject {
         this.bounds = bounds;
     }
 
-    public addMember(member: {[k: string]: any}) {
+    public addMember(member: { [k: string]: any }) {
         switch (member.type) {
             // super relation, need to do combination
             case 'relation':
-                let binder = new LateBinder(this.relations, function(id) {
+                let binder = new LateBinder(this.relations, function (id) {
                     const relation = this.refElems.get(`relation/${id}`);
                     if (relation) {
                         relation.refCount++;
@@ -241,7 +243,7 @@ export class Relation extends OsmObject {
                     way.refCount++;
                     ways.push(way);
                 } else {
-                    binder = new LateBinder(ways, function(nid) {
+                    let binder = new LateBinder(ways, function (nid) {
                         const way = this.refElems.get(`way/${nid}`);
                         if (way) {
                             way.refCount++;
@@ -257,7 +259,7 @@ export class Relation extends OsmObject {
                 let node: Node | null = null;
                 if (member.lat && member.lon) {
                     node = new Node(member.ref, this.refElems);
-                    node.setLatLng({lon: member.lon, lat: member.lat});
+                    node.setLatLng({ lon: member.lon, lat: member.lat });
                     if (member.tags) {
                         node.addTags(member.tags);
                     }
@@ -270,7 +272,7 @@ export class Relation extends OsmObject {
                     node.refCount++;
                     this.nodes.push(node);
                 } else {
-                    binder = new LateBinder(this.nodes, function(id) {
+                    let binder = new LateBinder(this.nodes, function (id) {
                         const nn = this.refElems.get(`node/${id}`);
                         if (nn) {
                             nn.refCount++;
@@ -424,13 +426,13 @@ export class Relation extends OsmObject {
                     }
                 }
             }
-            
+
             if (multiLineGeometry.coordinates.length > 0) {
                 let feature = Object.assign({}, templateFeature);
                 feature.geometry = multiLineGeometry;
                 stringFeatures.push(feature);
             }
-    }
+        }
 
         for (let node of this.nodes) {
             pointFeatures = pointFeatures.concat(node.toFeatureArray());
