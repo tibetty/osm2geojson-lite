@@ -1,6 +1,6 @@
-import {Feature, FeatureCollection, GeometryObject} from 'geojson';
-import {Node, Relation, Way} from './osmobjs';
-import {purgeProps, RefElements} from './utils';
+import { Feature, FeatureCollection, GeometryObject } from 'geojson';
+import { Node, Relation, Way } from './osmobjs';
+import { purgeProps, RefElements } from './utils';
 import XmlParser from './xmlparser';
 
 interface IOptions {
@@ -11,7 +11,7 @@ interface IOptions {
     suppressWay?: boolean;
 }
 
-export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureCollection<GeometryObject> => {
+function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): FeatureCollection<GeometryObject> {
     let completeFeature = false;
     let renderTagged = false;
     let excludeWay = true;
@@ -31,8 +31,8 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
         parseOpts(opts);
     }
 
-    const detectFormat = (o: string | {[k: string]: any}): string => {
-        if ((o as {[k: string]: any}).elements) {
+    const detectFormat = (o: string | { [k: string]: any }): string => {
+        if ((o as { [k: string]: any }).elements) {
             return 'json';
         }
         if (o.indexOf('<osm') >= 0) {
@@ -49,16 +49,16 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
     const refElements = new RefElements();
     let featureArray: Feature<any, any>[] = [];
 
-    const analyzeFeaturesFromJson = (o: string | {[k: string]: any}) => {
-        for (const elem of (osm as {[k: string]: any}).elements) {
+    const analyzeFeaturesFromJson = (o: string | { [k: string]: any }) => {
+        for (const elem of (osm as { [k: string]: any }).elements) {
             switch (elem.type) {
                 case 'node':
                     const node = new Node(elem.id as string, refElements);
                     if (elem.tags) {
                         node.addTags(elem.tags);
                     }
-                    node.addProps(purgeProps(elem as {[k: string]: string}, ['id', 'type', 'tags', 'lat', 'lon']));
-                    node.setLatLng(elem as {lat: string, lon: string});
+                    node.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'lat', 'lon']));
+                    node.setLatLng(elem as { lat: string, lon: string });
                     break;
 
                 case 'way':
@@ -66,7 +66,7 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
                     if (elem.tags) {
                         way.addTags(elem.tags);
                     }
-                    way.addProps(purgeProps(elem as {[k: string]: string}, ['id', 'type', 'tags', 'nodes', 'geometry']));
+                    way.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'nodes', 'geometry']));
                     if (elem.nodes) {
                         for (const n of elem.nodes) {
                             way.addNodeRef(n);
@@ -84,7 +84,7 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
                     if (elem.tags) {
                         relation.addTags(elem.tags);
                     }
-                    relation.addProps(purgeProps(elem as {[k: string]: string}, ['id', 'type', 'tags', 'bounds', 'members']));
+                    relation.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'bounds', 'members']));
                     if (elem.members) {
                         for (const member of elem.members) {
                             relation.addMember(member);
@@ -96,17 +96,17 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
         }
     };
 
-    const analyzeFeaturesFromXml = (o: string | {[k: string]: any}) => {
-        const xmlParser = new XmlParser({progressive: true});
+    const analyzeFeaturesFromXml = (o: string | { [k: string]: any }) => {
+        const xmlParser = new XmlParser({ progressive: true });
 
-        xmlParser.on('</osm.node>', (node: {[k: string]: any}) => {
+        xmlParser.on('</osm.node>', (node: { [k: string]: any }) => {
             const nd = new Node(node.id, refElements);
             for (const [k, v] of Object.entries(node)) {
                 if (!k.startsWith('$') && ['id', 'lon', 'lat'].indexOf(k) < 0) {
                     nd.addProp(k, v);
                 }
             }
-            nd.setLatLng(node as {lat: string, lon: string});
+            nd.setLatLng(node as { lat: string, lon: string });
             if (node.$innerNodes) {
                 for (const ind of node.$innerNodes) {
                     if (ind.$tag === 'tag') {
@@ -116,7 +116,7 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
             }
         });
 
-        xmlParser.on('</osm.way>', (node: {[k: string]: any}) => {
+        xmlParser.on('</osm.way>', (node: { [k: string]: any }) => {
             const way = new Way(node.id, refElements);
             for (const [k, v] of Object.entries(node)) {
                 if (!k.startsWith('$') && ['id'].indexOf(k) < 0) {
@@ -138,11 +138,11 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
             }
         });
 
-        xmlParser.on('<osm.relation>', (node: {[k: string]: any}) => new Relation(node.id, refElements));
+        xmlParser.on('<osm.relation>', (node: { [k: string]: any }) => new Relation(node.id, refElements));
 
-        xmlParser.on('</osm.relation.member>', (node: {[k: string]: any}, parent: {[k: string]: any}) => {
+        xmlParser.on('</osm.relation.member>', (node: { [k: string]: any }, parent: { [k: string]: any }) => {
             const relation = refElements.get(`relation/${parent.id}`);
-            const member: {[k: string]: any} = {
+            const member: { [k: string]: any } = {
                 type: node.type,
                 role: node.role ? node.role : '',
                 ref: node.ref,
@@ -176,11 +176,11 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
             relation.addMember(member);
         });
 
-        xmlParser.on('</osm.relation.bounds>', (node: {[k: string]: any}, parent: {[k: string]: any}) => {
+        xmlParser.on('</osm.relation.bounds>', (node: { [k: string]: any }, parent: { [k: string]: any }) => {
             refElements.get(`relation/${parent.id}`).setBounds([parseFloat(node.minlon), parseFloat(node.minlat), parseFloat(node.maxlon), parseFloat(node.maxlat)]);
         });
 
-        xmlParser.on('</osm.relation.tag>', (node: {[k: string]: any}, parent: {[k: string]: any}) => {
+        xmlParser.on('</osm.relation.tag>', (node: { [k: string]: any }, parent: { [k: string]: any }) => {
             refElements.get(`relation/${parent.id}`).addTag(node.k, node.v);
         });
 
@@ -188,8 +188,8 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
     };
 
     if (format === 'json-raw') {
-        osm = JSON.parse(osm as string) as {[k: string]: any};
-        if ((osm as {[k: string]: any}).elements) {
+        osm = JSON.parse(osm as string) as { [k: string]: any };
+        if ((osm as { [k: string]: any }).elements) {
             format = 'json';
         } else {
             format = 'invalid';
@@ -216,5 +216,7 @@ export default (osm: string | {[k: string]: any}, opts?: IOptions): FeatureColle
         }
     }
 
-    return {type: 'FeatureCollection', features: featureArray};
+    return { type: 'FeatureCollection', features: featureArray };
 };
+
+export = osm2geojson;
