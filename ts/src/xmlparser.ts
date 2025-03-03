@@ -2,24 +2,24 @@ function conditioned(evt: string): boolean {
     return evt.match(/^(.+?)\[(.+?)\]>$/g) !== null;
 }
 
-function parseEvent(evt: string): {evt: string, exp?: string} {
+function parseEvent(evt: string): { evt: string, exp?: string } {
     const match = /^(.+?)\[(.+?)\]>$/g.exec(evt);
     if (match) {
-        return {evt: match[1] + '>', exp: match[2]};
+        return { evt: match[1] + '>', exp: match[2] };
     }
-    return {evt};
+    return { evt };
 }
 
-function genConditionFunc(cond: string): (node: {[k: string]: any}) => boolean {
+function genConditionFunc(cond: string): (node: { [k: string]: any }) => boolean {
     const body = 'return ' + cond.replace(/(\$.+?)(?=[=!.])/g, 'node.$&') + ';';
-    return new Function('node', body) as (node: {[k: string]: any}) => boolean;
+    return new Function('node', body) as (node: { [k: string]: any }) => boolean;
 }
 
 export default class {
-    private queryParent: boolean;
-    private progressive: boolean;
-    private parentMap: WeakMap<any, any>;
-    private evtListeners: {[k: string]: any};
+    private queryParent: boolean = false;
+    private progressive: boolean = false;
+    private parentMap: WeakMap<any, any> = new WeakMap();
+    private evtListeners: { [k: string]: any };
 
     constructor(opts: any) {
         if (opts) {
@@ -41,7 +41,7 @@ export default class {
         let nodeMatch = nodeRegEx.exec(xml);
         while (nodeMatch) {
             const tag = nodeMatch[1];
-            const node: {[k: string]: any} = {$tag: tag};
+            const node: { [k: string]: any } = { $tag: tag };
             const fullTag = dir + tag;
 
             const attrText = nodeMatch[2].trim();
@@ -116,19 +116,19 @@ export default class {
     }
 
     // support javascript condition for the last tag
-    public addListener(evt: string, func: (node: {[k: string]: any}, parent?: {[k: string]: any}) => void) {
+    public addListener(evt: string, func: (node: { [k: string]: any }, parent?: { [k: string]: any }) => void) {
         if (conditioned(evt)) {
             // func.prototype = evt;
             const ev = parseEvent(evt);
             if (ev.exp) {
-               (func as {[k: string]: any}).condition = genConditionFunc(ev.exp);
+                (func as { [k: string]: any }).condition = genConditionFunc(ev.exp);
             }
             evt = ev.evt;
         }
         this.$addListener(evt, func);
     }
 
-    public removeListener(evt: string, func: (node: {[k: string]: any}, parent?: {[k: string]: any}) => void) {
+    public removeListener(evt: string, func: (node: { [k: string]: any }, parent?: { [k: string]: any }) => void) {
         if (conditioned(evt)) {
             const ev = parseEvent(evt);
             evt = ev.evt;
@@ -136,15 +136,15 @@ export default class {
         this.$removeListener(evt, func);
     }
 
-    public on(evt: string, func: (node: {[k: string]: any}, parent?: {[k: string]: any}) => void) {
+    public on(evt: string, func: (node: { [k: string]: any }, parent?: { [k: string]: any }) => void) {
         this.addListener(evt, func);
     }
 
-    public off(evt: string, func: (node: {[k: string]: any}, parent?: {[k: string]: any}) => void) {
+    public off(evt: string, func: (node: { [k: string]: any }, parent?: { [k: string]: any }) => void) {
         this.removeListener(evt, func);
     }
 
-    private $addListener(evt: string, func: (node: {[k: string]: any}, parent?: {[k: string]: any}) => void) {
+    private $addListener(evt: string, func: (node: { [k: string]: any }, parent?: { [k: string]: any }) => void) {
         const funcs = this.evtListeners[evt];
         if (funcs) {
             funcs.push(func);
@@ -153,7 +153,7 @@ export default class {
         }
     }
 
-    private $removeListener(evt: string, func: (node: {[k: string]: any}, parent?: {[k: string]: any}) => void) {
+    private $removeListener(evt: string, func: (node: { [k: string]: any }, parent?: { [k: string]: any }) => void) {
         const funcs = this.evtListeners[evt];
         let idx = -1;
         if (funcs) {
@@ -164,7 +164,7 @@ export default class {
         }
     }
 
-    private emit(evt: string, ...args) {
+    private emit(evt: string, ...args: any[]) {
         const funcs = this.evtListeners[evt];
         if (funcs) {
             for (const func of funcs) {
