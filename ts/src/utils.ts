@@ -1,6 +1,6 @@
-import {Way} from './osmobjs';
+import { Way } from './osmobjs';
 
-export function purgeProps(obj: {[k: string]: any}, blacklist: string[]): {[k: string]: any} {
+export function purgeProps(obj: { [k: string]: any }, blacklist: string[]): { [k: string]: any } {
     if (obj) {
         const rs = Object.assign({}, obj);
         if (blacklist) {
@@ -13,19 +13,19 @@ export function purgeProps(obj: {[k: string]: any}, blacklist: string[]): {[k: s
     return {};
 }
 
-export function mergeProps(obj1: {[k: string]: any}, obj2: {[k: string]: any}): {[k: string]: any} {
+export function mergeProps(obj1: { [k: string]: any }, obj2: { [k: string]: any }): { [k: string]: any } {
     obj1 = obj1 ? obj1 : {};
     obj2 = obj2 ? obj2 : {};
     return Object.assign(obj1, obj2);
 }
 
-export function addPropToFeature(f: {[k: string]: any}, k: string, v: any) {
+export function addPropToFeature(f: { [k: string]: any }, k: string, v: any) {
     if (f.properties && k && v) {
         f.properties[k] = v;
     }
 }
 
-export function addPropToFeatures(fs: Array<{[k: string]: any}>, k: string, v: any) {
+export function addPropToFeatures(fs: Array<{ [k: string]: any }>, k: string, v: any) {
     for (const f of fs) {
         addPropToFeature(f, k, v);
     }
@@ -35,7 +35,7 @@ export const first = <T>(a: T[]): T => a[0];
 export const last = <T>(a: T[]): T => a[a.length - 1];
 export const coordsToKey = <T>(a: T[]): string => a.join(',');
 
-export function addToMap<T>(m: {[k: string]: T[]}, k: string, v: T): void {
+export function addToMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
     const a = m[k];
     if (a) {
         a.push(v);
@@ -44,7 +44,7 @@ export function addToMap<T>(m: {[k: string]: T[]}, k: string, v: T): void {
     }
 }
 
-export function removeFromMap<T>(m: {[k: string]: T[]}, k: string, v: T): void {
+export function removeFromMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
     const a = m[k];
     let idx = -1;
     if (a) {
@@ -55,7 +55,7 @@ export function removeFromMap<T>(m: {[k: string]: T[]}, k: string, v: T): void {
     }
 }
 
-export function getFirstFromMap<T>(m: {[k: string]: T[]}, k: string): T | null {
+export function getFirstFromMap<T>(m: { [k: string]: T[] }, k: string): T | null {
     const a = m[k];
     if (a && a.length > 0) {
         return a[0];
@@ -101,12 +101,12 @@ export const ptInsidePolygon = (pt: number[], polygon: number[][], xIdx?: number
 export const strToFloat = (el: any[] | string): any => el instanceof Array ? el.map(strToFloat) : parseFloat(el);
 
 export class LateBinder {
-    private container: any[] | {[k: string]: any};
+    private container: any[] | { [k: string]: any };
     private valueFunc: (...args) => any;
     private ctx: any;
     private args: any[];
 
-    constructor(container: any[] | {[k: string]: any}, valueFunc: (...args) => any, ctx: any, args: any[]) {
+    constructor(container: any[] | { [k: string]: any }, valueFunc: (...args) => any, ctx: any, args: any[]) {
         this.container = container;
         this.valueFunc = valueFunc;
         this.ctx = ctx;
@@ -159,8 +159,8 @@ export class RefElements extends Map {
 }
 
 export class WayCollection extends Array {
-    private firstMap: {[k: string]: any};
-    private lastMap: {[k: string]: any};
+    private firstMap: { [k: string]: any };
+    private lastMap: { [k: string]: any };
 
     constructor() {
         super();
