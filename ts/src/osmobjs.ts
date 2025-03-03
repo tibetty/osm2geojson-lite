@@ -1,7 +1,7 @@
 import {
     Feature, GeometryObject, LineString,
     MultiLineString, MultiPoint, MultiPolygon,
-    Point, Polygon
+    Point, Polygon, BBox
 } from 'geojson';
 
 import { first, isRing, last, ptInsidePolygon, ringDirection, strToFloat } from './utils';
@@ -386,7 +386,7 @@ export class Relation extends OsmObject {
         let templateFeature: Feature<any, any> = {
             type: 'Feature',
             id: this.getCompositeId(),
-            bbox: this.bounds,
+            bbox: this.bounds as BBox,
             properties: this.getProps(),
             geometry: null
         };
