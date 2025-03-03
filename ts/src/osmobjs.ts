@@ -115,7 +115,7 @@ export class Way extends OsmObject {
     }
 
     public addNodeRef(ref: string) {
-        const binder = new LateBinder(this.latLngArray, function (id: string) {
+        const binder = new LateBinder(this.latLngArray, (id: string) => {
             const node = this.refElems.get(`node/${id}`);
             if (node) {
                 node.refCount++;
@@ -211,7 +211,7 @@ export class Relation extends OsmObject {
         switch (member.type) {
             // super relation, need to do combination
             case 'relation':
-                let binder = new LateBinder(this.relations, function (id) {
+                let binder = new LateBinder(this.relations, (id: string) => {
                     const relation = this.refElems.get(`relation/${id}`);
                     if (relation) {
                         relation.refCount++;
@@ -243,7 +243,7 @@ export class Relation extends OsmObject {
                     way.refCount++;
                     ways.push(way);
                 } else {
-                    let binder = new LateBinder(ways, function (nid) {
+                    let binder = new LateBinder(ways, (nid) => {
                         const way = this.refElems.get(`way/${nid}`);
                         if (way) {
                             way.refCount++;
@@ -272,7 +272,7 @@ export class Relation extends OsmObject {
                     node.refCount++;
                     this.nodes.push(node);
                 } else {
-                    let binder = new LateBinder(this.nodes, function (id) {
+                    let binder = new LateBinder(this.nodes, (id) => {
                         const nn = this.refElems.get(`node/${id}`);
                         if (nn) {
                             nn.refCount++;
@@ -361,7 +361,7 @@ export class Relation extends OsmObject {
                     if (ways) {
                         const thisWays = this[fieldName];
                         if (thisWays) {
-                            [].splice.apply(thisWays, [thisWays.length, 0].concat(ways));
+                            thisWays.push(...ways);
                         } else {
                             this[fieldName] = ways;
                         }
