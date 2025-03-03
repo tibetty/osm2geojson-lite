@@ -45,6 +45,54 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
     </script>
 
     <style type="text/css">
+        /* Update the code element CSS to look more like markdown */
+        code {
+            font-size: 13px;
+            font-family: "Menlo", "Monaco", "Consolas", "Courier New", monospace;
+            background-color: #f6f8fa;
+            border-radius: 3px;
+            padding: 8px 12px;
+            display: block;
+            width: calc(100% - 24px); /* Account for padding */
+            margin: 5px 0;
+            line-height: 1.45;
+            overflow-x: auto;
+            white-space: pre;
+            text-align: left;
+            border: 1px solid #e1e4e8;
+            color: #24292e;
+        }
+        
+        /* Make inline code different from block code */
+        p code, li > code:not(:only-child) {
+            display: inline;
+            padding: 3px 6px;
+            margin: 0 2px;
+            white-space: nowrap;
+            font-size: 85%;
+        }
+
+        /* Ensure consistent styling for list items */
+        ul {
+            padding-left: 20px;
+        }
+        
+        li {
+            line-height: 1.7em;
+            text-align: left;
+            list-style-type: disc;
+            margin-bottom: 8px;
+        }
+        
+        li li {
+            list-style-type: circle;
+        }
+        
+        /* Fix nested list padding */
+        li > ul {
+            margin-top: 8px;
+        }
+
         body {
             font-size: 18px;
             background: white;
@@ -53,12 +101,6 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             margin: 50px auto;
             color: #000022;
             line-height: 1.7em
-        }
-
-        li {
-            line-height: 1.7em;
-            text-align: left;
-            list-style: none;
         }
 
         #left {
@@ -215,6 +257,31 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             margin-top: 10px;
             margin-bottom: 20px;
         }
+
+        /* Add these CSS rules to hide bullets for list items with code blocks */
+        li:has(> code) {
+            list-style-type: none;
+            margin-left: -20px; /* Adjust the indentation */
+        }
+
+        /* For browsers that don't support :has selector (like Firefox) */
+        li code {
+            display: block;
+            margin-left: -20px;
+        }
+
+        /* Keep regular list styles for other items */
+        li {
+            line-height: 1.7em;
+            text-align: left;
+            list-style-type: disc;
+            margin-bottom: 8px;
+        }
+
+        /* Keep bullet points for parent items only */
+        li > ul > li {
+            list-style-type: none;
+        }
     </style>
 </head>
 <body>
@@ -243,27 +310,21 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             <p>osm2geojson-lite is a lightweight (not as lightweight as xml2geojson-lite though) yet faster convertor for OSM data in XML or JSON formats to GeoJSON - much faster (the more complex the data source is, the more performance advantages it posesses) than osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency, please find more details from its <a class="link" target="_blank" href="https://www.npmjs.com/package/osm2geojson-lite">npm homepage</a></p>
             <span style="font-weight: bold;">Usage: </span>
             <ul>
-                <li>In the browser:
-                    <ul>
-                        <li><code>
-                            &lt;script src='your/path/to/osm2geojson-lite.js'/&gt;
-                        </code></li>
-                        <li><code>
-                            osm2geojson(osm, opts);
-                        </code></li>
-                    </ul>
-                </li>
-                <li>As a nodejs library:
-                    <ul>
-                        <li><code>
-                            $ npm install osm2geojson-lite
-                        </code></li>
-                        <li><code>
-                            const osm2geojson = require('osm2geojson-lite');<br>
-                            osm2geojson(osm, opts);
-                        </code></li>
-                    </ul>
-                </li>
+                <li>In the browser:</li>
+                <div class="code-container">
+                    <code>&lt;script src='your/path/to/osm2geojson-lite.js'/&gt;</code>
+                </div>
+                <div class="code-container">
+                    <code>osm2geojson(osm, opts);</code>
+                </div>
+                
+                <li>As a nodejs library:</li>
+                <div class="code-container">
+                    <code>$ npm install osm2geojson-lite</code>
+                </div>
+                <div class="code-container">
+                    <code>const osm2geojson = require('osm2geojson-lite');<br>osm2geojson(osm, opts);</code>
+                </div>
             </ul>
             Read more about the API in the official <a class="link" target="_blank" href="https://github.com/tibetty/osm2geojson-lite#api">documentation</a>.
             <div id="download">
