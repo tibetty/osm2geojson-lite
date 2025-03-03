@@ -1,25 +1,30 @@
 ifeq ($(OS),Windows_NT)
-    OPEN_INDEX_HTML = start ./index.html
+    OPEN_CMD = start
+    CP_CMD = copy
 else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux)
-        OPEN_INDEX_HTML = xdg-open ./index.html
+        OPEN_CMD = xdg-open
     endif
     ifeq ($(UNAME_S),Darwin)
-        OPEN_INDEX_HTML = open ./index.html
+        OPEN_CMD = open
     endif
+    CP_CMD = cp
 endif
 
-all: node web test-node test-web
+all: node web
+
+# New target for tests only
+test: test-node test-web
 
 node: ts/src/*
-	cd ts && tsc && cp src/polytags.json release/ && cd ..
+	@cd ts && tsc --declaration && $(CP_CMD) src/polytags.json release/ && cd ..
 
-web: ts/release/*
-	npx browserify -s osm2geojson ts/release/index.js | npx uglifyjs -c -m -o dist/osm2geojson-lite.js
+web: ts/release/index.js
+	@npx browserify -s osm2geojson ts/release/index.js | npx uglifyjs -c -m -o dist/osm2geojson-lite.js
 
 test-node: test/test.js
-	cd test && node test.js && cd ..
+	@cd test && node test.js && cd ..
 
-test-web:
-	$(OPEN_INDEX_HTML)
+test-web: test/index.html
+	@$(OPEN_CMD) test/index.html
