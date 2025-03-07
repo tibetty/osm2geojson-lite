@@ -4,7 +4,7 @@
   "description": "",
   "main": "test.js",
   "scripts": {
-    "bench": "node otg-bench.js && node o2gl-bench.js",
+    "bench": "npm install && node otg-bench.js && node o2gl-bench.js",
     "test": "node test.js"
   },
   "dependencies": {
