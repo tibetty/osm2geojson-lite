@@ -45,8 +45,8 @@
     "multipolygon"
   ],
   "license": "ISC",
-  "main": "ts/release/index.js",
-  "types": "ts/release/index.d.ts",
+  "main": "dist/node/index.js",
+  "types": "dist/node/index.d.ts",
   "name": "osm2geojson-lite",
   "repository": {
     "type": "git",
@@ -59,7 +59,7 @@
   "optionalDependencies": {
     "@types/geojson": "^7946.0.16"
   },
-  "version": "1.0.1",
+  "version": "1.0.2",
   "directories": {
     "lib": "lib",
     "test": "test"
@@ -69,9 +69,7 @@
     "uglify-js": "^3.19.3"
   },
   "files": [
-    "ts/release/**/*.js",
-    "ts/release/**/*.d.ts",
-    "ts/release/**/*.json",
-    "dist/osm2geojson-lite.js"
+    "dist/**/*.js",
+    "dist/**/*.json"
   ]
 }

@@ -18,10 +18,10 @@ all: node web
 test: test-node test-web
 
 node: ts/src/*
-	@cd ts && tsc --declaration && $(CP_CMD) src/polytags.json release/ && cd ..
+	@cd ts && tsc --declaration && $(CP_CMD) src/polytags.json ../dist/node && cd ..
 
-web: ts/release/index.js
-	@npx browserify -s osm2geojson ts/release/index.js | npx uglifyjs -c -m -o dist/osm2geojson-lite.js
+web: dist/node/index.js
+	@npx browserify -s osm2geojson dist/node/index.js | npx uglifyjs -c -m -o dist/web/osm2geojson-lite.js
 
 test-node: test/test.js
 	@cd test && node test.js && cd ..

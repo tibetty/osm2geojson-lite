@@ -7,5 +7,5 @@
     "test": "node test.js"
   },
   "author": "tibetty",
-  "license": "isc"
+  "license": "ISC"
 }

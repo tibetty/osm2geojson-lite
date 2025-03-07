@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require('fs'),
-	osm2geojson = require('../ts/release');
+	osm2geojson = require('../dist/node');
 
 console.log('========== xml conversion results ==========');
 const xmlFiles = ['zhucheng.osm', 'hebei.osm', 'tokyodo.osm', 'usa.osm', 'original.osm'];
