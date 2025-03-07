@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require('fs'),
-	osm2geojson = require('../lib/index.js');
+	osm2geojson = require('../dist/node');
 
 const rounds = 100;
 console.log('==========xml processing performance results==========');
