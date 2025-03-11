@@ -58,9 +58,8 @@ Performance
 3. For each script, run as many as times seperately and then calculate the average cost time (ACT for short)
 4. The # listed in the table below are coarse lowest values of dividing the ACT of `osmtogeojson` by the one of this library
 ```
-$ cd bench
-$ node o2gl-bench.js
-$ node otg-bench.js
+$ cd test
+$ npm run bench
 ```
 1. XML
    
