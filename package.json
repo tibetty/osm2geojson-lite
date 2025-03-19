@@ -59,7 +59,7 @@
   "optionalDependencies": {
     "@types/geojson": "^7946.0.16"
   },
-  "version": "1.0.2",
+  "version": "1.0.3",
   "directories": {
     "lib": "lib",
     "test": "test"
@@ -70,6 +70,7 @@
   },
   "files": [
     "dist/**/*.js",
+    "dist/**/*.ts",
     "dist/**/*.json"
   ]
 }
