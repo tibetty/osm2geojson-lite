@@ -35,7 +35,7 @@ export const first = <T>(a: T[]): T => a[0];
 export const last = <T>(a: T[]): T => a[a.length - 1];
 export const coordsToKey = <T>(a: T[]): string => a.join(',');
 
-export function addToMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
+function addToMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
     const a = m[k];
     if (a) {
         a.push(v);
@@ -44,7 +44,7 @@ export function addToMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
     }
 }
 
-export function removeFromMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
+function removeFromMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
     const a = m[k];
     let idx = -1;
     if (a) {
@@ -55,7 +55,7 @@ export function removeFromMap<T>(m: { [k: string]: T[] }, k: string, v: T): void
     }
 }
 
-export function getFirstFromMap<T>(m: { [k: string]: T[] }, k: string): T | null {
+function getFirstFromMap<T>(m: { [k: string]: T[] }, k: string): T | null {
     const a = m[k];
     if (a && a.length > 0) {
         return a[0];
@@ -159,9 +159,9 @@ export class RefElements extends Map {
     }
 }
 
-export class WayCollection extends Array {
-    private firstMap: { [k: string]: any };
-    private lastMap: { [k: string]: any };
+export class WayCollection extends Array<number[][]> {
+    private firstMap: { [k: string]: number[][][] };
+    private lastMap: { [k: string]: number[][][] };
 
     constructor() {
         super();
@@ -172,20 +172,21 @@ export class WayCollection extends Array {
     public addWay(way: Way) {
         const w = way.toCoordsArray();
         if (w.length > 0) {
-            this.push(w);
-            addToMap(this.firstMap, coordsToKey(first(w)), w);
-            addToMap(this.lastMap, coordsToKey(last(w)), w);
+            const nw = strToFloat(w);
+            this.push(nw);
+            addToMap(this.firstMap, coordsToKey<number[]>(first(nw)), nw);
+            addToMap(this.lastMap, coordsToKey<number[]>(last(nw)), nw);
         }
     }
 
     public toStrings(): number[][][] {
         const strings: number[][][] = [];
-        let way: string[][] = this.shift();
+        let way: number[][] | undefined = this.shift();
         while (way) {
             removeFromMap(this.firstMap, coordsToKey(first(way)), way);
             removeFromMap(this.lastMap, coordsToKey(last(way)), way);
             let current = way;
-            let next: string[][] | null;
+            let next: number[][] | null;
             do {
                 const key = coordsToKey(last(current));
                 let shouldReverse = false;
@@ -231,6 +232,148 @@ export class WayCollection extends Array {
             }
             str = strings.shift();
         }
+        return rings;
+    }
+}
+
+export class OptimalWayCollection extends WayCollection {
+    public toOptimalStrings(): number[][][] {
+        // Clone the current collection to avoid modifying original data
+        const tempCollection = new WayCollection();
+        this.forEach(way => tempCollection.push([...way]));
+        
+        // First map for quick access to ways by their first node
+        const firstMap: { [k: string]: number[][] [] } = {};
+        // Last map for quick access to ways by their last node
+        const lastMap: { [k: string]: number[][] [] } = {};
+        
+        // Populate the maps
+        tempCollection.forEach(way => {
+            addToMap(firstMap, coordsToKey(first(way)), way);
+            addToMap(lastMap, coordsToKey(last(way)), way);
+        });
+        
+        const strings: number[][][] = [];
+        const processedWays = new Set();
+        
+        // Process each way as a potential starting point
+        while (tempCollection.length > 0) {
+            let longestString: number[][] | null = null;
+            let bestStartWay: number[][] | null = null;
+            
+            // Try each way as a starting point
+            for (const startWay of tempCollection) {
+                if (processedWays.has(startWay)) continue;
+                
+                // Create a temporary collection to simulate processing from this starting way
+                const testCollection = new WayCollection();
+                tempCollection.forEach(way => {
+                    if (way !== startWay && !processedWays.has(way)) {
+                        testCollection.push([...way]);
+                    }
+                });
+                
+                // Start with this way
+                let current = [...startWay];
+                let foundConnection = true;
+                
+                // Iteratively find connecting ways
+                while (foundConnection) {
+                    foundConnection = false;
+                    
+                    // Try to find a way connecting at the end
+                    const endKey = coordsToKey(last(current));
+                    let nextWay: number[][] | null = getFirstFromMap(firstMap, endKey);
+                    let shouldReverse = false;
+                    
+                    if (!nextWay) {
+                        nextWay = getFirstFromMap(lastMap, endKey);
+                        shouldReverse = true;
+                    }
+                    
+                    if (nextWay && !processedWays.has(nextWay)) {
+                        // Found a way to extend the current string
+                        processedWays.add(nextWay);
+                        testCollection.splice(testCollection.indexOf(nextWay), 1);
+                        
+                        if (shouldReverse) {
+                            nextWay = [...nextWay].reverse();
+                        }
+                        
+                        current = current.concat(nextWay.slice(1));
+                        foundConnection = true;
+                    }
+                }
+                
+                // Check if this is the longest string found so far
+                if (!longestString || current.length > longestString.length) {
+                    longestString = current;
+                    bestStartWay = startWay;
+                }
+                
+                // Clear the processed set for the next trial
+                processedWays.clear();
+            }
+            
+            // Add the longest string found to the result
+            if (longestString) {
+                strings.push(strToFloat(longestString));
+                
+                // Remove all ways that were used in this string
+                tempCollection.splice(tempCollection.indexOf(bestStartWay!), 1);
+                processedWays.add(bestStartWay);
+                
+                // Also remove any other ways that were connected to form this string
+                // This requires tracing the path again
+                let current = bestStartWay!;
+                let foundConnection = true;
+                
+                while (foundConnection) {
+                    foundConnection = false;
+                    
+                    const endKey = coordsToKey(last(current));
+                    let nextWay: number[][] | null = getFirstFromMap(firstMap, endKey);
+                    let shouldReverse = false;
+                    
+                    if (!nextWay) {
+                        nextWay = getFirstFromMap(lastMap, endKey);
+                        shouldReverse = true;
+                    }
+                    
+                    if (nextWay && tempCollection.includes(nextWay)) {
+                        tempCollection.splice(tempCollection.indexOf(nextWay), 1);
+                        processedWays.add(nextWay);
+                        
+                        if (shouldReverse) {
+                            nextWay = [...nextWay].reverse();
+                        }
+                        
+                        current = current.concat(nextWay.slice(1));
+                        foundConnection = true;
+                    }
+                }
+            } else {
+                // Should not happen, but just in case
+                break;
+            }
+        }
+        
+        return strings;
+    }
+    
+    public toOptimalRings(direction: string): number[][][] {
+        const strings = this.toOptimalStrings();
+        const rings: number[][][] = [];
+        
+        for (const str of strings) {
+            if (isRing(str)) {
+                if (ringDirection(str) !== direction) {
+                    str.reverse();
+                }
+                rings.push(str);
+            }
+        }
+        
         return rings;
     }
 }
