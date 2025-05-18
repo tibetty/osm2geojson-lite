@@ -15,7 +15,7 @@ function genConditionFunc(cond: string): (node: { [k: string]: any }) => boolean
     return new Function('node', body) as (node: { [k: string]: any }) => boolean;
 }
 
-export default class {
+export class XmlParser {
     private queryParent: boolean = false;
     private progressive: boolean = false;
     private parentMap: WeakMap<any, any> = new WeakMap();

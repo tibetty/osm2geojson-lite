@@ -25,7 +25,7 @@
   "bugs": {
     "url": "https://github.com/tibetty/osm2geojson-lite/issues"
   },
-  "bundleDependencies": false,
+  "bundleDependencies": [],
   "deprecated": false,
   "description": "a lightweight yet faster osm (either in xml or in json formats) to geojson convertor - 4x faster than xmldom + osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency",
   "homepage": "https://github.com/tibetty/osm2geojson-lite#readme",
@@ -66,6 +66,7 @@
   },
   "devDependencies": {
     "browserify": "^17.0.1",
+    "typescript": "^5.8.3",
     "uglify-js": "^3.19.3"
   },
   "files": [

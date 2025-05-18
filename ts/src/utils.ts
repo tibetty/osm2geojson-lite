@@ -1,4 +1,4 @@
-import { Way } from './osmobjs';
+import type { Way } from './way';
 
 export function purgeProps(obj: { [k: string]: any }, blacklist: string[]): { [k: string]: any } {
     if (obj) {
