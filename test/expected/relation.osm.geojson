@@ -1,0 +1,58 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "relation/1",
+      "properties": {
+        "id": "relation/1",
+        "type": "multipolygon"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -1,
+              -1
+            ],
+            [
+              1,
+              -1
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              -1,
+              1
+            ],
+            [
+              -1,
+              -1
+            ]
+          ],
+          [
+            [
+              0,
+              -0.5
+            ],
+            [
+              0,
+              0.5
+            ],
+            [
+              0.5,
+              0
+            ],
+            [
+              0,
+              -0.5
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
