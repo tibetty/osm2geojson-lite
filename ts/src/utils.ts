@@ -11,24 +11,6 @@ export function purgeProps(obj: { [k: string]: any }, blacklist: string[]): { [k
     return {};
 }
 
-export function mergeProps(obj1: { [k: string]: any }, obj2: { [k: string]: any }): { [k: string]: any } {
-    obj1 = obj1 ? obj1 : {};
-    obj2 = obj2 ? obj2 : {};
-    return Object.assign(obj1, obj2);
-}
-
-export function addPropToFeature(f: { [k: string]: any }, k: string, v: any) {
-    if (f.properties && k && v) {
-        f.properties[k] = v;
-    }
-}
-
-export function addPropToFeatures(fs: Array<{ [k: string]: any }>, k: string, v: any) {
-    for (const f of fs) {
-        addPropToFeature(f, k, v);
-    }
-}
-
 export const first = <T>(a: T[]): T => a[0];
 export const last = <T>(a: T[]): T => a[a.length - 1];
 export const coordsToKey = <T>(a: T[]): string => a.join(',');

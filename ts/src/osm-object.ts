@@ -47,9 +47,7 @@ export abstract class OsmObject {
         return Object.assign(this.props, this.tags);
     }
 
-    public toFeatureArray(): Array<Feature<any, any>> {
-        return [];
-    }
+    public abstract toFeatureArray(): Array<Feature<any, any>>;
 }
 
 
