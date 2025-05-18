@@ -1,6 +1,8 @@
 import { Feature } from "geojson";
 import { OsmObject } from "./osm-object";
-import { isRing, LateBinder, RefElements, ringDirection, strToFloat } from "./utils";
+import { LateBinder } from "./late-binder";
+import { RefElements } from "./ref-elements";
+import { isRing, ringDirection, strToFloat } from "./utils";
 import polygonTags from './polytags.json';
 
 

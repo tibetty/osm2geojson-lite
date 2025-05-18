@@ -1,5 +1,3 @@
-import type { Way } from './way';
-
 export function purgeProps(obj: { [k: string]: any }, blacklist: string[]): { [k: string]: any } {
     if (obj) {
         const rs = Object.assign({}, obj);
@@ -85,7 +83,7 @@ export const ringDirection = (a: number[][], xIdx?: number, yIdx?: number): stri
     return det < 0 ? 'clockwise' : 'counterclockwise';
 };
 
-export const ptInsidePolygon = (pt: number[], polygon: number[][], xIdx?: number, yIdx?: number): boolean => {
+export const pointInsidePolygon = (pt: number[], polygon: number[][], xIdx?: number, yIdx?: number): boolean => {
     xIdx = xIdx || 0, yIdx = yIdx || 1;
     let result = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -100,137 +98,8 @@ export const ptInsidePolygon = (pt: number[], polygon: number[][], xIdx?: number
 
 export const strToFloat = (el: any[] | string): any => el instanceof Array ? el.map(strToFloat) : parseFloat(el);
 
-export class LateBinder {
-    private container: any[] | { [k: string]: any };
-    private valueFunc: (...args: any[]) => any;
-    private ctx: any;
-    private args: any[];
 
-    constructor(container: any[] | { [k: string]: any }, valueFunc: (...args: any[]) => any, ctx: any, args: any[]) {
-        this.container = container;
-        this.valueFunc = valueFunc;
-        this.ctx = ctx;
-        this.args = args;
-    }
 
-    public bind() {
-        const v = this.valueFunc.apply(this.ctx, this.args);
-        if (this.container instanceof Array) {
-            const idx = this.container.indexOf(this);
-            if (idx >= 0) {
-                const args: [number, number, any?] = [idx, 1];
-                if (v) {
-                    args.push(v);
-                }
-                Array.prototype.splice.apply(this.container, args);
-            }
-        } else if (typeof this.container === 'object' && !Array.isArray(this.container)) {
-            const container = this.container as { [k: string]: any };
-            const k = Object.keys(container).find((nv) => container[nv] === this);
-            if (k) {
-                if (v) {
-                    container[k] = v;
-                } else {
-                    delete container[k];
-                }
-            }
-        }
-    }
-}
 
-export class RefElements extends Map {
-    private binders: LateBinder[];
 
-    constructor() {
-        super();
-        this.binders = [];
-    }
 
-    public add(k: string, v: any) {
-        this.set(k, v);
-    }
-
-    public addBinder(binder: LateBinder) {
-        this.binders.push(binder);
-    }
-
-    public bindAll() {
-        this.binders.forEach((binder) => binder.bind());
-    }
-}
-
-export class WayCollection extends Array {
-    private firstMap: { [k: string]: any };
-    private lastMap: { [k: string]: any };
-
-    constructor() {
-        super();
-        this.firstMap = {};
-        this.lastMap = {};
-    }
-
-    public addWay(way: Way) {
-        const w = way.toCoordsArray();
-        if (w.length > 0) {
-            this.push(w);
-            addToMap(this.firstMap, coordsToKey(first(w)), w);
-            addToMap(this.lastMap, coordsToKey(last(w)), w);
-        }
-    }
-
-    public toStrings(): number[][][] {
-        const strings: number[][][] = [];
-        let way: string[][] = this.shift();
-        while (way) {
-            removeFromMap(this.firstMap, coordsToKey(first(way)), way);
-            removeFromMap(this.lastMap, coordsToKey(last(way)), way);
-            let current = way;
-            let next: string[][] | null;
-            do {
-                const key = coordsToKey(last(current));
-                let shouldReverse = false;
-
-                next = getFirstFromMap(this.firstMap, key);
-                if (!next) {
-                    next = getFirstFromMap(this.lastMap, key);
-                    shouldReverse = true;
-                }
-
-                if (next) {
-                    this.splice(this.indexOf(next), 1);
-                    removeFromMap(this.firstMap, coordsToKey(first(next)), next);
-                    removeFromMap(this.lastMap, coordsToKey(last(next)), next);
-                    if (shouldReverse) {
-                        // always reverse shorter one to save time
-                        if (next.length > current.length) {
-                            [current, next] = [next, current];
-                        }
-                        next.reverse();
-                    }
-
-                    current = current.concat(next.slice(1));
-                }
-            } while (next);
-            strings.push(strToFloat(current));
-            way = this.shift();
-        }
-
-        return strings;
-    }
-
-    public toRings(direction: string): number[][][] {
-        const strings = this.toStrings();
-        const rings: number[][][] = [];
-        let str = strings.shift();
-        while (str) {
-            if (isRing(str)) {
-                if (ringDirection(str) !== direction) {
-                    str.reverse();
-                }
-                rings.push(str);
-            }
-            str = strings.shift();
-        }
-        return rings;
-    }
-}

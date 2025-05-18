@@ -1,5 +1,6 @@
 import { OsmObject } from "./osm-object";
-import { RefElements, strToFloat } from "./utils";
+import { RefElements } from "./ref-elements";
+import { strToFloat } from "./utils";
 import type { Feature } from "geojson";
 
 export class Node extends OsmObject {

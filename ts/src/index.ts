@@ -1,9 +1,10 @@
-import { Feature, FeatureCollection, GeometryObject } from 'geojson';
-import { purgeProps, RefElements } from './utils';
+import { purgeProps } from './utils';
 import { XmlParser } from './xmlparser';
 import { Node } from './node';
 import { Way } from './way';
 import { Relation } from './relation';
+import { RefElements } from './ref-elements';
+import type { Feature, FeatureCollection, GeometryObject } from 'geojson';
 
 interface IOptions {
     completeFeature?: boolean;
