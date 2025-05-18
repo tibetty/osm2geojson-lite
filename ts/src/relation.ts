@@ -3,8 +3,8 @@ import { Way } from "./way";
 import { Node } from "./node";
 import { WayCollection } from "./way-collection";
 import { LateBinder } from "./late-binder";
-import { RefElements } from "./ref-elements";
 import { first, pointInsidePolygon } from "./utils";
+import type { RefElements } from "./ref-elements";
 import type { BBox, Feature, GeometryObject, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "geojson";
 
 export class Relation extends OsmObject {

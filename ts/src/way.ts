@@ -1,9 +1,9 @@
 import { Feature } from "geojson";
 import { OsmObject } from "./osm-object";
 import { LateBinder } from "./late-binder";
-import { RefElements } from "./ref-elements";
 import { isRing, ringDirection, strToFloat } from "./utils";
 import polygonTags from './polytags.json';
+import type { RefElements } from "./ref-elements";
 
 
 export class Way extends OsmObject {
