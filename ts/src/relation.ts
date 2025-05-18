@@ -1,4 +1,4 @@
-import { OsmObject } from "./osmobjs";
+import { OsmObject } from "./osm-object";
 import { Way } from "./way";
 import { Node } from "./node";
 

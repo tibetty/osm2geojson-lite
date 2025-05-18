@@ -1,4 +1,4 @@
-import { OsmObject } from "./osmobjs";
+import { OsmObject } from "./osm-object";
 import { RefElements, strToFloat } from "./utils";
 import type { Feature } from "geojson";
 
