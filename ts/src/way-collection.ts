@@ -2,8 +2,8 @@ import { addToMap, coordsToKey, first, getFirstFromMap, isRing, last, removeFrom
 import type { Way } from "./way";
 
 export class WayCollection extends Array {
-    private firstMap: { [k: string]: any };
-    private lastMap: { [k: string]: any };
+    private firstMap: Record<string, string[][][]>;
+    private lastMap: Record<string, string[][][]>;
 
     constructor() {
         super();
