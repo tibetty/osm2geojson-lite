@@ -1,0 +1,664 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "node/2281802897",
+      "properties": {
+        "id": "node/2281802897",
+        "timestamp": "2013-04-26T07:39:31Z",
+        "version": 1,
+        "changeset": 15868943,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "amenity": "fountain"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.257524,
+          46.4555668
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/33200366",
+      "properties": {
+        "id": "way/33200366",
+        "timestamp": "2011-03-24T11:28:17Z",
+        "version": 2,
+        "changeset": 7654992,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "bicycle": "no",
+        "highway": "pedestrian"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2579312,
+            46.454835
+          ],
+          [
+            11.2578535,
+            46.4551482
+          ],
+          [
+            11.2578714,
+            46.4554286
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/33748708",
+      "properties": {
+        "id": "way/33748708",
+        "timestamp": "2013-11-02T18:28:24Z",
+        "version": 3,
+        "changeset": 18679226,
+        "user": "Skombi",
+        "uid": 1380953,
+        "barrier": "wall"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2568826,
+            46.4554992
+          ],
+          [
+            11.2568351,
+            46.455501
+          ],
+          [
+            11.2569027,
+            46.4548927
+          ],
+          [
+            11.2578379,
+            46.4551564
+          ],
+          [
+            11.257834,
+            46.4553983
+          ],
+          [
+            11.2578309,
+            46.455408
+          ],
+          [
+            11.2578166,
+            46.4554127
+          ],
+          [
+            11.2578065,
+            46.4554127
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/105582211",
+      "properties": {
+        "id": "way/105582211",
+        "timestamp": "2013-01-13T22:55:41Z",
+        "version": 2,
+        "changeset": 14642447,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "building": "yes"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              11.2579365,
+              46.4550159
+            ],
+            [
+              11.2580442,
+              46.4550251
+            ],
+            [
+              11.2580278,
+              46.4551126
+            ],
+            [
+              11.2580373,
+              46.4551161
+            ],
+            [
+              11.2580235,
+              46.4551816
+            ],
+            [
+              11.2579094,
+              46.4551715
+            ],
+            [
+              11.2579365,
+              46.4550159
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/105582213",
+      "properties": {
+        "id": "way/105582213",
+        "timestamp": "2011-03-24T11:27:44Z",
+        "version": 1,
+        "changeset": 7654992,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "building": "yes"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2580035,
+            46.4548633
+          ],
+          [
+            11.2580035,
+            46.4548633
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/201032335",
+      "properties": {
+        "id": "way/201032335",
+        "timestamp": "2013-01-13T22:55:36Z",
+        "version": 1,
+        "changeset": 14642447,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "building": "yes"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              11.2579365,
+              46.4550159
+            ],
+            [
+              11.2579603,
+              46.4549282
+            ],
+            [
+              11.2580442,
+              46.4550251
+            ],
+            [
+              11.2579365,
+              46.4550159
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/33052937",
+      "properties": {
+        "id": "way/33052937",
+        "timestamp": "2013-04-26T07:39:33Z",
+        "version": 5,
+        "changeset": 15868943,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "amenity": "parking",
+        "capacity:disabled": "2",
+        "fee": "yes",
+        "type": "surface"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2576431,
+            46.4555492
+          ],
+          [
+            11.2576358,
+            46.4555129
+          ],
+          [
+            11.2580121,
+            46.4554651
+          ],
+          [
+            11.2580266,
+            46.4555072
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/33189032",
+      "properties": {
+        "id": "way/33189032",
+        "timestamp": "2013-09-06T15:43:42Z",
+        "version": 8,
+        "changeset": 17705306,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "bicycle": "yes",
+        "highway": "pedestrian",
+        "name": "Kapuzinerstraße - via Cappuccini",
+        "name:de": "Kapuzinerstraße",
+        "name:it": "via Cappuccini"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2579495,
+            46.45542
+          ],
+          [
+            11.2578714,
+            46.4554286
+          ],
+          [
+            11.2576008,
+            46.4554764
+          ],
+          [
+            11.2574519,
+            46.4555026
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/105582312",
+      "properties": {
+        "id": "way/105582312",
+        "timestamp": "2013-01-13T22:55:40Z",
+        "version": 2,
+        "changeset": 14642447,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "building": "yes"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2579036,
+            46.4552576
+          ],
+          [
+            11.2578919,
+            46.4553699
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/106227173",
+      "properties": {
+        "id": "way/106227173",
+        "timestamp": "2013-01-13T22:55:47Z",
+        "version": 3,
+        "changeset": 14642447,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "access": "private",
+        "highway": "service",
+        "service": "driveway"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2573247,
+            46.4555155
+          ],
+          [
+            11.2573066,
+            46.4554415
+          ],
+          [
+            11.2572833,
+            46.4553349
+          ],
+          [
+            11.2569928,
+            46.4553232
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/106227181",
+      "properties": {
+        "id": "way/106227181",
+        "timestamp": "2013-01-13T22:55:42Z",
+        "version": 2,
+        "changeset": 14642447,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "building": "yes"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              11.2570676,
+              46.4555039
+            ],
+            [
+              11.2568826,
+              46.4554992
+            ],
+            [
+              11.256879,
+              46.4554532
+            ],
+            [
+              11.2570586,
+              46.4554554
+            ],
+            [
+              11.2570496,
+              46.4553857
+            ],
+            [
+              11.2572186,
+              46.4553667
+            ],
+            [
+              11.2572652,
+              46.4554875
+            ],
+            [
+              11.2570676,
+              46.4555039
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/201032299",
+      "properties": {
+        "id": "way/201032299",
+        "timestamp": "2013-01-13T22:55:35Z",
+        "version": 1,
+        "changeset": 14642447,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "building": "terrace"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2579014,
+            46.4554036
+          ],
+          [
+            11.2578919,
+            46.4553699
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/201032366",
+      "properties": {
+        "id": "way/201032366",
+        "timestamp": "2013-04-26T07:39:33Z",
+        "version": 2,
+        "changeset": 15868943,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "highway": "service",
+        "oneway": "yes",
+        "service": "parking_aisle"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2579605,
+            46.4555422
+          ],
+          [
+            11.2577161,
+            46.4555719
+          ],
+          [
+            11.2576677,
+            46.4556058
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/218973695",
+      "properties": {
+        "id": "way/218973695",
+        "timestamp": "2013-04-26T07:39:32Z",
+        "version": 1,
+        "changeset": 15868943,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "highway": "pedestrian"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2576008,
+            46.4554764
+          ],
+          [
+            11.2575984,
+            46.4555554
+          ],
+          [
+            11.2575528,
+            46.4556258
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/218973696",
+      "properties": {
+        "id": "way/218973696",
+        "timestamp": "2013-04-26T07:39:32Z",
+        "version": 1,
+        "changeset": 15868943,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "highway": "footway"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.2579618,
+            46.4555623
+          ],
+          [
+            11.2579605,
+            46.4555422
+          ],
+          [
+            11.2579495,
+            46.45542
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "relation/2385566",
+      "properties": {
+        "id": "relation/2385566",
+        "timestamp": "2013-09-06T20:38:45Z",
+        "version": 6,
+        "changeset": 17709634,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "network": "lwn",
+        "ref": "540",
+        "route": "hiking",
+        "type": "route"
+      },
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [
+            [
+              11.2574683,
+              46.4555997
+            ],
+            [
+              11.2574519,
+              46.4555026
+            ],
+            [
+              11.2573247,
+              46.4555155
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "relation/121733",
+      "properties": {
+        "id": "relation/121733",
+        "timestamp": "2009-04-27T17:28:49Z",
+        "version": 1,
+        "changeset": 993143,
+        "user": "tyr_asd",
+        "uid": 115612,
+        "type": "multipolygon"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              11.2570937,
+              46.4552187
+            ],
+            [
+              11.2571261,
+              46.4549719
+            ],
+            [
+              11.2574846,
+              46.4549942
+            ],
+            [
+              11.2574786,
+              46.4550395
+            ],
+            [
+              11.2575715,
+              46.4550453
+            ],
+            [
+              11.2576569,
+              46.4550506
+            ],
+            [
+              11.257641,
+              46.4551715
+            ],
+            [
+              11.2577565,
+              46.4551787
+            ],
+            [
+              11.2577374,
+              46.4553249
+            ],
+            [
+              11.257567,
+              46.4553143
+            ],
+            [
+              11.2575566,
+              46.4553937
+            ],
+            [
+              11.2573601,
+              46.4553814
+            ],
+            [
+              11.2573703,
+              46.4553036
+            ],
+            [
+              11.2570345,
+              46.4552827
+            ],
+            [
+              11.2570433,
+              46.4552155
+            ],
+            [
+              11.2570937,
+              46.4552187
+            ]
+          ],
+          [
+            [
+              11.2572168,
+              46.4551937
+            ],
+            [
+              11.2573593,
+              46.4552032
+            ],
+            [
+              11.2573757,
+              46.4550871
+            ],
+            [
+              11.2572332,
+              46.4550776
+            ],
+            [
+              11.2572168,
+              46.4551937
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
