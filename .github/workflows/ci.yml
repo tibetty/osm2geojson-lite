@@ -1,4 +1,3 @@
-# biuld and run tests using github actions
 name: CI
 on:
   push:
