@@ -1,6 +1,7 @@
 import { LateBinder } from "./late-binder";
+import type { OsmObject } from "./osm-object";
 
-export class RefElements extends Map {
+export class RefElements extends Map<string, OsmObject> {
     private binders: LateBinder[];
 
     constructor() {
@@ -8,7 +9,7 @@ export class RefElements extends Map {
         this.binders = [];
     }
 
-    public add(k: string, v: any) {
+    public add(k: string, v: OsmObject) {
         this.set(k, v);
     }
 

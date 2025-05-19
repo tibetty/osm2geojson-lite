@@ -3,6 +3,7 @@ import type { Feature } from 'geojson';
 
 export abstract class OsmObject {
     public refCount: number;
+    public hasTag: boolean;
 
     protected refElems: RefElements;
 
@@ -18,6 +19,7 @@ export abstract class OsmObject {
         this.tags = {};
         this.props = { id: this.getCompositeId() };
         this.refCount = 0;
+        this.hasTag = false;
         if (refElems) {
             refElems.add(this.getCompositeId(), this);
         }
@@ -25,10 +27,12 @@ export abstract class OsmObject {
 
     public addTags(tags: { [k: string]: string }) {
         this.tags = Object.assign(this.tags, tags);
+        this.hasTag = true;
     }
 
     public addTag(k: string, v: string) {
         this.tags[k] = v;
+        this.hasTag = true;
     }
 
     public addProp(k: string, v: any) {

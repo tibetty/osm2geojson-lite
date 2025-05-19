@@ -1,7 +1,8 @@
 import { Feature } from "geojson";
 import { OsmObject } from "./osm-object";
+import { Node } from "./node";
 import { LateBinder } from "./late-binder";
-import { isRing, ringDirection, strToFloat } from "./utils";
+import { isRing, ringDirection, strArrayArrayToFloat } from "./utils";
 import polygonTags from './polytags.json';
 import type { RefElements } from "./ref-elements";
 
@@ -26,7 +27,7 @@ export class Way extends OsmObject {
 
     public addNodeRef(ref: string) {
         const binder = new LateBinder(this.latLngArray, (id: string) => {
-            const node = this.refElems.get(`node/${id}`);
+            const node = this.refElems.get(`node/${id}`) as Node;
             if (node) {
                 node.refCount++;
                 return node.getLatLng();
@@ -54,9 +55,9 @@ export class Way extends OsmObject {
     }
 
     public toFeatureArray(): Array<Feature<any, any>> {
-        let coordsArray: any[] = this.toCoordsArray();
-        if (coordsArray.length > 1) {
-            coordsArray = strToFloat(coordsArray);
+        let coordsArrayString = this.toCoordsArray();
+        if (coordsArrayString.length > 1) {
+            const coordsArray = strArrayArrayToFloat(coordsArrayString);
             const feature: Feature<any, any> = {
                 type: 'Feature',
                 id: this.getCompositeId(),

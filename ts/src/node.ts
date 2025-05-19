@@ -1,5 +1,5 @@
 import { OsmObject } from "./osm-object";
-import { strToFloat } from "./utils";
+import { strArrayToFloat } from "./utils";
 import type { RefElements } from "./ref-elements";
 import type { Feature } from "geojson";
 
@@ -23,7 +23,7 @@ export class Node extends OsmObject {
                 properties: this.getProps(),
                 geometry: {
                     type: 'Point',
-                    coordinates: strToFloat([this.latLng.lon, this.latLng.lat]),
+                    coordinates: strArrayToFloat([this.latLng.lon, this.latLng.lat]),
                 },
             }];
         }

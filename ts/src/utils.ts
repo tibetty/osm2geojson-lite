@@ -11,9 +11,9 @@ export function purgeProps(obj: { [k: string]: any }, blacklist: string[]): { [k
     return {};
 }
 
-export const first = <T>(a: T[]): T => a[0];
-export const last = <T>(a: T[]): T => a[a.length - 1];
-export const coordsToKey = <T>(a: T[]): string => a.join(',');
+export function first<T>(a: T[]): T { return  a[0] }
+export function last<T>(a: T[]): T { return a[a.length - 1]}
+export function coordsToKey<T>(a: T[]): string { return a.join(',')}
 
 export function addToMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
     const a = m[k];
@@ -44,9 +44,11 @@ export function getFirstFromMap<T>(m: { [k: string]: T[] }, k: string): T | null
 }
 
 // need 3+ different points to form a ring, here using > 3 is 'coz a the first and the last points are actually the same
-export const isRing = (a: number[][]): boolean => a.length > 3 && coordsToKey(first(a)) === coordsToKey(last(a));
+export function isRing(a: number[][]): boolean {
+    return a.length > 3 && coordsToKey(first(a)) === coordsToKey(last(a))
+}
 
-export const ringDirection = (a: number[][], xIdx?: number, yIdx?: number): string => {
+export function ringDirection(a: number[][], xIdx?: number, yIdx?: number): string {
     xIdx = xIdx || 0, yIdx = yIdx || 1;
     // get the index of the point which has the maximum x value
     const m = a.reduce((maxxIdx: number, v: number[], idx: number): number => a[maxxIdx][xIdx || 0] > v[xIdx || 0] ? maxxIdx : idx, 0);
@@ -65,7 +67,7 @@ export const ringDirection = (a: number[][], xIdx?: number, yIdx?: number): stri
     return det < 0 ? 'clockwise' : 'counterclockwise';
 };
 
-export const pointInsidePolygon = (pt: number[], polygon: number[][], xIdx?: number, yIdx?: number): boolean => {
+export function pointInsidePolygon(pt: number[], polygon: number[][], xIdx?: number, yIdx?: number): boolean {
     xIdx = xIdx || 0, yIdx = yIdx || 1;
     let result = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -78,7 +80,13 @@ export const pointInsidePolygon = (pt: number[], polygon: number[][], xIdx?: num
     return result;
 };
 
-export const strToFloat = (el: any[] | string): any => el instanceof Array ? el.map(strToFloat) : parseFloat(el);
+export function strArrayArrayToFloat(el: string[][]): number[][] {
+    return el.map(strArrayToFloat);
+}
+
+export function strArrayToFloat(el: string[]): number[] {
+    return el.map(parseFloat);
+}
 
 
 

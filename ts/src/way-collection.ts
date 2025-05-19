@@ -1,4 +1,4 @@
-import { addToMap, coordsToKey, first, getFirstFromMap, isRing, last, removeFromMap, ringDirection, strToFloat } from "./utils";
+import { addToMap, coordsToKey, first, getFirstFromMap, isRing, last, removeFromMap, ringDirection, strArrayArrayToFloat } from "./utils";
 import type { Way } from "./way";
 
 export class WayCollection extends Array {
@@ -53,7 +53,7 @@ export class WayCollection extends Array {
                     current = current.concat(next.slice(1));
                 }
             } while (next);
-            strings.push(strToFloat(current));
+            strings.push(strArrayArrayToFloat(current));
             way = this.shift();
         }
 
