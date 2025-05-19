@@ -29,29 +29,22 @@ export class WayCollection extends Array {
             let current = way;
             let next: string[][] | null;
             do {
-                const key = coordsToKey(last(current));
-                let shouldReverse = false;
-
-                next = getFirstFromMap(this.firstMap, key);
+                let {next, shouldReverse} = this.getNextWay(current);
+                
                 if (!next) {
-                    next = getFirstFromMap(this.lastMap, key);
-                    shouldReverse = true;
+                    continue;
                 }
-
-                if (next) {
-                    this.splice(this.indexOf(next), 1);
-                    removeFromMap(this.firstMap, coordsToKey(first(next)), next);
-                    removeFromMap(this.lastMap, coordsToKey(last(next)), next);
-                    if (shouldReverse) {
-                        // always reverse shorter one to save time
-                        if (next.length > current.length) {
-                            [current, next] = [next, current];
-                        }
-                        next.reverse();
+                this.splice(this.indexOf(next), 1);
+                removeFromMap(this.firstMap, coordsToKey(first(next)), next);
+                removeFromMap(this.lastMap, coordsToKey(last(next)), next);
+                if (shouldReverse) {
+                    // always reverse shorter one to save time
+                    if (next.length > current.length) {
+                        [current, next] = [next, current];
                     }
-
-                    current = current.concat(next.slice(1));
+                    next.reverse();
                 }
+                current = current.concat(next.slice(1));
             } while (next);
             strings.push(strArrayArrayToFloat(current));
             way = this.shift();
@@ -60,6 +53,34 @@ export class WayCollection extends Array {
         return strings;
     }
 
+    /**
+     * Try to find the next way to add to the current way.
+     * It first tries the next way in the array, and if this doesn't work, try any other way.
+     */
+    private getNextWay(current: string[][]) {
+        const key = coordsToKey(last(current));
+        let shouldReverse = false;
+
+        // Step 1: Prefer the next way in the array if it connects
+        let next: string[][] | null = this.length > 0 ? this[0] : null;
+        if (next && coordsToKey(first(next)) !== key && coordsToKey(last(next)) === key) {
+            shouldReverse = true;
+        } else if (next && coordsToKey(first(next)) !== key) {
+            next = null; // Next way doesn't connect, ignore it
+        }
+        if (next) {
+            return { next, shouldReverse };
+        }
+        // Step 2: Fallback to map-based lookup if no sequential match
+        next = getFirstFromMap(this.firstMap, key);
+        if (next) {
+            return { next, shouldReverse };
+        }
+        next = getFirstFromMap(this.lastMap, key);
+        shouldReverse = true;
+        return { next, shouldReverse };
+    }
+    
     public toRings(direction: string): number[][][] {
         const strings = this.mergeWays();
         const rings: number[][][] = [];
