@@ -29,8 +29,9 @@ export class WayCollection extends Array {
             let current = way;
             let next: string[][] | null;
             do {
-                let {next, shouldReverse} = this.getNextWay(current);
-                
+                let nextWay = this.getNextWay(current);
+                next = nextWay.next;
+                let shouldReverse = nextWay.shouldReverse;
                 if (!next) {
                     continue;
                 }
