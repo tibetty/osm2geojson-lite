@@ -1,0 +1,38 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "way/37173117",
+      "properties": {
+        "id": "way/37173117",
+        "highway": "residential"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.0993706,
+            32.1012096
+          ],
+          [
+            35.0997918,
+            32.1013003
+          ],
+          [
+            35.0997975,
+            32.1017522
+          ],
+          [
+            35.0998711,
+            32.1020721
+          ],
+          [
+            35.1000631,
+            32.1023187
+          ]
+        ]
+      }
+    }
+  ]
+}

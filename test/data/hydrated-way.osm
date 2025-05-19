@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="Overpass API 0.7.62.5 1bd436f1">
+<note>The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.</note>
+<meta osm_base="2025-05-18T19:12:24Z"/>
+
+  <way id="37173117">
+    <bounds minlat="32.1012096" minlon="35.0993706" maxlat="32.1023187" maxlon="35.1000631"/>
+    <nd ref="432360610" lat="32.1012096" lon="35.0993706"/>
+    <nd ref="432353588" lat="32.1013003" lon="35.0997918"/>
+    <nd ref="2501248683" lat="32.1017522" lon="35.0997975"/>
+    <nd ref="2501248701" lat="32.1020721" lon="35.0998711"/>
+    <nd ref="432346444" lat="32.1023187" lon="35.1000631"/>
+    <tag k="highway" v="residential"/>
+  </way>
+
+</osm>

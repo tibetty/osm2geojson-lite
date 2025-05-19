@@ -31,8 +31,8 @@ create_web_dir:
 web: dist/node/index.js
 	@npx browserify -s osm2geojson dist/node/index.js | npx uglifyjs -c -m -o dist/web/osm2geojson-lite.js
 
-test-node: test/test.js
-	@cd test && node test.js && cd ..
+test-node: test/e2e.test.ts
+	@npm run test
 
 test-web: test/index.html
 	@$(OPEN_CMD) test/index.html

@@ -25,7 +25,7 @@ Installation:
 Usage:
 
 ```js
-    const osm2geojson = require('osm2geojson-lite');
+    import osm2geojson from 'osm2geojson-lite';
     let geojson = osm2geojson(osm, opts);
 ```
 
@@ -94,6 +94,6 @@ Copyleft
 
 Collaborators
 ---
-* tibetty
-* HarelM
+* [tibetty](https://github.com/tibetty/)
+* [HarelM](https://github.com/HarelM)
 

@@ -1,0 +1,17 @@
+{
+    "elements": [{
+        "type": "way",
+        "id": 1,
+        "nodes": [2, 3, 4, 5, 2],
+        "geometry": [
+            { "lat": 0, "lon": 0 },
+            { "lat": 0, "lon": 1 },
+            { "lat": 1, "lon": 1 },
+            { "lat": 1, "lon": 0 },
+            { "lat": 0, "lon": 0 }
+        ],
+        "tags": {
+            "natural": "cliff"
+        }
+    }]
+  }
