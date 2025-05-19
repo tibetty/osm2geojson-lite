@@ -5,20 +5,17 @@ import { WayCollection } from "./way-collection";
 import { LateBinder } from "./late-binder";
 import { first, pointInsidePolygon } from "./utils";
 import type { RefElements } from "./ref-elements";
-import type { BBox, Feature, GeometryObject, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "geojson";
+import type { BBox, Feature, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "geojson";
 
 export class Relation extends OsmObject {
-    private relations: any[];
-    private nodes: any[];
-    private bounds: number[] | undefined;
+    private relations: (LateBinder | Relation)[] = [];
+    private nodes: (LateBinder | Node)[] = [];
+    private bounds: number[] | undefined = undefined;
 
-    [k: string]: any;
+    public waysPerRole: Record<string, WayCollection> = {};
 
     constructor(id: string, refElems: RefElements) {
         super('relation', id, refElems);
-        this.relations = [];
-        this.nodes = [];
-        this.bounds = undefined;
     }
 
     public setBounds(bounds: any[]) {
@@ -44,9 +41,9 @@ export class Relation extends OsmObject {
                 if (!member.role) {
                     member.role = '';
                 }
-                let ways = this[member.role];
+                let ways = this.waysPerRole[member.role];
                 if (!ways) {
-                    ways = this[member.role] = [];
+                    ways = this.waysPerRole[member.role] = new WayCollection();
                 }
                 if (member.geometry) {
                     const way = new Way(member.ref, this.refElems);
@@ -100,106 +97,105 @@ export class Relation extends OsmObject {
                     this.nodes.push(binder);
                     this.refElems.addBinder(binder);
                 }
+                break;
             default:
                 break;
         }
     }
 
-    public toFeatureArray(): Array<Feature<any, any>> {
-        function constructStringGeometry(ws: WayCollection): LineString | MultiLineString | null {
-            const strings = ws ? ws.mergeWays() : [];
-            if (strings.length > 0) {
-                if (strings.length === 1) {
-                    return {
-                        type: 'LineString',
-                        coordinates: strings[0],
-                    };
-                }
-
+    private constructStringGeometry(ws: WayCollection): LineString | MultiLineString | null {
+        const strings = ws ? ws.mergeWays() : [];
+        if (strings.length > 0) {
+            if (strings.length === 1) {
                 return {
-                    type: 'MultiLineString',
-                    coordinates: strings,
+                    type: 'LineString',
+                    coordinates: strings[0],
                 };
             }
-            return null;
+
+            return {
+                type: 'MultiLineString',
+                coordinates: strings,
+            };
         }
+        return null;
+    }
 
-        function constructPolygonGeometry(ows: WayCollection, iws: WayCollection): Polygon | MultiPolygon | null {
-            const outerRings = ows ? ows.toRings('counterclockwise') : [];
-            const innerRings = iws ? iws.toRings('clockwise') : [];
+    private constructPolygonGeometry(ows: WayCollection, iws: WayCollection): Polygon | MultiPolygon | null {
+        const outerRings = ows ? ows.toRings('counterclockwise') : [];
+        const innerRings = iws ? iws.toRings('clockwise') : [];
 
-            if (outerRings.length > 0) {
-                const compositPolyons: any[] = [];
+        if (outerRings.length > 0) {
+            const compositPolyons: any[] = [];
 
-                let ring: number[][] | undefined;
-                for (ring of outerRings) {
-                    compositPolyons.push([ring]);
-                }
+            let ring: number[][] | undefined;
+            for (ring of outerRings) {
+                compositPolyons.push([ring]);
+            }
 
-                // link inner polygons to outer containers
-                ring = innerRings.shift();
-                while (ring) {
-                    for (const idx in outerRings) {
-                        if (pointInsidePolygon(first(ring), outerRings[idx])) {
-                            compositPolyons[idx].push(ring);
-                            break;
-                        }
+            // link inner polygons to outer containers
+            ring = innerRings.shift();
+            while (ring) {
+                for (const idx in outerRings) {
+                    if (pointInsidePolygon(first(ring), outerRings[idx])) {
+                        compositPolyons[idx].push(ring);
+                        break;
                     }
-                    ring = innerRings.shift();
                 }
+                ring = innerRings.shift();
+            }
 
-                // construct the Polygon/MultiPolygon geometry
-                if (compositPolyons.length === 1) {
-                    return {
-                        type: 'Polygon',
-                        coordinates: compositPolyons[0],
-                    };
-                }
-
+            // construct the Polygon/MultiPolygon geometry
+            if (compositPolyons.length === 1) {
                 return {
-                    type: 'MultiPolygon',
-                    coordinates: compositPolyons,
+                    type: 'Polygon',
+                    coordinates: compositPolyons[0],
                 };
             }
 
-            return null;
+            return {
+                type: 'MultiPolygon',
+                coordinates: compositPolyons,
+            };
         }
 
+        return null;
+    }
+
+    public toFeatureArray(): Array<Feature<any, any>> {
         const polygonFeatures: Array<Feature<Polygon | MultiPolygon, any>> = [];
         const stringFeatures: Array<Feature<LineString | MultiLineString, any>> = [];
         let pointFeatures: Array<Feature<Point | MultiPoint, any>> = [];
 
-        // need to do combination when there're nested relations
-        const notWayFields = ['type', 'id', 'refElems', 'tags', 'props', 'refCount', 'hasTag', 'relations', 'nodes', 'bounds'];
         for (const relation of this.relations) {
-            if (relation) {
-                let waysFieldNames = Object.keys(relation).filter(fieldName => notWayFields.indexOf(fieldName) < 0);
-                for (const fieldName of waysFieldNames) {
-                    const ways = relation[fieldName];
-                    if (ways) {
-                        const thisWays = this[fieldName];
-                        if (thisWays) {
-                            thisWays.push(...ways);
-                        } else {
-                            this[fieldName] = ways;
-                        }
-                    }
+            if (!relation) {
+                continue;
+            }
+            for (const fieldName of Object.keys((relation as Relation).waysPerRole)) {
+                const ways = (relation as Relation).waysPerRole[fieldName];
+                if (!ways) {
+                    continue;
+                }
+                const thisWays = this.waysPerRole[fieldName];
+                if (thisWays) {
+                    thisWays.push(...ways);
+                } else {
+                    this.waysPerRole[fieldName] = ways;
                 }
             }
         }
 
-        let waysFieldNames = Object.keys(this).filter(fieldName => notWayFields.indexOf(fieldName) < 0);
+        let waysFieldNames = Object.keys(this.waysPerRole);
         for (const fieldName of waysFieldNames) {
-            const ways = this[fieldName];
-            if (ways) {
-                this[fieldName] = new WayCollection();
-                for (const way of ways) {
-                    this[fieldName].addWay(way);
-                }
+            const ways = this.waysPerRole[fieldName];
+            if (!ways) {
+                continue;
+            }
+            this.waysPerRole[fieldName] = new WayCollection();
+            for (const way of ways) {
+                this.waysPerRole[fieldName].addWay(way);
             }
         }
-
-        let geometry: GeometryObject | null = null;
 
         let templateFeature: Feature<any, any> = {
             type: 'Feature',
@@ -213,35 +209,37 @@ export class Relation extends OsmObject {
             delete templateFeature.bbox;
         }
 
-        if (this.outer) {
+        if (this.waysPerRole.outer) {
             let feature = Object.assign({}, templateFeature);
-            let geometry = constructPolygonGeometry(this.outer, this.inner);
+            let geometry = this.constructPolygonGeometry(this.waysPerRole.outer, this.waysPerRole.inner);
             if (geometry) {
                 feature.geometry = geometry;
                 polygonFeatures.push(feature);
             }
-        }
-        else {
+        } else {
             let multiLineGeometry: MultiLineString = {
                 type: 'MultiLineString',
                 coordinates: []
             };
 
-            for (let way of waysFieldNames) {
-                if (way != null && way !== 'inner') {
-                    let ws = this[way];
-                    if (ws) {
-                        let geometry = constructStringGeometry(ws);
-                        if (geometry) {
-                            if (geometry.type === 'LineString') {
-                                multiLineGeometry.coordinates.push(geometry.coordinates);
-                            } else if (geometry.type === 'MultiLineString') {
-                                let feature = Object.assign({}, templateFeature);
-                                feature.geometry = geometry;
-                                stringFeatures.push(feature);
-                            }
-                        }
-                    }
+            for (let fieldName of waysFieldNames) {
+                if (fieldName == null || fieldName === 'inner') {
+                    continue;
+                }
+                let wayCollection = this.waysPerRole[fieldName];
+                if (!wayCollection) {
+                    continue;
+                }
+                let geometry = this.constructStringGeometry(wayCollection);
+                if (!geometry) {
+                    continue;
+                }
+                if (geometry.type === 'LineString') {
+                    multiLineGeometry.coordinates.push(geometry.coordinates);
+                } else if (geometry.type === 'MultiLineString') {
+                    let feature = Object.assign({}, templateFeature);
+                    feature.geometry = geometry;
+                    stringFeatures.push(feature);
                 }
             }
 
@@ -253,7 +251,7 @@ export class Relation extends OsmObject {
         }
 
         for (let node of this.nodes) {
-            pointFeatures = pointFeatures.concat(node.toFeatureArray());
+            pointFeatures = pointFeatures.concat((node as Node).toFeatureArray());
         }
 
         return [...polygonFeatures, ...stringFeatures, ...pointFeatures];
