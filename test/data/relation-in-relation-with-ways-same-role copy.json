@@ -1,0 +1,57 @@
+{
+    "elements": [
+        {
+            "type": "node",
+            "id": 1,
+            "lat": 0,
+            "lon": 0
+        },
+        {
+            "type": "node",
+            "id": 2,
+            "lat": 0,
+            "lon": 1
+        },
+        {
+            "type": "node",
+            "id": 3,
+            "lat": 1,
+            "lon": 1
+        },
+        {
+            "id": 5,
+            "type": "relation",
+            "tags": {
+                "name": "Relation 1"
+            },
+            "members": [
+                {
+                    "type": "way",
+                    "ref": 4,
+                    "role": "role1",
+                    "nodes": [1, 2, 3]
+                }
+            ]
+        },
+        {
+            "id": 6,
+            "type": "relation",
+            "tags": {
+                "name": "Relation 2"
+            },
+            "members": [
+                {
+                    "type": "relation",
+                    "ref": 5,
+                    "role": "inner"
+                },
+                {
+                    "type": "way",
+                    "ref": 7,
+                    "role": "role1",
+                    "nodes": [1, 2, 3]
+                }
+            ]
+        }
+    ]
+}
