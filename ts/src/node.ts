@@ -3,15 +3,16 @@ import { strArrayToFloat } from "./utils";
 import type { RefElements } from "./ref-elements";
 import type { Feature } from "geojson";
 
+export type LatLon = { lat: string, lon: string };
+
 export class Node extends OsmObject {
-    private latLng: { lon: string, lat: string } | null;
+    private latLng: LatLon | undefined;
 
     constructor(id: string, refElems: RefElements) {
         super('node', id, refElems);
-        this.latLng = null;
     }
 
-    public setLatLng(latLng: { lat: string, lon: string }) {
+    public setLatLng(latLng: LatLon) {
         this.latLng = latLng;
     }
 
@@ -30,7 +31,7 @@ export class Node extends OsmObject {
         return [];
     }
 
-    public getLatLng(): { lat: string, lon: string } | null {
+    public getLatLng(): LatLon | undefined {
         return this.latLng;
     }
 }

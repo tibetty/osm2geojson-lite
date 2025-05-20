@@ -8,10 +8,10 @@ import type { RefElements } from "./ref-elements";
 import type { BBox, Feature, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "geojson";
 
 export class Relation extends OsmObject {
-    private relations: (LateBinder | Relation)[] = [];
-    private nodes: (LateBinder | Node)[] = [];
+    private relations: (LateBinder<Relation> | Relation)[] = [];
+    private nodes: (LateBinder<Node> | Node)[] = [];
     private bounds: number[] | undefined = undefined;
-    public ways: (LateBinder | Way)[] = [];
+    public ways: (LateBinder<Way> | Way)[] = [];
     public roles: string[] = [];
 
     constructor(id: string, refElems: RefElements) {
@@ -27,7 +27,7 @@ export class Relation extends OsmObject {
             // super relation, need to do combination
             case 'relation':
                 let binder = new LateBinder(this.relations, (id: string) => {
-                    const relation = this.refElems.get(`relation/${id}`);
+                    const relation = this.refElems.get(`relation/${id}`) as Relation;
                     if (relation) {
                         relation.refCount++;
                         return relation;
@@ -57,7 +57,7 @@ export class Relation extends OsmObject {
                     this.roles.push(member.role);
                 } else {
                     let binder = new LateBinder(this.ways, (nid) => {
-                        const way = this.refElems.get(`way/${nid}`);
+                        const way = this.refElems.get(`way/${nid}`) as Way;
                         if (way) {
                             way.refCount++;
                             return way;
@@ -87,7 +87,7 @@ export class Relation extends OsmObject {
                     this.nodes.push(node);
                 } else {
                     let binder = new LateBinder(this.nodes, (id) => {
-                        const nn = this.refElems.get(`node/${id}`);
+                        const nn = this.refElems.get(`node/${id}`) as Node;
                         if (nn) {
                             nn.refCount++;
                             return nn;
