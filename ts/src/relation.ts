@@ -97,27 +97,19 @@ export class Relation extends OsmObject {
                     this.refElems.addBinder(binder);
                 }
                 break;
-            default:
-                break;
         }
     }
 
-    private constructStringGeometry(ws: WayCollection): LineString | MultiLineString | null {
+    private constructStringGeometry(ws: WayCollection): MultiLineString | null {
         const strings = ws ? ws.mergeWays() : [];
-        if (strings.length > 0) {
-            if (strings.length === 1) {
-                return {
-                    type: 'LineString',
-                    coordinates: strings[0],
-                };
-            }
-
-            return {
-                type: 'MultiLineString',
-                coordinates: strings,
-            };
+        if (strings.length === 0) {
+            return null;
         }
-        return null;
+
+        return {
+            type: 'MultiLineString',
+            coordinates: strings,
+        };
     }
 
     private constructPolygonGeometry(ows: WayCollection, iws: WayCollection): Polygon | MultiPolygon | null {
@@ -214,12 +206,6 @@ export class Relation extends OsmObject {
             let geometry = this.constructStringGeometry(wayCollection);
             if (geometry) {
                 let feature = Object.assign({}, templateFeature);
-                if (geometry.type === 'LineString') {
-                    geometry = {
-                        type: 'MultiLineString',
-                        coordinates: [geometry.coordinates]
-                    };
-                }
                 feature.geometry = geometry;
                 stringFeatures.push(feature);
             }
