@@ -181,16 +181,18 @@ export class Relation extends OsmObject {
             delete templateFeature.bbox;
         }
 
-        const outerWays = this.ways.filter((w, i) => this.roles[i] === 'outer');
-        if (outerWays.length > 0) {
-            const innerWays = this.ways.filter((w, i) => this.roles[i] === 'inner');
+        
+        if (this.roles.some((r) => r === 'outer')) {
             const outerWayCollection = new WayCollection();
             const innerWayCollection = new WayCollection();
-            for (const way of outerWays) {
-                outerWayCollection.addWay(way as Way);
-            }
-            for (const way of innerWays) {
-                innerWayCollection.addWay(way as Way);
+            for (let i = 0; i < this.ways.length; i++) {
+                const way = this.ways[i];
+                const role = this.roles[i];
+                if (role === 'outer') { 
+                    outerWayCollection.addWay(way as Way);
+                } else if (role === 'inner') {
+                    innerWayCollection.addWay(way as Way);
+                }
             }
             let feature = Object.assign({}, templateFeature);
             let geometry = this.constructPolygonGeometry(outerWayCollection, innerWayCollection);
