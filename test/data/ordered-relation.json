@@ -1,0 +1,61 @@
+{
+    "elements": [
+        {
+            "type": "node",
+            "id": 1,
+            "lat": 0,
+            "lon": 0
+        },
+        {
+            "type": "node",
+            "id": 2,
+            "lat": 0,
+            "lon": 1
+        },
+        {
+            "type": "node",
+            "id": 3,
+            "lat": 1,
+            "lon": 1
+        },
+        {
+            "type": "node",
+            "id": 4,
+            "lat": 1,
+            "lon": 0
+        },
+        {
+            "id": 5,
+            "type": "relation",
+            "tags": {
+                "name": "Closed route relation"
+            },
+            "members": [
+                {
+                    "type": "way",
+                    "ref": 6,
+                    "role": "forward",
+                    "nodes": [2, 1]
+                },
+                {
+                    "type": "way",
+                    "ref": 7,
+                    "role": "backwards",
+                    "nodes": [2, 3]
+                },
+                {
+                    "type": "way",
+                    "ref": 8,
+                    "role": "",
+                    "nodes": [3, 4]
+                },
+                {
+                    "type": "way",
+                    "ref": 9,
+                    "role": "forward",
+                    "nodes": [4, 1]
+                }
+            ]
+        }
+    ]
+}

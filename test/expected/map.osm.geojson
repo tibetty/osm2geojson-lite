@@ -649,6 +649,41 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "relation/1165342",
+      "properties": {
+        "id": "relation/1165342",
+        "description": "St. Michael Eppan: residential area",
+        "landuse": "residential",
+        "type": "multipolygon"
+      },
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [
+            [
+              11.2569027,
+              46.4548927
+            ],
+            [
+              11.2577552,
+              46.4549454
+            ]
+          ],
+          [
+            [
+              11.2574237,
+              46.4555443
+            ],
+            [
+              11.2571676,
+              46.4555607
+            ]
+          ]
+        ]
+      }
     }
   ]
 }
