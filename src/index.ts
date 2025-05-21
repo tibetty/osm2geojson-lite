@@ -14,12 +14,6 @@ interface IOptions {
      */
     completeFeature?: boolean;
     /**
-     * When it's set to `true`, the returned geojson will include all elements that meet the specified conditions in `FeatureCollection` format; 
-     * otherwise, only the bare geometry of the first `relation` element will be returned.
-     * @default false
-     */
-    allFeatures?: boolean;
-    /**
      * When it's set to `true`, the returned geojson will include all elements with tags (i.e., tagged) 
      * until `suppressWay` changes its behavior a bit; otherwise only the unreferenced ones get returned.
      * @default false
@@ -31,25 +25,15 @@ interface IOptions {
      * @default true
      */
     excludeWay?: boolean;
-    /**
-     * When it's set to `true`, the returned `FeatureCollection` will exclude all referenced `way`s even though they are tagged; 
-     * otherwise the features of those `way`s will be included in the resulted result as well.
-     * @default true
-     */
-    suppressWay?: boolean;
 }
 
 function parseOptions(options: IOptions | undefined): { completeFeature: boolean; renderTagged: boolean; excludeWay: boolean } {
     if (!options) {
         return { completeFeature: false, renderTagged: false, excludeWay: true };
     }
-    let excludeWay = true;
-    let completeFeature = options.completeFeature || options.allFeatures ? true : false;
+    let excludeWay = options.excludeWay === undefined || options.excludeWay;
+    let completeFeature = options.completeFeature ? true : false;
     let renderTagged = options.renderTagged ? true : false;
-    const wayOpt = options.suppressWay || options.excludeWay;
-    if (wayOpt !== undefined && !wayOpt) {
-        excludeWay = false;
-    }
     return { completeFeature, renderTagged, excludeWay };
 }
 
