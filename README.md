@@ -1,17 +1,14 @@
 osm2geojson-lite
 ============
 
+[![NPM Version](https://img.shields.io/npm/v/osm2geojson-lite)](https://www.npmjs.com/package/osm2geojson-lite) [![Codecov](https://img.shields.io/codecov/c/github/tibetty/osm2geojson-lite/master.svg)](https://codecov.io/gh/tibetty/osm2geojson-lite/)
+
+
 A lightweight (not as lightweight as xml2geojson though) yet faster convertor for [OSM](http://openstreetmap.org) [data](http://wiki.openstreetmap.org/wiki/OSM_XML) whatever in XML or JSON formats to [GeoJSON](http://www.geojson.org/) - much faster (the more complex the data source is, the more performance advantages it posesses) than osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency.
 
 History
 -----
 An internal function inside [query-geo-boundary](https://www.npmjs.com/package/query-geo-boundary) &rightarrow; stripped out to handle OSM XML only [xml2geojson-lite](https://www.npmjs.com/package/xml2geojson-lite) &rightarrow; this library that supports both OSM XML and OSM/Overpass JSON
-
-Changelog:
------
-* Late 2018: this repository was created and the initial version was pushed to github - almost around specific usages for myself.
-* 2019-2025: quite a few contributors had fixed quite a few bugs and also contributed some good ideas - thanks for their efforts!
-* 2025-03-03: fixed a few bugs around non-*Polygon features processing and convert it to a pure TypeScript project (codes published to [NPM](https://npmjs.org/) have become TSC compiled from now on).
 
 Usage
 -----
@@ -46,9 +43,9 @@ Converts OSM data (XML/JSON) to GeoJSON.
 
 * `osm`: the OSM XML data in String, or OSM/Overpass JSON as object or in String
 * `opts?`: optional, the options object, right now supports below properties/fields:
-    - `completeFeature/allFeatures`:  the default value is `false`. When it's set to `true`, the returned geojson will include all elements that meet the specified conditions in `FeatureCollection` format; otherwise, only the bare geometry of the first `relation` element will be returned.
-    - `renderTagged`: the default value is `false`. When it's set to `true`, the returned geojson will include all elements with tags (i.e., tagged) until `suppressWay` changes its behavior a bit; otherwise only the unreferenced ones get returned.
-    - `suppressWay/excludeWay`: the default value is `true`. When it's set to `true`, the returned `FeatureCollection` will exclude all referenced `way`s even though they are tagged; otherwise the features of those `way`s will be included in the resulted result as well.
+    - `completeFeature`:  the default value is `false`. When it's set to `true`, the returned geojson will include all elements that meet the specified conditions in `FeatureCollection` format; otherwise, only the bare geometry of the first `relation` element will be returned.
+    - `renderTagged`: the default value is `false`. When it's set to `true`, the returned geojson will include all elements with tags (i.e., tagged) until `excludeWay` changes its behavior a bit; otherwise only the unreferenced ones get returned.
+    - `excludeWay`: the default value is `true`. When it's set to `true`, the returned `FeatureCollection` will exclude all referenced `way`s even though they are tagged; otherwise the features of those `way`s will be included in the resulted result as well.
 
 
 Performance
@@ -78,7 +75,7 @@ Correctness
 ---
 You can copy the converted results to [geojsonlint](http://geojsonlint.com) for the correctness validation.  Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also quite representative) in the `data` subfolers under `test` and `bench` directories, which also outperforms `osmtogeojson`. 
 
-The client side example shipped along with this package, `test/index.html` ~~will automatically call `geojsonlint` validation service directly after each conversion, you can wait for a while to see the validation result after click the conversion button.~~ - because the CORS limitation, the direct post to geojsonlint was blocked, so I added a "copy to clipboard" button for you to ease the validation.
+The client side example shipped along with this package, `test/index.html` - due to CORS limitation, the direct post to geojsonlint is blocked, so there's a "copy to clipboard" button for you to ease the validation.
 
 Node.JS version
 ---

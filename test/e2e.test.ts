@@ -1,5 +1,5 @@
 import fs from 'fs';
-import osm2geojson from '../ts/src/index';
+import osm2geojson from '../src/index';
 import { describe, it, expect } from 'vitest';
 
 describe('osm2geojson', () => {
