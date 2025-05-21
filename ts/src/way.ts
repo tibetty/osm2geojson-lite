@@ -1,6 +1,6 @@
 import { Feature } from "geojson";
 import { OsmObject } from "./osm-object";
-import { Node } from "./node";
+import { LatLon, Node } from "./node";
 import { LateBinder } from "./late-binder";
 import { isRing, ringDirection, strArrayArrayToFloat } from "./utils";
 import polygonTags from './polytags.json';
@@ -8,7 +8,7 @@ import type { RefElements } from "./ref-elements";
 
 
 export class Way extends OsmObject {
-    private latLngArray: Array<{ lon: string, lat: string } | LateBinder>;
+    private latLngArray: Array<LatLon | LateBinder<LatLon>>;
     private isPolygon: boolean;
 
     constructor(id: string, refElems: RefElements) {
@@ -17,11 +17,11 @@ export class Way extends OsmObject {
         this.isPolygon = false;
     }
 
-    public addLatLng(latLng: { lat: string, lon: string }) {
+    public addLatLng(latLng: LatLon) {
         this.latLngArray.push(latLng);
     }
 
-    public setLatLngArray(latLngArray: Array<{ lat: string, lon: string, [k: string]: any }>) {
+    public setLatLngArray(latLngArray: Array<LatLon & { [k: string]: any }>) {
         this.latLngArray = latLngArray;
     }
 
@@ -51,7 +51,7 @@ export class Way extends OsmObject {
     }
 
     public toCoordsArray(): string[][] {
-        return (this.latLngArray as Array<{ lon: string, lat: string }>).map((latLng) => [latLng.lon, latLng.lat]);
+        return (this.latLngArray as Array<LatLon>).map((latLng) => [latLng.lon, latLng.lat]);
     }
 
     public toFeatureArray(): Array<Feature<any, any>> {

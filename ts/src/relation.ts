@@ -8,11 +8,11 @@ import type { RefElements } from "./ref-elements";
 import type { BBox, Feature, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "geojson";
 
 export class Relation extends OsmObject {
-    private relations: (LateBinder | Relation)[] = [];
-    private nodes: (LateBinder | Node)[] = [];
+    private relations: (LateBinder<Relation> | Relation)[] = [];
+    private nodes: (LateBinder<Node> | Node)[] = [];
     private bounds: number[] | undefined = undefined;
-
-    public waysPerRole: Record<string, WayCollection> = {};
+    public ways: (LateBinder<Way> | Way)[] = [];
+    public roles: string[] = [];
 
     constructor(id: string, refElems: RefElements) {
         super('relation', id, refElems);
@@ -27,7 +27,7 @@ export class Relation extends OsmObject {
             // super relation, need to do combination
             case 'relation':
                 let binder = new LateBinder(this.relations, (id: string) => {
-                    const relation = this.refElems.get(`relation/${id}`);
+                    const relation = this.refElems.get(`relation/${id}`) as Relation;
                     if (relation) {
                         relation.refCount++;
                         return relation;
@@ -41,31 +41,30 @@ export class Relation extends OsmObject {
                 if (!member.role) {
                     member.role = '';
                 }
-                let ways = this.waysPerRole[member.role];
-                if (!ways) {
-                    ways = this.waysPerRole[member.role] = new WayCollection();
-                }
                 if (member.geometry) {
                     const way = new Way(member.ref, this.refElems);
                     way.setLatLngArray(member.geometry);
                     way.refCount++;
-                    ways.push(way);
+                    this.ways.push(way);
+                    this.roles.push(member.role);
                 } else if (member.nodes) {
                     const way = new Way(member.ref, this.refElems);
                     for (const nid of member.nodes) {
                         way.addNodeRef(nid);
                     }
                     way.refCount++;
-                    ways.push(way);
+                    this.ways.push(way);
+                    this.roles.push(member.role);
                 } else {
-                    let binder = new LateBinder(ways, (nid) => {
-                        const way = this.refElems.get(`way/${nid}`);
+                    let binder = new LateBinder(this.ways, (nid) => {
+                        const way = this.refElems.get(`way/${nid}`) as Way;
                         if (way) {
                             way.refCount++;
                             return way;
                         }
                     }, this, [member.ref]);
-                    ways.push(binder);
+                    this.ways.push(binder);
+                    this.roles.push(member.role);
                     this.refElems.addBinder(binder);
                 }
                 break;
@@ -88,7 +87,7 @@ export class Relation extends OsmObject {
                     this.nodes.push(node);
                 } else {
                     let binder = new LateBinder(this.nodes, (id) => {
-                        const nn = this.refElems.get(`node/${id}`);
+                        const nn = this.refElems.get(`node/${id}`) as Node;
                         if (nn) {
                             nn.refCount++;
                             return nn;
@@ -98,27 +97,19 @@ export class Relation extends OsmObject {
                     this.refElems.addBinder(binder);
                 }
                 break;
-            default:
-                break;
         }
     }
 
-    private constructStringGeometry(ws: WayCollection): LineString | MultiLineString | null {
+    private constructStringGeometry(ws: WayCollection): MultiLineString | null {
         const strings = ws ? ws.mergeWays() : [];
-        if (strings.length > 0) {
-            if (strings.length === 1) {
-                return {
-                    type: 'LineString',
-                    coordinates: strings[0],
-                };
-            }
-
-            return {
-                type: 'MultiLineString',
-                coordinates: strings,
-            };
+        if (strings.length === 0) {
+            return null;
         }
-        return null;
+
+        return {
+            type: 'MultiLineString',
+            coordinates: strings,
+        };
     }
 
     private constructPolygonGeometry(ows: WayCollection, iws: WayCollection): Polygon | MultiPolygon | null {
@@ -171,29 +162,10 @@ export class Relation extends OsmObject {
             if (!relation) {
                 continue;
             }
-            for (const fieldName of Object.keys((relation as Relation).waysPerRole)) {
-                const ways = (relation as Relation).waysPerRole[fieldName];
-                if (!ways) {
-                    continue;
-                }
-                const thisWays = this.waysPerRole[fieldName];
-                if (thisWays) {
-                    thisWays.push(...ways);
-                } else {
-                    this.waysPerRole[fieldName] = ways;
-                }
-            }
-        }
-
-        let waysFieldNames = Object.keys(this.waysPerRole);
-        for (const fieldName of waysFieldNames) {
-            const ways = this.waysPerRole[fieldName];
-            if (!ways) {
-                continue;
-            }
-            this.waysPerRole[fieldName] = new WayCollection();
-            for (const way of ways) {
-                this.waysPerRole[fieldName].addWay(way);
+            for (let i = 0; i < (relation as Relation).ways. length; i++) {
+                const way = (relation as Relation).ways[i];
+                this.ways.push(way);
+                this.roles.push((relation as Relation).roles[i]);
             }
         }
 
@@ -209,43 +181,34 @@ export class Relation extends OsmObject {
             delete templateFeature.bbox;
         }
 
-        if (this.waysPerRole.outer) {
+        
+        if (this.roles.some((r) => r === 'outer')) {
+            const outerWayCollection = new WayCollection();
+            const innerWayCollection = new WayCollection();
+            for (let i = 0; i < this.ways.length; i++) {
+                const way = this.ways[i];
+                const role = this.roles[i];
+                if (role === 'outer') { 
+                    outerWayCollection.addWay(way as Way);
+                } else if (role === 'inner') {
+                    innerWayCollection.addWay(way as Way);
+                }
+            }
             let feature = Object.assign({}, templateFeature);
-            let geometry = this.constructPolygonGeometry(this.waysPerRole.outer, this.waysPerRole.inner);
+            let geometry = this.constructPolygonGeometry(outerWayCollection, innerWayCollection);
             if (geometry) {
                 feature.geometry = geometry;
                 polygonFeatures.push(feature);
             }
         } else {
-            let multiLineGeometry: MultiLineString = {
-                type: 'MultiLineString',
-                coordinates: []
-            };
-
-            for (let fieldName of waysFieldNames) {
-                if (fieldName == null || fieldName === 'inner') {
-                    continue;
-                }
-                let wayCollection = this.waysPerRole[fieldName];
-                if (!wayCollection) {
-                    continue;
-                }
-                let geometry = this.constructStringGeometry(wayCollection);
-                if (!geometry) {
-                    continue;
-                }
-                if (geometry.type === 'LineString') {
-                    multiLineGeometry.coordinates.push(geometry.coordinates);
-                } else if (geometry.type === 'MultiLineString') {
-                    let feature = Object.assign({}, templateFeature);
-                    feature.geometry = geometry;
-                    stringFeatures.push(feature);
-                }
+            const wayCollection = new WayCollection();
+            for (let way of this.ways) {
+                wayCollection.addWay(way as Way);
             }
-
-            if (multiLineGeometry.coordinates.length > 0) {
+            let geometry = this.constructStringGeometry(wayCollection);
+            if (geometry) {
                 let feature = Object.assign({}, templateFeature);
-                feature.geometry = multiLineGeometry;
+                feature.geometry = geometry;
                 stringFeatures.push(feature);
             }
         }

@@ -1,6 +1,13 @@
 import { addToMap, coordsToKey, first, getFirstFromMap, isRing, last, removeFromMap, ringDirection, strArrayArrayToFloat } from "./utils";
 import type { Way } from "./way";
 
+const enum MergeType {
+    EndStart,
+    EndEnd,
+    StartStart,
+    StartEnd
+}
+
 export class WayCollection extends Array {
     private firstMap: Record<string, string[][][]>;
     private lastMap: Record<string, string[][][]>;
@@ -31,21 +38,29 @@ export class WayCollection extends Array {
             do {
                 let nextWay = this.getNextWay(current);
                 next = nextWay.next;
-                let shouldReverse = nextWay.shouldReverse;
+                let mergeType = nextWay.mergeType;
                 if (!next) {
                     continue;
                 }
                 this.splice(this.indexOf(next), 1);
                 removeFromMap(this.firstMap, coordsToKey(first(next)), next);
                 removeFromMap(this.lastMap, coordsToKey(last(next)), next);
-                if (shouldReverse) {
-                    // always reverse shorter one to save time
-                    if (next.length > current.length) {
-                        [current, next] = [next, current];
-                    }
-                    next.reverse();
+                switch (mergeType) {
+                    case MergeType.EndStart:
+                        current = current.concat(next.slice(1));
+                        break;
+                    case MergeType.EndEnd:
+                        next.reverse();
+                        current = current.concat(next.slice(1));
+                        break;
+                    case MergeType.StartStart:
+                        current.reverse();
+                        current = current.concat(next.slice(1));
+                        break;
+                    case MergeType.StartEnd:
+                        current = next.concat(current.slice(1));
+                        break;
                 }
-                current = current.concat(next.slice(1));
             } while (next);
             strings.push(strArrayArrayToFloat(current));
             way = this.shift();
@@ -58,28 +73,35 @@ export class WayCollection extends Array {
      * Try to find the next way to add to the current way.
      * It first tries the next way in the array, and if this doesn't work, try any other way.
      */
-    private getNextWay(current: string[][]) {
-        const key = coordsToKey(last(current));
-        let shouldReverse = false;
+    private getNextWay(current: string[][]): { next: string[][] | null; mergeType: MergeType } {
+        const lastKey = coordsToKey(last(current));
+        const firstKey = coordsToKey(first(current));
 
         // Step 1: Prefer the next way in the array if it connects
         let next: string[][] | null = this.length > 0 ? this[0] : null;
-        if (next && coordsToKey(first(next)) !== key && coordsToKey(last(next)) === key) {
-            shouldReverse = true;
-        } else if (next && coordsToKey(first(next)) !== key) {
-            next = null; // Next way doesn't connect, ignore it
-        }
         if (next) {
-            return { next, shouldReverse };
-        }
+            const nextFirstKey = coordsToKey(first(next));
+            const nextLastKey = coordsToKey(last(next));
+            if (lastKey === nextFirstKey) {
+                return { next, mergeType: MergeType.EndStart };
+            }
+            if (lastKey === nextLastKey) {
+                return { next, mergeType: MergeType.EndEnd };
+            }
+            if (firstKey === nextFirstKey) {
+                return { next, mergeType: MergeType.StartStart };
+            }
+            if (firstKey === nextLastKey) {
+                return { next, mergeType: MergeType.StartEnd };
+            }
+        } 
         // Step 2: Fallback to map-based lookup if no sequential match
-        next = getFirstFromMap(this.firstMap, key);
+        next = getFirstFromMap(this.firstMap, lastKey);
         if (next) {
-            return { next, shouldReverse };
+            return { next, mergeType: MergeType.EndStart };
         }
-        next = getFirstFromMap(this.lastMap, key);
-        shouldReverse = true;
-        return { next, shouldReverse };
+        next = getFirstFromMap(this.lastMap, lastKey);
+        return { next, mergeType: MergeType.EndEnd };
     }
     
     public toRings(direction: string): number[][][] {

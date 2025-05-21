@@ -53,7 +53,7 @@
     "url": "git+https://github.com/tibetty/osm2geojson-lite.git"
   },
   "scripts": {
-    "build": "npm install && make",
+    "build": "make",
     "test": "vitest test/e2e.test.ts --coverage"
   },
   "optionalDependencies": {

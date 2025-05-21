@@ -1,6 +1,6 @@
 import { purgeProps } from './utils';
 import { XmlParser } from './xmlparser';
-import { Node } from './node';
+import { LatLon, Node } from './node';
 import { Way } from './way';
 import { Relation } from './relation';
 import { RefElements } from './ref-elements';
@@ -75,7 +75,7 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
                     node.addTags(elem.tags);
                 }
                 node.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'lat', 'lon']));
-                node.setLatLng(elem as { lat: string, lon: string });
+                node.setLatLng(elem);
                 break;
             case 'way':
                 const way = new Way(elem.id as string, refElements);
@@ -121,7 +121,7 @@ function analyzeFeaturesFromXml(osm: string, refElements: RefElements): void {
                 nd.addProp(k, v);
             }
         }
-        nd.setLatLng(node as { lat: string, lon: string });
+        nd.setLatLng(node as LatLon);
         if (node.$innerNodes) {
             for (const ind of node.$innerNodes) {
                 if (ind.$tag === 'tag') {
