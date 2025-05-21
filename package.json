@@ -53,7 +53,9 @@
     "url": "git+https://github.com/tibetty/osm2geojson-lite.git"
   },
   "scripts": {
-    "build": "make",
+    "build-node": "tsc --declaration && cp src/polytags.json dist/node",
+    "build-web": "mkdir -p dist/web && browserify -s osm2geojson dist/node/index.js | uglifyjs -c -m -o dist/web/osm2geojson-lite.js",
+    "build": "npm run build-node && npm run build-web",
     "test": "vitest test/e2e.test.ts --coverage"
   },
   "optionalDependencies": {
