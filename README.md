@@ -87,7 +87,7 @@ Dependencies
 
 License
 ---
-Copyleft
+MIT
 
 Collaborators
 ---
