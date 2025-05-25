@@ -44,7 +44,7 @@
     "polygon",
     "multipolygon"
   ],
-  "license": "ISC",
+  "license": "MIT",
   "main": "dist/node/index.js",
   "types": "dist/node/index.d.ts",
   "name": "osm2geojson-lite",
@@ -61,7 +61,7 @@
   "optionalDependencies": {
     "@types/geojson": "^7946.0.16"
   },
-  "version": "1.0.3",
+  "version": "1.1.1",
   "directories": {
     "lib": "lib",
     "test": "test"
