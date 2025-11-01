@@ -59,6 +59,7 @@ export class WayCollection extends Array {
                         break;
                     case MergeType.StartEnd:
                         current = next.concat(current.slice(1));
+                        current.reverse();
                         break;
                 }
             } while (next);
