@@ -4,11 +4,11 @@ import type { Feature } from 'geojson';
 export abstract class OsmObject {
     public refCount: number;
     public hasTag: boolean;
+    public id: string;
 
     protected refElems: RefElements;
 
     private type: string;
-    private id: string;
     private tags: { [k: string]: string };
     private props: { [k: string]: string };
 

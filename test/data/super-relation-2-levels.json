@@ -1,0 +1,128 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 1,
+      "lat": 0,
+      "lon": 0
+    },
+    {
+      "type": "node",
+      "id": 2,
+      "lat": 0,
+      "lon": 1
+    },
+    {
+      "type": "node",
+      "id": 3,
+      "lat": 1,
+      "lon": 1
+    },
+    {
+      "type": "node",
+      "id": 4,
+      "lat": 0,
+      "lon": 2
+    },
+    {
+      "type": "way",
+      "id": 5,
+      "nodes": [
+        2,
+        1
+      ],
+      "tags": {
+        "highway": "residential"
+      }
+    },
+    {
+      "type": "way",
+      "id": 6,
+      "nodes": [
+        3,
+        2
+      ]
+    },
+    {
+      "type": "way",
+      "id": 7,
+      "nodes": [
+        4,
+        2
+      ]
+    },
+    {
+      "type": "relation",
+      "id": 8,
+      "members": [
+        {
+          "type": "way",
+          "ref": 5
+        }
+      ]
+    },
+    {
+      "type": "relation",
+      "id": 9,
+      "members": [
+        {
+          "type": "way",
+          "ref": 6
+        }
+      ]
+    },
+    {
+      "type": "relation",
+      "id": 10,
+      "members": [
+        {
+          "type": "way",
+          "ref": 7
+        }
+      ]
+    },
+    {
+      "type": "relation",
+      "id": 11,
+      "members": [
+        {
+          "type": "relation",
+          "ref": 8
+        },
+        {
+          "type": "relation",
+          "ref": 9
+        }
+      ]
+    },
+    {
+      "type": "relation",
+      "id": 12,
+      "members": [
+        {
+          "type": "relation",
+          "ref": 9
+        },
+        {
+          "type": "relation",
+          "ref": 10
+        }
+      ]
+    }
+    ,
+    {
+      "type": "relation",
+      "id": 13,
+      "members": [
+        {
+          "type": "relation",
+          "ref": 11
+        },
+        {
+          "type": "relation",
+          "ref": 12
+        }
+      ]
+    }
+  ]
+}

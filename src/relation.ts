@@ -7,6 +7,11 @@ import { first, pointInsidePolygon } from "./utils";
 import type { RefElements } from "./ref-elements";
 import type { BBox, Feature, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "geojson";
 
+type WaysAndRoles = {
+    ways: Way[];
+    roles: string[];
+};
+
 export class Relation extends OsmObject {
     private relations: (LateBinder<Relation> | Relation)[] = [];
     private nodes: (LateBinder<Node> | Node)[] = [];
@@ -153,21 +158,38 @@ export class Relation extends OsmObject {
         return null;
     }
 
+    private collectAllWaysForRelation(relation: Relation, relationToWaysMap: Map<string, WaysAndRoles>): WaysAndRoles {
+        const ways = [...relation.ways as Way[]];
+        const roles = [...relation.roles];
+        if (relation.relations.length === 0) {
+            relationToWaysMap.set(relation.id, { ways, roles });
+            return { ways, roles };
+        }
+        for (const subRelation of relation.relations as Relation[]) {
+            if (!subRelation) {
+                continue;
+            }
+            if (!relationToWaysMap.has(subRelation.id)) {   
+                this.collectAllWaysForRelation(subRelation, relationToWaysMap);
+            }
+
+            const entry = relationToWaysMap.get(subRelation.id)!;
+            for (let i = 0; i < entry.ways.length; i++) {
+                ways.push(entry.ways[i]);
+                roles.push(entry.roles[i]);
+            }
+        }
+        relationToWaysMap.set(relation.id, { ways, roles });
+        return { ways, roles };
+    }
+
     public toFeatureArray(): Array<Feature<any, any>> {
         const polygonFeatures: Array<Feature<Polygon | MultiPolygon, any>> = [];
         const stringFeatures: Array<Feature<LineString | MultiLineString, any>> = [];
         let pointFeatures: Array<Feature<Point | MultiPoint, any>> = [];
 
-        for (const relation of this.relations) {
-            if (!relation) {
-                continue;
-            }
-            for (let i = 0; i < (relation as Relation).ways. length; i++) {
-                const way = (relation as Relation).ways[i];
-                this.ways.push(way);
-                this.roles.push((relation as Relation).roles[i]);
-            }
-        }
+        const relationToWaysMap: Map<string, WaysAndRoles> = new Map<string, WaysAndRoles>();
+        const waysAndRoles = this.collectAllWaysForRelation(this , relationToWaysMap);
 
         let templateFeature: Feature<any, any> = {
             type: 'Feature',
@@ -185,13 +207,13 @@ export class Relation extends OsmObject {
         if (this.roles.some((r) => r === 'outer')) {
             const outerWayCollection = new WayCollection();
             const innerWayCollection = new WayCollection();
-            for (let i = 0; i < this.ways.length; i++) {
-                const way = this.ways[i];
-                const role = this.roles[i];
+            for (let i = 0; i < waysAndRoles.ways.length; i++) {
+                const way = waysAndRoles.ways[i];
+                const role = waysAndRoles.roles[i];
                 if (role === 'outer') { 
-                    outerWayCollection.addWay(way as Way);
+                    outerWayCollection.addWay(way);
                 } else if (role === 'inner') {
-                    innerWayCollection.addWay(way as Way);
+                    innerWayCollection.addWay(way);
                 }
             }
             let feature = Object.assign({}, templateFeature);
@@ -202,8 +224,8 @@ export class Relation extends OsmObject {
             }
         } else {
             const wayCollection = new WayCollection();
-            for (let way of this.ways) {
-                wayCollection.addWay(way as Way);
+            for (let way of waysAndRoles.ways) {
+                wayCollection.addWay(way);
             }
             let geometry = this.constructStringGeometry(wayCollection);
             if (geometry) {

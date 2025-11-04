@@ -1,0 +1,55 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 1,
+      "lat": 0,
+      "lon": 0
+    },
+    {
+      "type": "node",
+      "id": 2,
+      "lat": 0,
+      "lon": 1
+    },
+    {
+      "type": "node",
+      "id": 3,
+      "lat": 0,
+      "lon": 2
+    },
+    {
+      "type": "way",
+      "id": 4,
+      "nodes": [
+        2,
+        1
+      ],
+      "tags": {
+        "highway": "residential"
+      }
+    },
+    {
+      "type": "way",
+      "id": 5,
+      "nodes": [
+        3,
+        2
+      ]
+    },
+    {
+      "type": "relation",
+      "id": 6,
+      "members": [
+        {
+          "type": "way",
+          "ref": 4
+        },
+        {
+          "type": "way",
+          "ref": 5
+        }
+      ]
+    }
+  ]
+}
