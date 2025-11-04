@@ -1,8 +1,7 @@
 In order to release a new version to NPM do the following steps:
 
-1. Checkout latest `main` branch
-2. Run the npm version command: `npm version --commit-hooks false --git-tag-version false x.y.z`
+1. Use the Create bump version PR action to create a PR to update the version
 3. Update [changelog](./CHANGELOG.md) with the relevant changes
-4. Commit with the message "Bump version to x.y.z" and push
+4. Merge the PR
 
 The release CI will kick in, create a git tag, a github release and publish the package to NPM.
