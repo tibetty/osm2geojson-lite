@@ -35,7 +35,7 @@
     "vitest": "^4.1.5"
   },
   "bin": {
-    "osm2geojson-lite": "osm2geojson-lite"
+    "osm2geojson-lite": "cli.mjs"
   },
   "directories": {
     "lib": "lib",
