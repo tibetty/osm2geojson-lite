@@ -1,33 +1,53 @@
 {
-  "_from": "xml2geojson-lite",
-  "_inBundle": false,
-  "_integrity": "sha512-FGxK8VIn/S86TRwcy9OM64KGOLMOc/952ybsYA9npTXdpfezIfS5khRqW/cC67uu8P0sNuSsk+vx1UbO6VM2jQ==",
-  "_location": "/osm2geojson-lite",
-  "_phantomChildren": {},
-  "_requested": {
-    "type": "tag",
-    "registry": true,
-    "raw": "osm2geojson-lite",
-    "name": "osm2geojson-lite",
-    "escapedName": "osm2geojson-lite",
-    "rawSpec": "",
-    "saveSpec": null,
-    "fetchSpec": "latest"
-  },
-  "_requiredBy": [
-    "#USER",
-    "/"
-  ],
+  "name": "osm2geojson-lite",
+  "version": "1.2.0",
+  "description": "a lightweight yet faster osm (either in xml or in json formats) to geojson convertor - 4x faster than xmldom + osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency",
   "author": "tibetty",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.mjs",
+    "dist/**/*.d.ts",
+    "dist/**/*.json"
+  ],
+  "scripts": {
+    "build": "rolldown -c && cp src/polytags.json dist/",
+    "test": "vitest test/e2e.test.ts --coverage"
+  },
+  "optionalDependencies": {
+    "@types/geojson": "^7946.0.16"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.5",
+    "rolldown": "^1.0.0-rc.18",
+    "rolldown-plugin-dts": "^0.24.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  },
   "bin": {
     "osm2geojson-lite": "osm2geojson-lite"
+  },
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tibetty/osm2geojson-lite.git"
   },
   "bugs": {
     "url": "https://github.com/tibetty/osm2geojson-lite/issues"
   },
-  "bundleDependencies": [],
-  "deprecated": false,
-  "description": "a lightweight yet faster osm (either in xml or in json formats) to geojson convertor - 4x faster than xmldom + osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency",
   "homepage": "https://github.com/tibetty/osm2geojson-lite#readme",
   "keywords": [
     "openstreetmap",
@@ -43,39 +63,5 @@
     "multilinestring",
     "polygon",
     "multipolygon"
-  ],
-  "license": "MIT",
-  "main": "dist/node/index.js",
-  "types": "dist/node/index.d.ts",
-  "name": "osm2geojson-lite",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/tibetty/osm2geojson-lite.git"
-  },
-  "scripts": {
-    "build-node": "tsc --declaration && cp src/polytags.json dist/node",
-    "build-web": "mkdir -p dist/web && browserify -s osm2geojson dist/node/index.js | uglifyjs -c -m -o dist/web/osm2geojson-lite.js",
-    "build": "npm run build-node && npm run build-web",
-    "test": "vitest test/e2e.test.ts --coverage"
-  },
-  "optionalDependencies": {
-    "@types/geojson": "^7946.0.16"
-  },
-  "version": "1.2.0",
-  "directories": {
-    "lib": "lib",
-    "test": "test"
-  },
-  "devDependencies": {
-    "@vitest/coverage-v8": "^3.1.3",
-    "browserify": "^17.0.1",
-    "typescript": "^5.8.3",
-    "uglify-js": "^3.19.3",
-    "vitest": "^3.1.3"
-  },
-  "files": [
-    "dist/**/*.js",
-    "dist/**/*.ts",
-    "dist/**/*.json"
   ]
 }
