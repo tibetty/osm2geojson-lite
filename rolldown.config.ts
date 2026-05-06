@@ -24,5 +24,14 @@ export default defineConfig([
             format: 'esm',
         },
         plugins: [dts()],
-    }
+    },
+    {
+        input: 'src/cli.ts',
+        external: ['./index.js', /node:.*/],
+        output: {
+            dir: 'dist',
+            format: 'esm',
+            entryFileNames: 'cli.mjs',
+        },
+    },
 ]);
