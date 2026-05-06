@@ -31,7 +31,7 @@ export default defineConfig([
         output: {
             dir: 'dist',
             format: 'esm',
-            entryFileNames: 'cli.js',
+            entryFileNames: 'cli.mjs',
         },
     },
 ]);
