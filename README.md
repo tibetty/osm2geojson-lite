@@ -34,6 +34,11 @@ Usage:
     let geojson = osm2geojson(osm, opts);
 ```
 
+### In the command line
+```sh
+    npx osm2geojson-lite --help
+```
+
 API
 ---
 
