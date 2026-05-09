@@ -1,5 +1,10 @@
 name: Release
 
+permissions:
+  id-token: write  # Required for trusted publishing
+  contents: write
+  attestations: write
+
 on:
   push:
     branches: [main]
@@ -17,7 +22,7 @@ jobs:
 
       - name: Check if version has been updated
         id: check
-        uses: EndBug/version-check@v2
+        uses: EndBug/version-check@v3
           
     outputs:
       publish: ${{ steps.check.outputs.changed }}
@@ -53,9 +58,7 @@ jobs:
 
       - name: Publish NPM package
         run: |
-          npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm publish --access public
 
       - name: Tag commit and push
         id: tag_version
