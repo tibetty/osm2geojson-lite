@@ -27,11 +27,15 @@ Usage:
 ```
 
 ### In the Browser
+
+Modern browsers load the ESM build directly via `<script type="module">`. Import it from a CDN (e.g. [esm.sh](https://esm.sh) or [jsDelivr](https://www.jsdelivr.com)):
+
 ```html
-    <script src='your/path/to/osm2geojson-lite.js'/>
-```
-```js
-    let geojson = osm2geojson(osm, opts);
+    <script type="module">
+        import osm2geojson from 'https://esm.sh/osm2geojson-lite';
+
+        const geojson = osm2geojson(osm, opts);
+    </script>
 ```
 
 ### In the command line
@@ -56,24 +60,26 @@ Converts OSM data (XML/JSON) to GeoJSON.
 Performance
 ---
 1. Workloads include the boundary XML and JSON of 4 administrive areas (zhucheng, hebei, tokyodo, usa)
-2. Call each conversion for 100 rounds to mitigate the impacts of GC and other factors
-3. For each script, run as many as times seperately and then calculate the average cost time (ACT for short)
-4. The # listed in the table below are coarse lowest values of dividing the ACT of `osmtogeojson` by the one of this library
+2. The benchmark is written with [Vitest's `bench`](https://vitest.dev/guide/features.html#benchmarking), which warms up and then samples each conversion many times, comparing this library against [`osm2geojson-ultra`](https://www.npmjs.com/package/osm2geojson-ultra) (which uses the `txml` parser) and `osmtogeojson` (+ `xmldom` for XML).
 ```
-$ cd test
 $ npm run bench
 ```
+3. The # listed in the tables below are coarse lowest speed-up factors (this library vs. the competitor) observed on the sample data.
+
 1. XML
-   
-| zhucheng  | hebei    | tokyodo | usa  |
-|-----------|----------|---------|------|
-| >2.5x     | >4.0x    | >3.0x   | >3.0x|
+
+|                 | zhucheng | hebei | tokyodo | usa   |
+|-----------------|----------|-------|---------|-------|
+| vs osmtogeojson | >5.0x    | >7.0x | >5.0x   | >3.5x |
+| vs ultra        | ~1.0x    | ~1.0x | >1.1x   | >1.0x |
 
 2. Overpass JSON
-   
-| zhucheng  | hebei    | tokyodo | usa  |
-|-----------|----------|---------|------|
-| >2.5x     | >11.0x   | >7.0x   | >5.0x|
+
+|                 | zhucheng | hebei  | tokyodo | usa   |
+|-----------------|----------|--------|---------|-------|
+| vs osmtogeojson | >9.0x    | >16.0x | >3.0x   | >1.6x |
+
+> **Note on `osm2geojson-ultra`:** for JSON, both libraries skip XML tokenizing and run nearly identical element-iteration code, so the *parsing* cost is effectively the same. The benchmark still reports a difference, but it comes from divergent conversion semantics (ultra dropped the `completeFeature`/`renderTagged`/`excludeWay` options and emits a different output shape — e.g. a `GeometryCollection` where this library emits a `MultiPolygon` plus `Point`s), not from faster JSON reading.
 
 
 Correctness

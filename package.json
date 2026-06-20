@@ -4,36 +4,40 @@
   "description": "a lightweight yet faster osm (either in xml or in json formats) to geojson convertor - 4x faster than xmldom + osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency",
   "author": "tibetty",
   "license": "MIT",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "type": "module",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
-    "dist/**/*.js",
+    "dist/**/*.cjs",
     "dist/**/*.mjs",
     "dist/**/*.d.ts",
     "dist/**/*.json"
   ],
   "scripts": {
     "build": "rolldown -c && cp src/polytags.json dist/",
-    "test": "vitest test/e2e.test.ts --coverage"
+    "test": "vitest test/e2e.test.ts --coverage",
+    "bench": "vitest bench --run"
   },
   "optionalDependencies": {
     "@types/geojson": "^7946.0.16"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",
-    "@vitest/coverage-v8": "^4.1.5",
-    "rolldown": "^1.0.0-rc.18",
-    "rolldown-plugin-dts": "^0.24.1",
+    "@vitest/coverage-v8": "^4.1.9",
+    "@xmldom/xmldom": "^0.9.10",
+    "osm2geojson-ultra": "^4.0.1",
+    "osmtogeojson": "^3.0.0-beta.5",
+    "rolldown": "^1.1.1",
+    "rolldown-plugin-dts": "^0.25.2",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.9"
   },
   "bin": {
     "osm2geojson-lite": "dist/cli.mjs"

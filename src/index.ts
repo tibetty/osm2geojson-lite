@@ -100,9 +100,9 @@ function analyzeFeaturesFromXml(osm: string, refElements: RefElements): void {
 
     xmlParser.on('</osm.node>', (node: { [k: string]: any }) => {
         const nd = new Node(node.id, refElements);
-        for (const [k, v] of Object.entries(node)) {
-            if (!k.startsWith('$') && ['id', 'lon', 'lat'].indexOf(k) < 0) {
-                nd.addProp(k, v);
+        for (const k in node) {
+            if (k[0] !== '$' && k !== 'id' && k !== 'lon' && k !== 'lat') {
+                nd.addProp(k, node[k]);
             }
         }
         nd.setLatLng(node as LatLon);
@@ -117,9 +117,9 @@ function analyzeFeaturesFromXml(osm: string, refElements: RefElements): void {
 
     xmlParser.on('</osm.way>', (node: { [k: string]: any }) => {
         const way = new Way(node.id, refElements);
-        for (const [k, v] of Object.entries(node)) {
-            if (!k.startsWith('$') && ['id'].indexOf(k) < 0) {
-                way.addProp(k, v);
+        for (const k in node) {
+            if (k[0] !== '$' && k !== 'id') {
+                way.addProp(k, node[k]);
             }
         }
         if (node.$innerNodes) {
@@ -149,9 +149,9 @@ function analyzeFeaturesFromXml(osm: string, refElements: RefElements): void {
 
         if (node.lat && node.lon) {
             member.lat = node.lat, member.lon = node.lon, member.tags = {};
-            for (const [k, v] of Object.entries(node)) {
-                if (!k.startsWith('$') && ['type', 'lat', 'lon'].indexOf(k) < 0) {
-                    member[k] = v;
+            for (const k in node) {
+                if (k[0] !== '$' && k !== 'type' && k !== 'lat' && k !== 'lon') {
+                    member[k] = node[k];
                 }
             }
         }
@@ -226,4 +226,4 @@ function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): Featu
     return { type: 'FeatureCollection', features: featureArray };
 };
 
-export = osm2geojson;
+export default osm2geojson;

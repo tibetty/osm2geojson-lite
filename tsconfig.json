@@ -1,23 +1,17 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
-        "moduleResolution": "node",
+        "module": "esnext",
+        "moduleResolution": "bundler",
         "resolveJsonModule": true,
-        "esModuleInterop": true,
-        "allowSyntheticDefaultImports": true,
-        "strictNullChecks": true,
-        "outDir": "dist/node",
         "strict": true,
-        "target": "es2017"
+        "target": "es2017",
+        "types": ["node"],
+        "noEmit": true
     },
-    "typeRoots": [
-        "node_modules/@types"
-    ],
     "include": [
         "src/*"
     ],
     "exclude": [
-        "node_modules",
-        "**/*.spec.ts"
+        "node_modules"
     ]
 }

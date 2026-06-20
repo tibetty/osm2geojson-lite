@@ -7,13 +7,13 @@ export default defineConfig([
         output: [
             {
                 dir: 'dist',
-                format: 'cjs',
-                entryFileNames: 'index.js',
+                format: 'esm',
+                entryFileNames: 'index.mjs',
             },
             {
                 dir: 'dist',
-                format: 'esm',
-                entryFileNames: 'index.mjs',
+                format: 'cjs',
+                entryFileNames: 'index.cjs',
             },
         ],
     },
@@ -23,11 +23,11 @@ export default defineConfig([
             dir: 'dist',
             format: 'esm',
         },
-        plugins: [dts()],
+        plugins: [dts({ emitDtsOnly: true })],
     },
     {
         input: 'src/cli.ts',
-        external: ['./index.js', /node:.*/],
+        external: [/node:.*/],
         output: {
             dir: 'dist',
             format: 'esm',
