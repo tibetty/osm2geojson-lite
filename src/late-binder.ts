@@ -11,16 +11,11 @@ export class LateBinder<T> {
         this.args = args;
     }
 
-    public bind() {
-        const v = this.valueFunc.apply(this.ctx, this.args);
-        const idx = this.container.indexOf(this);
-        if (idx < 0) {
-            return;
-        }
-        const args: [number, number, any?] = [idx, 1];
-        if (v) {
-            args.push(v);
-        }
-        Array.prototype.splice.apply(this.container, args);
+    public resolve(): T | undefined {
+        return this.valueFunc.apply(this.ctx, this.args);
+    }
+
+    public getContainer(): (T | LateBinder<T>)[] {
+        return this.container;
     }
 }

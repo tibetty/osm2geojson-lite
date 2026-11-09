@@ -1,35 +1,21 @@
 {
-  "building": {},
+  "building": {
+    "ignore": ["no"]
+  },
   "highway": {
-    "whitelist": [
-      "services",
-      "rest_area",
-      "escape",
-      "elevator"
-    ]
+    "include": ["services", "rest_area", "escape", "elevator"]
   },
   "natural": {
-    "blacklist": [
-      "coastline",
-      "cliff",
-      "ridge",
-      "arete",
-      "tree_row"
-    ]
+    "exclude": ["coastline", "cliff", "ridge", "arete", "tree_row"]
   },
   "landuse": {},
   "waterway": {
-    "whitelist": [
-      "riverbank",
-      "dock",
-      "boatyard",
-      "dam"
-    ]
+    "include": ["riverbank", "dock", "boatyard", "dam"]
   },
   "amenity": {},
   "leisure": {},
   "barrier": {
-    "whitelist": [
+    "include": [
       "city_wall",
       "ditch",
       "hedge",
@@ -39,46 +25,39 @@
     ]
   },
   "railway": {
-    "whitelist": [
-      "station",
-      "turntable",
-      "roundhouse",
-      "platform"
-    ]
+    "include": ["station", "turntable", "roundhouse", "platform"]
   },
-  "area": {},
   "boundary": {},
   "man_made": {
-    "blacklist": [
-      "cutline",
-      "embankment",
-      "pipeline"
-    ]
+    "exclude": ["cutline", "embankment", "pipeline"]
   },
   "power": {
-    "whitelist": [
-      "plant",
-      "substation",
-      "generator",
-      "transformer"
-    ]
+    "include": ["plant", "substation", "generator", "transformer"]
+  },
+  "piste:type": {
+    "include": ["downhill"]
   },
   "place": {},
   "shop": {},
   "aeroway": {
-    "blacklist": [
-      "taxiway"
-    ]
+    "exclude": ["taxiway"]
   },
   "tourism": {},
   "historic": {},
   "public_transport": {},
   "office": {},
-  "building:part": {},
+  "building:part": {
+    "ignore": ["no"]
+  },
   "military": {},
   "ruins": {},
   "area:highway": {},
   "craft": {},
   "golf": {},
-  "indoor": {}
+  "indoor": {
+    "ignore": ["yes", "no"]
+  },
+  "area": {
+    "exclude": ["no"]
+  }
 }

@@ -5,14 +5,16 @@ export abstract class OsmObject {
     public refCount: number;
     public hasTag: boolean;
     public id: string;
+    /** Set when a referenced node, way or relation could not be resolved. */
+    public tainted: boolean;
 
     protected refElems: RefElements;
 
     private type: string;
-    private tags: { [k: string]: string };
-    private props: { [k: string]: string };
+    protected tags: { [k: string]: string };
+    private props: { [k: string]: any };
 
-    constructor(type: string, id: string, refElems: RefElements) {
+    constructor(type: string, id: string, refElems: RefElements, register: boolean = true) {
         this.type = type;
         this.id = id;
         this.refElems = refElems;
@@ -20,7 +22,8 @@ export abstract class OsmObject {
         this.props = { id: this.getCompositeId() };
         this.refCount = 0;
         this.hasTag = false;
-        if (refElems) {
+        this.tainted = false;
+        if (refElems && register) {
             refElems.add(this.getCompositeId(), this);
         }
     }
@@ -39,7 +42,7 @@ export abstract class OsmObject {
         this.props[k] = v;
     }
 
-    public addProps(props: { [k: string]: string }) {
+    public addProps(props: { [k: string]: any }) {
         this.props = Object.assign(this.props, props);
     }
 
@@ -47,14 +50,13 @@ export abstract class OsmObject {
         return `${this.type}/${this.id}`;
     }
 
-    public getProps(): { [k: string]: string } {
-        return Object.assign(this.props, this.tags);
+    public getProps(): { [k: string]: any } {
+        const props = Object.assign({}, this.props, this.tags);
+        if (this.tainted && this.refElems && this.refElems.reportTainted) {
+            props['@tainted'] = true;
+        }
+        return props;
     }
 
     public abstract toFeatureArray(): Array<Feature<any, any>>;
 }
-
-
-
-
-

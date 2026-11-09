@@ -15,6 +15,35 @@ function parseEvent(evt: string): { evt: string, exp?: string } {
     return { evt };
 }
 
+const XML_ENTITY = /&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g;
+
+/**
+ * Decode the XML entities that occur in OSM data. The cheap `indexOf` check
+ * keeps the common case (no entities) allocation-free.
+ */
+function decodeEntities(value: string): string {
+    if (value.indexOf('&') < 0) {
+        return value;
+    }
+    return value.replace(XML_ENTITY, (match, entity: string) => {
+        switch (entity) {
+            case 'amp': return '&';
+            case 'lt': return '<';
+            case 'gt': return '>';
+            case 'quot': return '"';
+            case 'apos': return "'";
+        }
+        if (entity.charCodeAt(0) === 35) { // '#'
+            const hex = entity.charCodeAt(1) === 120 || entity.charCodeAt(1) === 88; // 'x' or 'X'
+            const code = hex ? parseInt(entity.slice(2), 16) : parseInt(entity.slice(1), 10);
+            if (Number.isFinite(code) && code >= 0 && code <= 0x10FFFF) {
+                return String.fromCodePoint(code);
+            }
+        }
+        return match;
+    });
+}
+
 function genConditionFunc(cond: string): (node: { [k: string]: any }) => boolean {
     const body = 'return ' + cond.replace(/(\$.+?)(?=[=!.])/g, 'node.$&') + ';';
     return new Function('node', body) as (node: { [k: string]: any }) => boolean;
@@ -118,7 +147,7 @@ export class XmlParser {
                 const parentNode = parentFrame ? parentFrame.node : undefined;
 
                 if (!node.$innerNodes && lt > frame.textStart) {
-                    node.$innerText = xml.slice(frame.textStart, lt);
+                    node.$innerText = decodeEntities(xml.slice(frame.textStart, lt));
                 }
 
                 if (progressive) {
@@ -212,7 +241,7 @@ export class XmlParser {
                         if (valEnd < 0) {
                             valEnd = len;
                         }
-                        node[attrName] = xml.slice(j, valEnd);
+                        node[attrName] = decodeEntities(xml.slice(j, valEnd));
                         j = valEnd + 1;
                     }
                 } else if (attrName) {

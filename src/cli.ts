@@ -10,8 +10,8 @@ function printHelp () {
         'Convert OpenStreetMap XML or JSON data to GeoJSON.',
         '',
         'Usage:',
-        '  npx osm2geojson INPUT_FILE OUTPUT_FILE',
-        '  npx osm2geojson < INPUT_FILE > OUTPUT_FILE',
+        '  npx osm2geojson-lite INPUT_FILE OUTPUT_FILE',
+        '  npx osm2geojson-lite < INPUT_FILE > OUTPUT_FILE',
         '',
     ].join('\n'))
 }
@@ -30,6 +30,7 @@ async function main (positionals: Array<string>) {
 
 const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
+    allowPositionals: true,
     options: {
         help: {
             short: 'h',
