@@ -84,7 +84,8 @@ export interface RingBounds {
 const ringBoundsCache = new WeakMap<number[][], RingBounds>();
 
 export function ringDirection(a: number[][], xIdx?: number, yIdx?: number): string {
-    xIdx = xIdx || 0, yIdx = yIdx || 1;
+    xIdx = xIdx === undefined ? 0 : xIdx;
+    yIdx = yIdx === undefined ? 1 : yIdx;
     // get the index of the point which has the maximum x value, while also
     // collecting the bounding box in the same pass
     let m = 0;
@@ -147,7 +148,8 @@ export function ringBounds(ring: number[][]): RingBounds {
 }
 
 export function pointInsidePolygon(pt: number[], polygon: number[][], xIdx?: number, yIdx?: number): boolean {
-    xIdx = xIdx || 0, yIdx = yIdx || 1;
+    xIdx = xIdx === undefined ? 0 : xIdx;
+    yIdx = yIdx === undefined ? 1 : yIdx;
     const px = pt[xIdx];
     const py = pt[yIdx];
     let result = false;
