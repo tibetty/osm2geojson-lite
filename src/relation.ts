@@ -90,6 +90,9 @@ export class Relation extends OsmObject {
                 if (member.lat !== undefined && member.lon !== undefined) {
                     node = new Node(member.ref, this.refElems, false);
                     node.setLatLng({ lon: member.lon, lat: member.lat });
+                    if (!node.hasCoordinates()) {
+                        this.tainted = true;
+                    }
                     if (member.tags) {
                         node.addTags(member.tags);
                     }
@@ -104,7 +107,7 @@ export class Relation extends OsmObject {
                 } else {
                     let binder = new LateBinder(this.nodes, (id) => {
                         const nn = this.refElems.get(`node/${id}`) as Node;
-                        if (nn) {
+                        if (nn && nn.hasCoordinates()) {
                             nn.refCount++;
                             return nn;
                         }
@@ -224,6 +227,9 @@ export class Relation extends OsmObject {
                 relation.tainted = true;
                 return;
             }
+            if (way.tainted) {
+                relation.tainted = true;
+            }
             const key = way.getCompositeId() + '\n' + role;
             if (seen.has(key)) {
                 return;
@@ -251,6 +257,9 @@ export class Relation extends OsmObject {
                 continue;
             }
             seenRelations.add(id);
+            if (subRelation.tainted) {
+                relation.tainted = true;
+            }
             const entry = this.collectAllWaysForRelation(subRelation, relationToWaysMap, visiting);
             for (let i = 0; i < entry.ways.length; i++) {
                 ways.push(entry.ways[i]);
@@ -293,8 +302,14 @@ export class Relation extends OsmObject {
                 const role = waysAndRoles.roles[i];
                 if (role === 'outer') {
                     outerWayCollection.addWay(way);
+                    if (way.tainted) {
+                        this.tainted = true;
+                    }
                 } else if (role === 'inner') {
                     innerWayCollection.addWay(way);
+                    if (way.tainted) {
+                        this.tainted = true;
+                    }
                 }
             }
             const geometry = this.constructPolygonGeometry(outerWayCollection, innerWayCollection);
@@ -308,6 +323,9 @@ export class Relation extends OsmObject {
             const wayCollection = new WayCollection();
             for (const way of waysAndRoles.ways) {
                 wayCollection.addWay(way);
+                if (way.tainted) {
+                    this.tainted = true;
+                }
             }
             const geometry = this.constructStringGeometry(wayCollection);
             if (geometry) {
@@ -337,6 +355,22 @@ export class Relation extends OsmObject {
                 coordinates: [+this.center.lon, +this.center.lat],
             };
             pointFeatures.push(feature);
+        }
+
+        // Ways are only converted/normalised while assembling geometry, so a
+        // taint discovered there (e.g. null `out geom` coordinates) must be
+        // reflected in the feature properties.
+        if (this.tainted) {
+            const properties = this.getProps();
+            for (const feature of polygonFeatures) {
+                feature.properties = properties;
+            }
+            for (const feature of stringFeatures) {
+                feature.properties = properties;
+            }
+            for (const feature of pointFeatures) {
+                feature.properties = properties;
+            }
         }
 
         for (const node of this.nodes) {

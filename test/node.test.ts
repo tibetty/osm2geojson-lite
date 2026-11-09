@@ -54,4 +54,21 @@ describe('Node', () => {
         refs.reportTainted = false;
         expect(node.toFeatureArray()[0].properties['@tainted']).toBeUndefined();
     });
+
+    it('rejects missing, empty and non-finite coordinates', () => {
+        const node = new Node('1', new RefElements());
+        node.setLatLng({ lat: '', lon: '' });
+        expect(node.hasCoordinates()).toBe(false);
+        expect(node.toFeatureArray()).toEqual([]);
+
+        node.setLatLng({ lat: undefined as any, lon: 1 });
+        expect(node.hasCoordinates()).toBe(false);
+
+        node.setLatLng({ lat: 1, lon: Number.NaN });
+        expect(node.hasCoordinates()).toBe(false);
+
+        node.setLatLng({ lat: 0, lon: 0 });
+        expect(node.hasCoordinates()).toBe(true);
+        expect(node.toFeatureArray()[0].geometry).toEqual({ type: 'Point', coordinates: [0, 0] });
+    });
 });

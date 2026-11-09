@@ -15,15 +15,30 @@ export class Node extends OsmObject {
         this.latLng = latLng;
     }
 
+    public hasCoordinates(): boolean {
+        const latLng = this.latLng;
+        if (!latLng) {
+            return false;
+        }
+        const lat = latLng.lat;
+        const lon = latLng.lon;
+        if ((typeof lat !== 'number' && typeof lat !== 'string') ||
+            (typeof lon !== 'number' && typeof lon !== 'string') ||
+            lat === '' || lon === '') {
+            return false;
+        }
+        return Number.isFinite(+lat) && Number.isFinite(+lon);
+    }
+
     public toFeatureArray(): Array<Feature<any, any>> {
-        if (this.latLng) {
+        if (this.hasCoordinates()) {
             return [{
                 type: 'Feature',
                 id: this.getCompositeId(),
                 properties: this.getProps(),
                 geometry: {
                     type: 'Point',
-                    coordinates: [+this.latLng.lon, +this.latLng.lat],
+                    coordinates: [+this.latLng!.lon, +this.latLng!.lat],
                 },
             }];
         }

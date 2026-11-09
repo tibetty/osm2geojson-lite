@@ -259,6 +259,9 @@
       "id": "relation/4050234",
       "properties": {
         "id": "relation/4050234",
+        "version": "3",
+        "timestamp": "2015-02-28T07:40:38Z",
+        "changeset": "0",
         "name": "松前町",
         "type": "boundary",
         "source": "KSJ2/N03",
@@ -2283,6 +2286,9 @@
       "id": "relation/12578",
       "properties": {
         "id": "relation/12578",
+        "version": "18",
+        "timestamp": "2015-04-30T05:03:46Z",
+        "changeset": "0",
         "ref": "38",
         "name": "徳島県道38号沖ノ洲徳島本町線 (Tokushima Prefectural Road 38)",
         "type": "route",
