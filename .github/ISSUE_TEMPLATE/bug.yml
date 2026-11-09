@@ -1,0 +1,53 @@
+name: Bug report
+description: Something produces wrong output or throws.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. A minimal input that reproduces the issue is the most useful thing you can provide.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal OSM/Overpass XML or JSON plus the options passed to osm2geojson.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include the error message or stack trace if applicable.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: osm2geojson-lite version
+      placeholder: 2.1.3
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js / browser version
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Overpass query, dataset size, screenshots, etc.
