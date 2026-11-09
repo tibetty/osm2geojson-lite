@@ -145,6 +145,61 @@ describe('out bb bounds fallback', () => {
     });
 });
 
+describe('relation stitching order', () => {
+    it('stitches a later member that joins the head when the next member is disconnected', () => {
+        const result = json([
+            { type: 'node', id: 0, lat: 0, lon: 0 },
+            { type: 'node', id: 1, lat: 0, lon: 1 },
+            { type: 'node', id: 2, lat: 0, lon: 2 },
+            { type: 'node', id: 8, lat: 5, lon: 5 },
+            { type: 'node', id: 9, lat: 5, lon: 6 },
+            { type: 'way', id: 10, nodes: [1, 2] },
+            { type: 'way', id: 11, nodes: [8, 9] },
+            { type: 'way', id: 12, nodes: [0, 1] },
+            {
+                type: 'relation', id: 20, tags: { type: 'route' },
+                members: [
+                    { type: 'way', ref: 10, role: '' },
+                    { type: 'way', ref: 11, role: '' },
+                    { type: 'way', ref: 12, role: '' },
+                ],
+            },
+        ]);
+        const geometry = result.features.find((f: any) => f.id === 'relation/20').geometry;
+        expect(geometry.type).toBe('MultiLineString');
+        expect(geometry.coordinates).toHaveLength(2);
+        const stitched = geometry.coordinates.find((line: number[][]) => line.length === 3);
+        expect(stitched).toBeDefined();
+        expect(stitched).toEqual(expect.arrayContaining([[0, 0], [1, 0], [2, 0]]));
+    });
+
+    it('stitches a later member whose first point joins the head', () => {
+        const result = json([
+            { type: 'node', id: 0, lat: 0, lon: 0 },
+            { type: 'node', id: 1, lat: 0, lon: 1 },
+            { type: 'node', id: 2, lat: 0, lon: 2 },
+            { type: 'node', id: 8, lat: 5, lon: 5 },
+            { type: 'node', id: 9, lat: 5, lon: 6 },
+            { type: 'way', id: 10, nodes: [1, 2] },
+            { type: 'way', id: 11, nodes: [8, 9] },
+            { type: 'way', id: 12, nodes: [1, 0] },
+            {
+                type: 'relation', id: 20, tags: { type: 'route' },
+                members: [
+                    { type: 'way', ref: 10, role: '' },
+                    { type: 'way', ref: 11, role: '' },
+                    { type: 'way', ref: 12, role: '' },
+                ],
+            },
+        ]);
+        const geometry = result.features.find((f: any) => f.id === 'relation/20').geometry;
+        expect(geometry.coordinates).toHaveLength(2);
+        const stitched = geometry.coordinates.find((line: number[][]) => line.length === 3);
+        expect(stitched).toBeDefined();
+        expect(stitched).toEqual(expect.arrayContaining([[0, 0], [1, 0], [2, 0]]));
+    });
+});
+
 describe('XML entity decoding', () => {
     it('decodes named and numeric entities in attributes and text', () => {
         const xml = '<osm><node id="1" lat="0" lon="0"><tag k="name" v="A &amp; B &#65; &#x42; &lt;&gt;&quot;&apos;"/></node></osm>';

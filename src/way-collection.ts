@@ -195,13 +195,23 @@ export class WayCollection {
             }
         }
 
-        // Step 2: Fallback to map-based lookup if no sequential match
+        // Step 2: Fallback to map-based lookup if no sequential match.
+        // Prefer extending the tail, then try the head (a later member may
+        // join the front while the next array entry is disconnected).
         const fromFirst = getFirstFromMap(this.firstMap, tailKey);
         if (fromFirst) {
             return { next: fromFirst, mergeType: MergeType.EndStart };
         }
         const fromLast = getFirstFromMap(this.lastMap, tailKey);
-        return { next: fromLast, mergeType: MergeType.EndEnd };
+        if (fromLast) {
+            return { next: fromLast, mergeType: MergeType.EndEnd };
+        }
+        const headFirst = getFirstFromMap(this.firstMap, headKey);
+        if (headFirst) {
+            return { next: headFirst, mergeType: MergeType.StartStart };
+        }
+        const headLast = getFirstFromMap(this.lastMap, headKey);
+        return { next: headLast, mergeType: MergeType.StartEnd };
     }
 
     public toRings(direction: string): number[][][] {
