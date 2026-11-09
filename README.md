@@ -1,3 +1,5 @@
+<p align="center"><img src="favicon.png" width="128" alt="osm2geojson-lite icon"></p>
+
 osm2geojson-lite
 ============
 
