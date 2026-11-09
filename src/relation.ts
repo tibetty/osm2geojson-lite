@@ -3,7 +3,7 @@ import { Way } from "./way";
 import { Node, LatLon } from "./node";
 import { WayCollection } from "./way-collection";
 import { LateBinder } from "./late-binder";
-import { first, pointInsidePolygon, ringBounds } from "./utils";
+import { boundsToRing, first, pointInsidePolygon, ringBounds } from "./utils";
 import type { RefElements } from "./ref-elements";
 import type { BBox, Feature, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "geojson";
 
@@ -297,6 +297,17 @@ export class Relation extends OsmObject {
                 stringFeatures.push(feature);
                 hasGeometry = true;
             }
+        }
+
+        // `out bb` responses may only carry a bounding box.
+        if (!hasGeometry && this.bounds) {
+            const feature = Object.assign({}, templateFeature);
+            feature.geometry = {
+                type: 'Polygon',
+                coordinates: [boundsToRing(this.bounds)],
+            };
+            polygonFeatures.push(feature);
+            hasGeometry = true;
         }
 
         // `out center` / derived responses may only carry a centre point.

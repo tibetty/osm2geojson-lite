@@ -60,9 +60,9 @@ Converts OSM data (XML/JSON) to GeoJSON.
     - `polygonTags`: optional, alternative polygon tag rules for ways. The shape matches the bundled `polytags.json`, e.g. `{ "building": { "ignore": ["no"] } }`; the legacy `whitelist`/`blacklist` spellings are still accepted.
 
 Beyond plain OSM data the converter understands the shapes produced by Overpass
-`out geom`, `out center`, `convert`, `make` and `local` (both JSON and XML),
-including derived `Point`/`LineString`/`Polygon`/`GeometryCollection` output,
-member geometries, `center` fallbacks and relation `bounds`.
+`out geom`, `out center`, `out bb`, `convert`, `make` and `local` (both JSON and
+XML), including derived `Point`/`LineString`/`Polygon`/`GeometryCollection`
+output, member geometries, `center` fallbacks and `bounds`-only rectangles.
 
 
 Performance
@@ -78,15 +78,15 @@ $ npm run bench
 
 |                 | zhucheng | hebei | tokyodo | usa   |
 |-----------------|----------|-------|---------|-------|
-| vs osmtogeojson | >9.0x    | >17.0x| >12.0x  | >11.4x|
-| vs ultra        | >2.0x    | >2.4x | >3.0x   | >3.2x |
+| vs osmtogeojson | >10.9x   | >20.8x| >14.9x  | >14.8x|
+| vs ultra        | >2.6x    | >3.1x | >3.7x   | >4.2x |
 
 2. Overpass JSON
 
 |                 | zhucheng | hebei  | tokyodo | usa   |
 |-----------------|----------|--------|---------|-------|
-| vs osmtogeojson | >13.1x   | >51.7x | >20.4x  | >28.6x|
-| vs ultra        | >4.1x    | >6.8x  | >13.6x  | >21.5x|
+| vs osmtogeojson | >13.7x   | >56.3x | >21.8x  | >27.5x|
+| vs ultra        | >4.4x    | >7.4x  | >14.4x  | >20.3x|
 
 > **Note on column values:** the numbers are `hz` ratios reported by Vitest on
 > the reference machine (Node 26, Apple silicon). Run `npm run bench` on your

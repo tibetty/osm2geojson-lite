@@ -21,7 +21,7 @@ const XML_ENTITY = /&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g;
  * Decode the XML entities that occur in OSM data. The cheap `indexOf` check
  * keeps the common case (no entities) allocation-free.
  */
-function decodeEntities(value: string): string {
+export function decodeEntities(value: string): string {
     if (value.indexOf('&') < 0) {
         return value;
     }

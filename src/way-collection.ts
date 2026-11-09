@@ -1,4 +1,4 @@
-import { addToMap, coordsToKey, first, getFirstFromMap, isRing, last, removeFromMap, ringDirection } from "./utils";
+import { addToMap, boundsToRing, coordsToKey, first, getFirstFromMap, isRing, last, removeFromMap, ringDirection } from "./utils";
 import type { Way } from "./way";
 
 const enum MergeType {
@@ -90,7 +90,13 @@ export class WayCollection {
     }
 
     public addWay(way: Way) {
-        const w = way.toCoordsArray();
+        let w = way.toCoordsArray();
+        if (w.length === 0) {
+            const bounds = way.getBounds();
+            if (bounds) {
+                w = boundsToRing(bounds);
+            }
+        }
         if (w.length > 0) {
             const index = this.ways.length;
             const firstKey = coordsToKey(first(w));

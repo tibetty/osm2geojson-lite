@@ -2,7 +2,7 @@ import { Feature } from "geojson";
 import { OsmObject } from "./osm-object";
 import { LatLon, Node } from "./node";
 import { LateBinder } from "./late-binder";
-import { isRing, ringDirection } from "./utils";
+import { boundsToRing, isRing, ringDirection } from "./utils";
 import polygonTags from './polytags.json';
 import type { RefElements } from "./ref-elements";
 
@@ -22,11 +22,13 @@ const defaultPolygonRules = polygonTags as PolygonTags;
 export class Way extends OsmObject {
     private latLngArray: Array<LatLon | LateBinder<LatLon>>;
     private center: LatLon | null;
+    private bounds: number[] | null;
 
     constructor(id: string, refElems: RefElements, register: boolean = true) {
         super('way', id, refElems, register);
         this.latLngArray = [];
         this.center = null;
+        this.bounds = null;
     }
 
     public addLatLng(latLng: LatLon) {
@@ -39,6 +41,14 @@ export class Way extends OsmObject {
 
     public setCenter(center: LatLon) {
         this.center = center;
+    }
+
+    public setBounds(bounds: number[]) {
+        this.bounds = bounds;
+    }
+
+    public getBounds(): number[] | null {
+        return this.bounds;
     }
 
     public addNodeRef(ref: string) {
@@ -96,6 +106,18 @@ export class Way extends OsmObject {
             }
 
             return [feature];
+        }
+
+        if (this.bounds) {
+            return [{
+                type: 'Feature',
+                id: this.getCompositeId(),
+                properties: this.getProps(),
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [boundsToRing(this.bounds)],
+                },
+            }];
         }
 
         if (this.center) {

@@ -53,6 +53,22 @@ export function isRing(a: number[][]): boolean {
     return firstPoint[0] === lastPoint[0] && firstPoint[1] === lastPoint[1];
 }
 
+/**
+ * Build the closed rectangle used by Overpass `out bb` responses when an
+ * element carries only a bounding box.
+ * @param bounds `[minlon, minlat, maxlon, maxlat]`
+ */
+export function boundsToRing(bounds: number[]): number[][] {
+    const [minLon, minLat, maxLon, maxLat] = bounds;
+    return [
+        [minLon, minLat],
+        [maxLon, minLat],
+        [maxLon, maxLat],
+        [minLon, maxLat],
+        [minLon, minLat],
+    ];
+}
+
 export interface RingBounds {
     minX: number;
     maxX: number;

@@ -111,6 +111,40 @@ describe('relation member handling', () => {
     });
 });
 
+describe('out bb bounds fallback', () => {
+    const ring = [[1, 0], [3, 0], [3, 2], [1, 2], [1, 0]];
+
+    it('builds a polygon for a bounds-only JSON way', () => {
+        const result = json([{ type: 'way', id: 1, tags: { highway: 'path' }, bounds: { minlat: 0, minlon: 1, maxlat: 2, maxlon: 3 } }]);
+        expect(result.features[0].id).toBe('way/1');
+        expect(result.features[0].geometry).toEqual({ type: 'Polygon', coordinates: [ring] });
+    });
+
+    it('builds a polygon for a bounds-only JSON relation', () => {
+        const result = json([{ type: 'relation', id: 2, tags: { type: 'multipolygon' }, bounds: { minlat: 0, minlon: 1, maxlat: 2, maxlon: 3 } }]);
+        const relation = result.features.find((f: any) => f.id === 'relation/2');
+        expect(relation.geometry).toEqual({ type: 'Polygon', coordinates: [ring] });
+    });
+
+    it('builds a polygon for a bounds-only XML way', () => {
+        const xml = '<osm><way id="1"><bounds minlat="0" minlon="1" maxlat="2" maxlon="3"/><tag k="highway" v="path"/></way></osm>';
+        const result = osm2geojson(xml, { completeFeature: true }) as any;
+        expect(result.features[0].geometry).toEqual({ type: 'Polygon', coordinates: [ring] });
+    });
+
+    it('builds a polygon for a bounds-only XML relation', () => {
+        const xml = '<osm><relation id="2"><bounds minlat="0" minlon="1" maxlat="2" maxlon="3"/><tag k="type" v="multipolygon"/></relation></osm>';
+        const result = osm2geojson(xml, { completeFeature: true }) as any;
+        expect(result.features[0].geometry).toEqual({ type: 'Polygon', coordinates: [ring] });
+    });
+
+    it('prefers real coordinates over bounds', () => {
+        const xml = '<osm><node id="9" lat="0" lon="0"/><node id="10" lat="1" lon="1"/><way id="1"><bounds minlat="0" minlon="1" maxlat="2" maxlon="3"/><nd ref="9"/><nd ref="10"/></way></osm>';
+        const result = osm2geojson(xml, { completeFeature: true }) as any;
+        expect(result.features[0].geometry).toEqual({ type: 'LineString', coordinates: [[0, 0], [1, 1]] });
+    });
+});
+
 describe('XML entity decoding', () => {
     it('decodes named and numeric entities in attributes and text', () => {
         const xml = '<osm><node id="1" lat="0" lon="0"><tag k="name" v="A &amp; B &#65; &#x42; &lt;&gt;&quot;&apos;"/></node></osm>';
