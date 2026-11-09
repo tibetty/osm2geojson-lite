@@ -51,7 +51,15 @@ export function isRing(a: number[][]): boolean {
 export function ringDirection(a: number[][], xIdx?: number, yIdx?: number): string {
     xIdx = xIdx || 0, yIdx = yIdx || 1;
     // get the index of the point which has the maximum x value
-    const m = a.reduce((maxxIdx: number, v: number[], idx: number): number => a[maxxIdx][xIdx || 0] > v[xIdx || 0] ? maxxIdx : idx, 0);
+    let m = 0;
+    let maxX = a[0][xIdx];
+    for (let idx = 1; idx < a.length; idx++) {
+        const x = a[idx][xIdx];
+        if (x >= maxX) {
+            maxX = x;
+            m = idx;
+        }
+    }
     // 'coz the first point is virtually the same one as the last point,
     // we need to skip a.length - 1 for left when m = 0,
     // and skip 0 for right when m = a.length - 1;

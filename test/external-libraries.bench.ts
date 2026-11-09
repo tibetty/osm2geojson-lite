@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { bench, describe } from 'vitest';
+import { test } from 'vitest';
 import { DOMParser } from '@xmldom/xmldom';
-import osm2geojsonLite from '../src/index';
+import osm2geojsonLite from 'osm2geojson-lite';
 import osm2geojsonUltra from 'osm2geojson-ultra';
 import osmtogeojson from 'osmtogeojson';
 
@@ -19,16 +19,18 @@ const datasets = ['zhucheng', 'hebei', 'tokyodo', 'usa'];
 // parsing the XML is included in its case to keep the comparison fair.
 for (const name of datasets) {
     const xml = read(`${name}.osm`);
-    describe(`${name} · XML → GeoJSON`, () => {
-        bench('osm2geojson-lite', () => {
-            osm2geojsonLite(xml, opts);
-        });
-        bench('osm2geojson-ultra', () => {
-            osm2geojsonUltra(xml, opts);
-        });
-        bench('osmtogeojson + xmldom', () => {
-            osmtogeojson(new DOMParser().parseFromString(xml, 'text/xml'));
-        });
+    test(`${name} · XML → GeoJSON`, async ({ bench }) => {
+        await bench.compare(
+            bench('osm2geojson-lite', () => {
+                osm2geojsonLite(xml, opts);
+            }),
+            bench('osm2geojson-ultra', () => {
+                osm2geojsonUltra(xml, opts);
+            }),
+            bench('osmtogeojson + xmldom', () => {
+                osmtogeojson(new DOMParser().parseFromString(xml, 'text/xml'));
+            }),
+        );
     });
 }
 
@@ -36,15 +38,17 @@ for (const name of datasets) {
 // conversion rather than JSON.parse.
 for (const name of datasets) {
     const json = JSON.parse(read(`${name}.json`));
-    describe(`${name} · JSON → GeoJSON`, () => {
-        bench('osm2geojson-lite', () => {
-            osm2geojsonLite(json, opts);
-        });
-        bench('osm2geojson-ultra', () => {
-            osm2geojsonUltra(json, opts);
-        });
-        bench('osmtogeojson', () => {
-            osmtogeojson(json);
-        });
+    test(`${name} · JSON → GeoJSON`, async ({ bench }) => {
+        await bench.compare(
+            bench('osm2geojson-lite', () => {
+                osm2geojsonLite(json, opts);
+            }),
+            bench('osm2geojson-ultra', () => {
+                osm2geojsonUltra(json, opts);
+            }),
+            bench('osmtogeojson', () => {
+                osmtogeojson(json);
+            }),
+        );
     });
 }

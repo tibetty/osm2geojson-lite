@@ -83,6 +83,13 @@ export class XmlParser {
      * building open-event strings for the overwhelmingly common leaf elements.
      */
     private openListenerCount: number = 0;
+    /**
+     * Exact paths that have at least one listener, and the set of final tag
+     * components. These let the scanner skip building event strings for the
+     * many `<nd>`/`<tag>` leaves that nobody observes.
+     */
+    private watchedPaths: Set<string> = new Set();
+    private watchedLeafTags: Set<string> = new Set();
 
     constructor(opts: any) {
         if (opts) {
@@ -147,10 +154,11 @@ export class XmlParser {
                 const parentNode = parentFrame ? parentFrame.node : undefined;
 
                 if (!node.$innerNodes && lt > frame.textStart) {
-                    node.$innerText = decodeEntities(xml.slice(frame.textStart, lt));
+                    const raw = xml.slice(frame.textStart, lt);
+                    node.$innerText = raw.indexOf('&') < 0 ? raw : decodeEntities(raw);
                 }
 
-                if (progressive) {
+                if (progressive && this.watchedPaths.has(frame.fullTag)) {
                     this.emit('</' + frame.fullTag + '>', node, parentNode);
                 }
 
@@ -241,7 +249,8 @@ export class XmlParser {
                         if (valEnd < 0) {
                             valEnd = len;
                         }
-                        node[attrName] = decodeEntities(xml.slice(j, valEnd));
+                        const raw = xml.slice(j, valEnd);
+                        node[attrName] = raw.indexOf('&') < 0 ? raw : decodeEntities(raw);
                         j = valEnd + 1;
                     }
                 } else if (attrName) {
@@ -250,7 +259,6 @@ export class XmlParser {
             }
             i = j;
 
-            const fullTag = top ? top.fullTag + '.' + tag : (basePath ? basePath + '.' + tag : tag);
             const parentNode = top ? top.node : undefined;
 
             if (queryParent && parentNode) {
@@ -260,11 +268,14 @@ export class XmlParser {
             // '?'/'!' prefixed tags were already routed above; treat trailing
             // '/' (and the implicitly self-closing prolog tags) as leaves.
             if (selfClose) {
-                if (progressive) {
-                    if (hasOpenListeners) {
-                        this.emit('<' + fullTag + '>', node, parentNode);
+                if (progressive && this.watchedLeafTags.has(tag)) {
+                    const fullTag = top ? top.fullTag + '.' + tag : (basePath ? basePath + '.' + tag : tag);
+                    if (this.watchedPaths.has(fullTag)) {
+                        if (hasOpenListeners) {
+                            this.emit('<' + fullTag + '>', node, parentNode);
+                        }
+                        this.emit('</' + fullTag + '>', node, parentNode);
                     }
-                    this.emit('</' + fullTag + '>', node, parentNode);
                 }
                 if (parentNode) {
                     const inner = parentNode.$innerNodes;
@@ -279,7 +290,8 @@ export class XmlParser {
                 continue;
             }
 
-            if (hasOpenListeners) {
+            const fullTag = top ? top.fullTag + '.' + tag : (basePath ? basePath + '.' + tag : tag);
+            if (hasOpenListeners && this.watchedPaths.has(fullTag)) {
                 this.emit('<' + fullTag + '>', node, parentNode);
             }
             const frame: Frame = { node, fullTag, textStart: i };
@@ -339,6 +351,11 @@ export class XmlParser {
         // open-tag events look like `<path>`; close-tag events like `</path>`.
         if (evt.charCodeAt(1) !== SLASH) {
             this.openListenerCount++;
+        }
+        if (evt.charCodeAt(0) === LT) {
+            const path = evt.slice(evt.charCodeAt(1) === SLASH ? 2 : 1, evt.length - 1);
+            this.watchedPaths.add(path);
+            this.watchedLeafTags.add(path.slice(path.lastIndexOf('.') + 1));
         }
     }
 

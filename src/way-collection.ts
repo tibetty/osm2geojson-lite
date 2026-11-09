@@ -9,6 +9,57 @@ const enum MergeType {
 }
 
 /**
+ * A growable point sequence with O(1) reverse and amortised O(1) append.
+ *
+ * `left` is stored in reverse order, so the logical sequence is
+ * `reverse(left) + right`. Reversing therefore only swaps the two arrays and
+ * appending always targets `right`. This lets the line/ring stitcher grow a
+ * path without repeatedly copying the accumulated coordinates.
+ */
+class PointDeque {
+    private left: number[][];
+    private right: number[][];
+    public headKey: string;
+    public tailKey: string;
+
+    constructor(first: number[][], firstKey: string, lastKey: string) {
+        this.left = [];
+        this.right = first.slice();
+        this.headKey = firstKey;
+        this.tailKey = lastKey;
+    }
+
+    public reverse() {
+        const tmp = this.left;
+        this.left = this.right;
+        this.right = tmp;
+        const key = this.headKey;
+        this.headKey = this.tailKey;
+        this.tailKey = key;
+    }
+
+    /** Append a segment, dropping its first point (the shared joint). */
+    public append(segment: number[][], segmentLastKey: string) {
+        for (let i = 1; i < segment.length; i++) {
+            this.right.push(segment[i]);
+        }
+        this.tailKey = segmentLastKey;
+    }
+
+    public flatten(): number[][] {
+        const result = new Array<number[]>(this.left.length + this.right.length);
+        let at = 0;
+        for (let i = this.left.length - 1; i >= 0; i--) {
+            result[at++] = this.left[i];
+        }
+        for (let i = 0; i < this.right.length; i++) {
+            result[at++] = this.right[i];
+        }
+        return result;
+    }
+}
+
+/**
  * A collection of way coordinate arrays that can be stitched back into lines
  * or rings.
  *
@@ -19,6 +70,8 @@ const enum MergeType {
  */
 export class WayCollection {
     private ways: number[][][];
+    private firstKeys: string[];
+    private lastKeys: string[];
     private firstMap: Record<string, number[][][]>;
     private lastMap: Record<string, number[][][]>;
     private used: boolean[];
@@ -27,6 +80,8 @@ export class WayCollection {
 
     constructor() {
         this.ways = [];
+        this.firstKeys = [];
+        this.lastKeys = [];
         this.firstMap = {};
         this.lastMap = {};
         this.used = [];
@@ -38,11 +93,15 @@ export class WayCollection {
         const w = way.toCoordsArray();
         if (w.length > 0) {
             const index = this.ways.length;
+            const firstKey = coordsToKey(first(w));
+            const lastKey = coordsToKey(last(w));
             this.ways.push(w);
+            this.firstKeys.push(firstKey);
+            this.lastKeys.push(lastKey);
             this.used.push(false);
             this.indexByWay.set(w, index);
-            addToMap(this.firstMap, coordsToKey(first(w)), w);
-            addToMap(this.lastMap, coordsToKey(last(w)), w);
+            addToMap(this.firstMap, firstKey, w);
+            addToMap(this.lastMap, lastKey, w);
         }
     }
 
@@ -51,10 +110,10 @@ export class WayCollection {
         let index = this.firstUnused();
         while (index >= 0) {
             const way = this.ways[index];
-            this.consume(index, way);
-            let current = way;
+            this.consume(index);
+            const deque = new PointDeque(way, this.firstKeys[index], this.lastKeys[index]);
             for (;;) {
-                const found = this.getNextWay(current);
+                const found = this.getNextWay(deque.headKey, deque.tailKey);
                 const next = found.next;
                 if (!next) {
                     break;
@@ -63,26 +122,27 @@ export class WayCollection {
                 if (nextIndex === undefined) {
                     break;
                 }
-                this.consume(nextIndex, next);
+                this.consume(nextIndex);
                 switch (found.mergeType) {
                     case MergeType.EndStart:
-                        current = current.concat(next.slice(1));
+                        deque.append(next, this.lastKeys[nextIndex]);
                         break;
                     case MergeType.EndEnd:
                         next.reverse();
-                        current = current.concat(next.slice(1));
+                        deque.append(next, this.firstKeys[nextIndex]);
                         break;
                     case MergeType.StartStart:
-                        current.reverse();
-                        current = current.concat(next.slice(1));
+                        deque.reverse();
+                        deque.append(next, this.lastKeys[nextIndex]);
                         break;
                     case MergeType.StartEnd:
-                        current = next.concat(current.slice(1));
-                        current.reverse();
+                        next.reverse();
+                        deque.reverse();
+                        deque.append(next, this.firstKeys[nextIndex]);
                         break;
                 }
             }
-            strings.push(current);
+            strings.push(deque.flatten());
             index = this.firstUnused();
         }
 
@@ -96,10 +156,11 @@ export class WayCollection {
         return this.head < this.ways.length ? this.head : -1;
     }
 
-    private consume(index: number, way: number[][]) {
+    private consume(index: number) {
         this.used[index] = true;
-        removeFromMap(this.firstMap, coordsToKey(first(way)), way);
-        removeFromMap(this.lastMap, coordsToKey(last(way)), way);
+        const way = this.ways[index];
+        removeFromMap(this.firstMap, this.firstKeys[index], way);
+        removeFromMap(this.lastMap, this.lastKeys[index], way);
     }
 
     /**
@@ -107,36 +168,33 @@ export class WayCollection {
      * It first tries the next unused way in the array, and if this doesn't work,
      * tries any other way through the endpoint maps.
      */
-    private getNextWay(current: number[][]): { next: number[][] | null; mergeType: MergeType } {
-        const lastKey = coordsToKey(last(current));
-        const firstKey = coordsToKey(first(current));
-
+    private getNextWay(headKey: string, tailKey: string): { next: number[][] | null; mergeType: MergeType } {
         // Step 1: Prefer the next unused way in the array if it connects
         const candidateIndex = this.firstUnused();
         const next = candidateIndex >= 0 ? this.ways[candidateIndex] : null;
         if (next) {
-            const nextFirstKey = coordsToKey(first(next));
-            const nextLastKey = coordsToKey(last(next));
-            if (lastKey === nextFirstKey) {
+            const nextFirstKey = this.firstKeys[candidateIndex];
+            const nextLastKey = this.lastKeys[candidateIndex];
+            if (tailKey === nextFirstKey) {
                 return { next, mergeType: MergeType.EndStart };
             }
-            if (lastKey === nextLastKey) {
+            if (tailKey === nextLastKey) {
                 return { next, mergeType: MergeType.EndEnd };
             }
-            if (firstKey === nextFirstKey) {
+            if (headKey === nextFirstKey) {
                 return { next, mergeType: MergeType.StartStart };
             }
-            if (firstKey === nextLastKey) {
+            if (headKey === nextLastKey) {
                 return { next, mergeType: MergeType.StartEnd };
             }
         }
 
         // Step 2: Fallback to map-based lookup if no sequential match
-        const fromFirst = getFirstFromMap(this.firstMap, lastKey);
+        const fromFirst = getFirstFromMap(this.firstMap, tailKey);
         if (fromFirst) {
             return { next: fromFirst, mergeType: MergeType.EndStart };
         }
-        const fromLast = getFirstFromMap(this.lastMap, lastKey);
+        const fromLast = getFirstFromMap(this.lastMap, tailKey);
         return { next: fromLast, mergeType: MergeType.EndEnd };
     }
 

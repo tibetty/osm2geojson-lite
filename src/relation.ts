@@ -139,7 +139,13 @@ export class Relation extends OsmObject {
 
             for (const ring of outerRings) {
                 compositPolyons.push([ring]);
-                outerBounds.push(ringBounds(ring));
+            }
+
+            // Bounding boxes are only needed to cheaply reject inner rings.
+            if (innerRings.length > 0) {
+                for (const ring of outerRings) {
+                    outerBounds.push(ringBounds(ring));
+                }
             }
 
             // Link inner rings to their outer container. A bbox pre-check avoids
