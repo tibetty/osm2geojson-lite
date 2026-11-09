@@ -27,6 +27,7 @@ const enum Kind {
     Member,
     LineString,
     Group,
+    Custom,
     Skip
 }
 
@@ -50,6 +51,7 @@ interface Derived {
 interface Frame {
     kind: Kind;
     id?: string;
+    type?: string;
     attrs?: Record<string, string>;
     tags?: Record<string, string>;
     relation?: Relation;
@@ -121,7 +123,7 @@ function addDerivedProps(output: Output, attrs: Record<string, string>) {
 }
 
 function isRoot(kind: Kind): boolean {
-    return kind === Kind.Root || kind === Kind.Skip;
+    return kind === Kind.Root;
 }
 
 function finish(frame: Frame, parent: Frame | undefined, refElements: RefElements): void {
@@ -200,6 +202,19 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
             return;
         }
 
+        case Kind.Custom: {
+            const output = new Output(frame.type!, frame.id!, refElements);
+            addDerivedProps(output, frame.attrs!);
+            if (frame.tags) {
+                output.addTags(frame.tags);
+            }
+            const geometry = buildDerivedGeometry(frame.derived!);
+            if (geometry) {
+                output.setGeometry(geometry);
+            }
+            return;
+        }
+
         case Kind.Member: {
             const attrs = frame.attrs!;
             const member: { [k: string]: any } = {
@@ -229,7 +244,7 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
         }
 
         case Kind.LineString: {
-            if (parent && (parent.kind === Kind.Node || parent.kind === Kind.Way || parent.kind === Kind.Relation)) {
+            if (parent && (parent.kind === Kind.Node || parent.kind === Kind.Way || parent.kind === Kind.Relation || parent.kind === Kind.Custom)) {
                 parent.derived!.geometry = {
                     type: 'Polygon',
                     coordinates: [frame.lineCoords!],
@@ -239,7 +254,7 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
         }
 
         case Kind.Group: {
-            if (parent && (parent.kind === Kind.Node || parent.kind === Kind.Way || parent.kind === Kind.Relation)) {
+            if (parent && (parent.kind === Kind.Node || parent.kind === Kind.Way || parent.kind === Kind.Relation || parent.kind === Kind.Custom)) {
                 const derived = parent.derived!;
                 const points = frame.groupPoints!;
                 for (let i = 0; i < points.length; i++) {
@@ -348,7 +363,7 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
                 }
                 break;
             case 'tag':
-                if (topKind === Kind.Node || topKind === Kind.Way || topKind === Kind.Relation) {
+                if (topKind === Kind.Node || topKind === Kind.Way || topKind === Kind.Relation || topKind === Kind.Custom) {
                     attrMode = AttrMode.Tag;
                 }
                 break;
@@ -363,23 +378,30 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
                 }
                 break;
             case 'point':
-                if (topKind === Kind.Node || topKind === Kind.Way || topKind === Kind.Relation || topKind === Kind.Group) {
+                if (topKind === Kind.Node || topKind === Kind.Way || topKind === Kind.Relation || topKind === Kind.Group || topKind === Kind.Custom) {
                     attrMode = AttrMode.LatLon;
                 }
                 break;
             case 'vertex':
-                if (topKind === Kind.Way || topKind === Kind.Relation || topKind === Kind.Group || topKind === Kind.LineString) {
+                if (topKind === Kind.Way || topKind === Kind.Relation || topKind === Kind.Group || topKind === Kind.LineString || topKind === Kind.Custom) {
                     attrMode = AttrMode.LatLon;
                 }
                 break;
             case 'linestring':
-                if (topKind === Kind.Node || topKind === Kind.Way || topKind === Kind.Relation) {
+                if (topKind === Kind.Node || topKind === Kind.Way || topKind === Kind.Relation || topKind === Kind.Custom) {
                     kind = Kind.LineString;
                 }
                 break;
             case 'group':
-                if (topKind === Kind.Node || topKind === Kind.Way || topKind === Kind.Relation) {
+                if (topKind === Kind.Node || topKind === Kind.Way || topKind === Kind.Relation || topKind === Kind.Custom) {
                     kind = Kind.Group;
+                }
+                break;
+            default:
+                // Unknown top-level elements are treated as Overpass custom
+                // derived objects once they show an `id` attribute.
+                if (isRoot(topKind)) {
+                    attrMode = AttrMode.Bag;
                 }
                 break;
         }
@@ -483,6 +505,10 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
         }
         i = j;
 
+        if (kind === Kind.Skip && attrMode === AttrMode.Bag && attrs && attrs.id) {
+            kind = Kind.Custom;
+        }
+
         const parent = stack.length ? stack[stack.length - 1] : undefined;
 
         if (attrMode === AttrMode.Nd) {
@@ -554,6 +580,7 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
                     case Kind.Node:
                     case Kind.Way:
                     case Kind.Relation:
+                    case Kind.Custom:
                         parent.hasDerived = true;
                         if (tag === 'point') {
                             parent.derived!.geometry = { type: 'Point', coordinates: [x, y] };
@@ -617,14 +644,24 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
                     member: { geometry: [], nodes: [] },
                 };
                 break;
+            case Kind.Custom:
+                frame = {
+                    kind,
+                    id: attrs!.id,
+                    type: tag,
+                    attrs,
+                    derived: newDerived(),
+                    hasDerived: false,
+                };
+                break;
             case Kind.LineString:
-                if (parent && (parent.kind === Kind.Node || parent.kind === Kind.Way || parent.kind === Kind.Relation)) {
+                if (parent && (parent.kind === Kind.Node || parent.kind === Kind.Way || parent.kind === Kind.Relation || parent.kind === Kind.Custom)) {
                     parent.hasDerived = true;
                 }
                 frame = { kind, lineCoords: [] };
                 break;
             case Kind.Group:
-                if (parent && (parent.kind === Kind.Node || parent.kind === Kind.Way || parent.kind === Kind.Relation)) {
+                if (parent && (parent.kind === Kind.Node || parent.kind === Kind.Way || parent.kind === Kind.Relation || parent.kind === Kind.Custom)) {
                     parent.hasDerived = true;
                 }
                 frame = { kind, groupPoints: [], groupCoords: [] };

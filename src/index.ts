@@ -142,6 +142,122 @@ function analyzeFeaturesFromXml(osm: string, refElements: RefElements): void {
     parseOsmXml(osm, refElements);
 };
 
+/**
+ * A closed relation cycle has no unreferenced relation, so the refCount-based
+ * output filter would drop the whole cycle. Pick one relation per unreachable
+ * strongly connected component and treat it as a root.
+ */
+function ensureRelationCyclesHaveRoot(refElements: RefElements): void {
+    const relations: Relation[] = [];
+    for (const value of refElements.values()) {
+        if (value instanceof Relation) {
+            relations.push(value);
+        }
+    }
+    if (relations.length === 0) {
+        return;
+    }
+
+    const present = new Set<string>();
+    for (const relation of relations) {
+        present.add(relation.getCompositeId());
+    }
+
+    const graph = new Map<Relation, Relation[]>();
+    for (const relation of relations) {
+        graph.set(relation, relation.getSubRelations().filter((sub) => present.has(sub.getCompositeId())));
+    }
+
+    // Anything reachable from an existing root is already covered by that
+    // root's feature.
+    const reachable = new Set<Relation>();
+    const queue: Relation[] = [];
+    for (const relation of relations) {
+        if (relation.refCount === 0) {
+            reachable.add(relation);
+            queue.push(relation);
+        }
+    }
+    while (queue.length > 0) {
+        const relation = queue.pop()!;
+        for (const sub of graph.get(relation)!) {
+            if (!reachable.has(sub)) {
+                reachable.add(sub);
+                queue.push(sub);
+            }
+        }
+    }
+
+    // Iterative Tarjan SCC so deeply nested relations cannot overflow the stack.
+    let nextIndex = 0;
+    const indices = new Map<Relation, number>();
+    const lowLinks = new Map<Relation, number>();
+    const onStack = new Set<Relation>();
+    const sccStack: Relation[] = [];
+
+    for (const start of relations) {
+        if (indices.has(start)) {
+            continue;
+        }
+        const frames: { relation: Relation, subs: Relation[], next: number }[] = [];
+        const enter = (relation: Relation) => {
+            indices.set(relation, nextIndex);
+            lowLinks.set(relation, nextIndex);
+            nextIndex++;
+            sccStack.push(relation);
+            onStack.add(relation);
+            frames.push({ relation, subs: graph.get(relation)!, next: 0 });
+        };
+        enter(start);
+
+        while (frames.length > 0) {
+            const frame = frames[frames.length - 1];
+            if (frame.next < frame.subs.length) {
+                const sub = frame.subs[frame.next++];
+                if (!indices.has(sub)) {
+                    enter(sub);
+                } else if (onStack.has(sub)) {
+                    lowLinks.set(frame.relation, Math.min(lowLinks.get(frame.relation)!, indices.get(sub)!));
+                }
+                continue;
+            }
+
+            frames.pop();
+            const relation = frame.relation;
+            if (frames.length > 0) {
+                const parent = frames[frames.length - 1].relation;
+                lowLinks.set(parent, Math.min(lowLinks.get(parent)!, lowLinks.get(relation)!));
+            }
+
+            if (lowLinks.get(relation) !== indices.get(relation)) {
+                continue;
+            }
+
+            const component: Relation[] = [];
+            let member: Relation = relation;
+            do {
+                member = sccStack.pop()!;
+                onStack.delete(member);
+                component.push(member);
+            } while (member !== relation);
+
+            const cyclic = component.length > 1 || graph.get(relation)!.indexOf(relation) >= 0;
+            if (!cyclic || component.some((node) => reachable.has(node))) {
+                continue;
+            }
+
+            let root = component[0];
+            for (const node of component) {
+                if (node.hasDirectGeometry()) {
+                    root = node;
+                    break;
+                }
+            }
+            root.refCount = 0;
+        }
+    }
+}
+
 function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): FeatureCollection<GeometryObject> | Feature<any, any> | GeometryObject | undefined {
     let { completeFeature, renderTagged, excludeWay, elementId, tainted, polygonTags } = parseOptions(opts);
 
@@ -173,6 +289,8 @@ function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): Featu
         const element = refElements.get(elementId);
         return element ? element.toFeatureArray()[0] : undefined;
     }
+
+    ensureRelationCyclesHaveRoot(refElements);
 
     for (const v of refElements.values()) {
         if (v.refCount > 0 && (!v.hasTag || !renderTagged || (v instanceof Way && excludeWay))) {

@@ -182,16 +182,34 @@ export class Relation extends OsmObject {
         return null;
     }
 
+    public getSubRelations(): Relation[] {
+        return this.relations.filter((relation): relation is Relation => relation instanceof Relation);
+    }
+
+    public hasDirectGeometry(): boolean {
+        return this.ways.length > 0 || this.nodes.length > 0 || this.center !== null || this.bounds !== undefined;
+    }
+
     /**
      * Flatten a relation and its sub-relations into a single way/role list.
      * Duplicate way references (a common cause of duplicated rings) are removed
      * while preserving the first occurrence and its role.
      */
-    private collectAllWaysForRelation(relation: Relation, relationToWaysMap: Map<string, WaysAndRoles>): WaysAndRoles {
+    private collectAllWaysForRelation(relation: Relation, relationToWaysMap: Map<string, WaysAndRoles>, visiting: Set<string>): WaysAndRoles {
+        if (!(relation instanceof Relation)) {
+            return { ways: [], roles: [] };
+        }
         const cached = relationToWaysMap.get(relation.id);
         if (cached) {
             return cached;
         }
+        // A relation cycle (e.g. A -> B -> A) has no natural root. Stop the
+        // recursion at the first relation already on the stack instead of
+        // overflowing; the outer relation still contributes its direct ways.
+        if (visiting.has(relation.id)) {
+            return { ways: [], roles: [] };
+        }
+        visiting.add(relation.id);
 
         const ways: Way[] = [];
         const roles: string[] = [];
@@ -233,13 +251,14 @@ export class Relation extends OsmObject {
                 continue;
             }
             seenRelations.add(id);
-            const entry = this.collectAllWaysForRelation(subRelation, relationToWaysMap);
+            const entry = this.collectAllWaysForRelation(subRelation, relationToWaysMap, visiting);
             for (let i = 0; i < entry.ways.length; i++) {
                 ways.push(entry.ways[i]);
                 roles.push(entry.roles[i]);
             }
         }
 
+        visiting.delete(relation.id);
         const result = { ways, roles };
         relationToWaysMap.set(relation.id, result);
         return result;
@@ -251,7 +270,7 @@ export class Relation extends OsmObject {
         let pointFeatures: Array<Feature<Point | MultiPoint, any>> = [];
 
         const relationToWaysMap: Map<string, WaysAndRoles> = new Map<string, WaysAndRoles>();
-        const waysAndRoles = this.collectAllWaysForRelation(this, relationToWaysMap);
+        const waysAndRoles = this.collectAllWaysForRelation(this, relationToWaysMap, new Set());
 
         let templateFeature: Feature<any, any> = {
             type: 'Feature',

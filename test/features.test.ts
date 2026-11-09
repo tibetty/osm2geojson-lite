@@ -196,3 +196,101 @@ describe('polygonTags override', () => {
         expect(result.features[0].geometry.type).toBe('LineString');
     });
 });
+
+describe('Overpass custom derived XML types (#34)', () => {
+    it('converts an arbitrary root element with vertices and tags', () => {
+        const xml = '<osm><this_string_is_user_defined id="1"><vertex lat="51.4772755" lon="0.0041914"/><vertex lat="51.4768181" lon="0.0026436"/><tag k="highway" v="pedestrian"/></this_string_is_user_defined></osm>';
+        const result = osm2geojson(xml, { completeFeature: true }) as any;
+        const feature = result.features.find((f: any) => f.id === 'this_string_is_user_defined/1');
+        expect(feature).toBeDefined();
+        expect(feature.geometry).toEqual({
+            type: 'LineString',
+            coordinates: [[0.0041914, 51.4772755], [0.0026436, 51.4768181]],
+        });
+        expect(feature.properties.highway).toBe('pedestrian');
+    });
+
+    it('converts arbitrary root elements with point and linestring children', () => {
+        const xml = '<osm>'
+            + '<custom_point id="1"><point lat="2" lon="3"/></custom_point>'
+            + '<custom_polygon id="2"><linestring><vertex lat="0" lon="0"/><vertex lat="0" lon="1"/><vertex lat="1" lon="0"/><vertex lat="0" lon="0"/></linestring></custom_polygon>'
+            + '</osm>';
+        const result = osm2geojson(xml, { completeFeature: true }) as any;
+        expect(result.features.find((f: any) => f.id === 'custom_point/1').geometry)
+            .toEqual({ type: 'Point', coordinates: [3, 2] });
+        expect(result.features.find((f: any) => f.id === 'custom_polygon/2').geometry)
+            .toEqual({ type: 'Polygon', coordinates: [[[0, 0], [1, 0], [0, 1], [0, 0]]] });
+    });
+
+    it('keeps custom and regular elements in mixed XML output', () => {
+        const xml = '<osm>'
+            + '<custom_way id="1"><vertex lat="0" lon="0"/><vertex lat="1" lon="1"/></custom_way>'
+            + '<node id="2" lat="5" lon="6"><tag k="barrier" v="gate"/></node>'
+            + '</osm>';
+        const result = osm2geojson(xml, { completeFeature: true }) as any;
+        expect(result.features.find((f: any) => f.id === 'custom_way/1')).toBeDefined();
+        expect(result.features.find((f: any) => f.id === 'node/2').geometry)
+            .toEqual({ type: 'Point', coordinates: [6, 5] });
+    });
+
+    it('converts arbitrary JSON element types carrying a geometry', () => {
+        const result = json([{
+            type: 'this_string_is_user_defined',
+            id: 1,
+            geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
+            tags: { highway: 'pedestrian' },
+        }]);
+        const feature = result.features[0];
+        expect(feature.id).toBe('this_string_is_user_defined/1');
+        expect(feature.geometry).toEqual({ type: 'LineString', coordinates: [[0, 0], [1, 1]] });
+        expect(feature.properties.highway).toBe('pedestrian');
+    });
+});
+
+describe('circular relations (#36)', () => {
+    const data = {
+        elements: [
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 0, lon: 1 },
+            {
+                type: 'relation', id: 3, tags: { name: 'Relation 1' },
+                members: [
+                    { type: 'way', ref: 4, role: 'role1', nodes: [1, 2, 3] },
+                    { type: 'relation', ref: 5, role: 'outer' },
+                ],
+            },
+            {
+                type: 'relation', id: 5, tags: { name: 'Relation 2' },
+                members: [{ type: 'relation', ref: 3, role: 'inner' }],
+            },
+        ],
+    };
+
+    it('emits a feature for a closed relation cycle instead of nothing', () => {
+        const result = json(data.elements);
+        expect(result.features.length).toBeGreaterThan(0);
+        expect(result.features.some((f: any) => f.id === 'relation/3')).toBe(true);
+    });
+
+    it('does not recurse forever when tagged relations are rendered', () => {
+        let result: any;
+        expect(() => { result = json(data.elements, { renderTagged: true }); }).not.toThrow();
+        expect(result.features.some((f: any) => f.id === 'relation/3')).toBe(true);
+    });
+
+    it('handles a self-referencing relation', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 0, lon: 1 },
+            { type: 'way', id: 3, nodes: [1, 2], tags: { highway: 'path' } },
+            {
+                type: 'relation', id: 4, tags: { name: 'self' },
+                members: [
+                    { type: 'way', ref: 3, role: '' },
+                    { type: 'relation', ref: 4, role: '' },
+                ],
+            },
+        ]);
+        expect(result.features.some((f: any) => f.id === 'relation/4')).toBe(true);
+    });
+});
