@@ -24,7 +24,9 @@
     "build": "rolldown -c && cp src/polytags.json dist/",
     "test": "vitest run --coverage",
     "bench": "vitest bench --run --reporter=verbose",
-    "prebench": "npm run build"
+    "prebench": "npm run build",
+    "valid": "node scripts/serve.mjs",
+    "prevalid": "npm run build"
   },
   "optionalDependencies": {
     "@types/geojson": "^7946.0.16"
