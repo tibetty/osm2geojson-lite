@@ -15,7 +15,7 @@ function parseEvent(evt: string): { evt: string, exp?: string } {
     return { evt };
 }
 
-const XML_ENTITY = /&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g;
+const XML_ENTITY = /&(#[xX][0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g;
 
 /**
  * Decode the XML entities that occur in OSM data. The cheap `indexOf` check
@@ -272,9 +272,11 @@ export class XmlParser {
             if (selfClose) {
                 if (progressive) {
                     const parentTag = top ? top.fullTag : basePath;
-                    const watched = top ? this.watchedChildren.get(parentTag) : this.watchedTopLevel;
+                    const watched = parentTag
+                        ? this.watchedChildren.get(parentTag)
+                        : this.watchedTopLevel;
                     if (watched && watched.has(tag)) {
-                        const fullTag = top ? parentTag + '.' + tag : (basePath ? basePath + '.' + tag : tag);
+                        const fullTag = parentTag ? parentTag + '.' + tag : tag;
                         if (hasOpenListeners) {
                             this.emit('<' + fullTag + '>', node, parentNode);
                         }
@@ -294,7 +296,9 @@ export class XmlParser {
                 continue;
             }
 
-            const fullTag = top ? top.fullTag + '.' + tag : (basePath ? basePath + '.' + tag : tag);
+            const fullTag = top
+                ? (top.fullTag ? top.fullTag + '.' + tag : tag)
+                : (basePath ? basePath + '.' + tag : tag);
             if (hasOpenListeners && this.watchedPaths.has(fullTag)) {
                 this.emit('<' + fullTag + '>', node, parentNode);
             }
