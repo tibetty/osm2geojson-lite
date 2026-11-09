@@ -7,39 +7,83 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
 <head>
     <title>osm2geojson-lite</title>
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <script type="text/javascript" src="../dist/web/osm2geojson-lite.js"></script>
+    <script src="https://unpkg.com/@mapbox/geojsonhint@3.3.0/geojsonhint.js"></script>
+    <script type="module">
+        import osm2geojson from '../dist/index.mjs';
+        window.osm2geojson = osm2geojson;
+    </script>
     <script type="text/javascript">
         $(() => {
+            let snackbarTimer = null;
+            const showSnackbar = (html, color, timeout = 3000) => {
+                const s = $('#snackbar');
+                s.html(html);
+                s.css('color', color);
+                s.addClass('show');
+                if (snackbarTimer) {
+                    clearTimeout(snackbarTimer);
+                }
+                snackbarTimer = setTimeout(() => s.removeClass('show'), timeout);
+            };
+            const escapeHtml = (value) => String(value).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[c]);
+
             $("#toGeo").click(e => {
                 e.preventDefault();
-                let g = $('#geojson');
-                let osm = $('#osmdata').val() || '<osm></osm>';
-                let geojson = osm2geojson(osm, {completeFeature: true});
+                if (typeof osm2geojson !== 'function') {
+                    showSnackbar('Converter failed to load. Run <strong>npm run build</strong> and serve the repository root.', 'red', 6000);
+                    return;
+                }
+                const g = $('#geojson');
+                const osm = $('#osmdata').val() || '<osm></osm>';
+                const geojson = osm2geojson(osm, { completeFeature: true });
                 g.val(JSON.stringify(geojson, null, 2));
             });
-            
-            // Update the copy event handler in your script section
+
+            $("#validateGeo").click(e => {
+                e.preventDefault();
+                const text = $('#geojson').val();
+                if (!text) {
+                    showSnackbar('Convert some OSM data first.', 'red');
+                    return;
+                }
+                if (!window.geojsonhint) {
+                    showSnackbar('The GeoJSON validator failed to load. Check your internet connection.', 'red', 6000);
+                    return;
+                }
+                let errors;
+                try {
+                    errors = window.geojsonhint.hint(text);
+                } catch (err) {
+                    errors = [{ line: 0, message: err.message || String(err) }];
+                }
+                if (!errors || errors.length === 0) {
+                    showSnackbar('Valid GeoJSON', 'green');
+                    return;
+                }
+                const shown = errors.slice(0, 8).map(err => {
+                    const lineNumber = typeof err.line === 'number' ? (err.error ? err.line + 1 : Math.max(1, err.line)) : 0;
+                    const line = lineNumber ? `Line ${lineNumber}: ` : '';
+                    return `<div>${escapeHtml(line + err.message)}</div>`;
+                }).join('');
+                const more = errors.length > 8 ? `<div>...and ${errors.length - 8} more</div>` : '';
+                showSnackbar(`<div><strong>Invalid GeoJSON</strong></div>${shown}${more}`, 'red', 8000);
+            });
+
             $("#copyGeo").click(e => {
                 e.preventDefault();
                 const geojsonText = $('#geojson').val();
-                if (geojsonText) {
-                    navigator.clipboard.writeText(geojsonText)
-                        .then(() => {
-                            const s = $('#snackbar');
-                            s.html('Copied! Go to <a href="https://geojsonlint.com/" target="_blank" style="color: #0c74a9;">geojsonlint.com</a> to verify');
-                            s.css('color', 'black');
-                            s.attr('class', 'show');
-                            setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
-                        })
-                        .catch(err => {
-                            console.error('Failed to copy text: ', err);
-                            const s = $('#snackbar');
-                            s.html('Failed to copy to clipboard');
-                            s.css('color', 'red');
-                            s.attr('class', 'show');
-                            setTimeout(() => s.attr('class', s.attr('class').replace('show', '')), 3000);
-                        });
+                if (!geojsonText) {
+                    showSnackbar('Nothing to copy.', 'red');
+                    return;
                 }
+                navigator.clipboard.writeText(geojsonText)
+                    .then(() => showSnackbar('Copied to clipboard.', 'black'))
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        showSnackbar('Failed to copy to clipboard.', 'red');
+                    });
             });
         });
     </script>
@@ -190,10 +234,14 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
         #snackbar {
             visibility: hidden;
             min-width: 300px;
+            max-width: 70vw;
+            max-height: 60vh;
+            overflow: auto;
             background-color: #ccc;
             color: black;
             text-shadow: 0px 0px 1px white;
-            text-align: center;
+            text-align: left;
+            line-height: 1.4;
             border-radius: 4px;
             padding: 16px;
             position: fixed;
@@ -285,7 +333,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
     </style>
 </head>
 <body>
-        <div id="snackbar"> [Used to display the result of the geojsonlint's validation] </div>
+        <div id="snackbar"> [GeoJSON validation result] </div>
         <a href="https://github.com/tibetty/osm2geojson-lite"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s.cdpn.io/31787/forkme_right_blue.png" alt="Fork me on GitHub"></a>
         <div id="top">
             <span id="name">osm2geojson-lite</span> converts OSM data to GeoJSON.
@@ -302,7 +350,8 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
                 <h3>GeoJSON</h3>
                 <textarea class="ta" id="geojson" contenteditable="true"></textarea>
                 <div class="button-container">
-                    <a class="button" href="" id="copyGeo">Copy to Clipboard</a>
+                    <a class="button" href="" id="validateGeo">Validate GeoJSON</a>
+                    <a class="button" href="" id="copyGeo" style="margin-left: 8px;">Copy to Clipboard</a>
                 </div>
             </div>
         </div>
@@ -312,10 +361,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             <ul>
                 <li>In the browser:</li>
                 <div class="code-container">
-                    <code>&lt;script src='your/path/to/osm2geojson-lite.js'/&gt;</code>
-                </div>
-                <div class="code-container">
-                    <code>osm2geojson(osm, opts);</code>
+                    <code>&lt;script type="module"&gt;<br>import osm2geojson from 'https://esm.sh/osm2geojson-lite';<br>osm2geojson(osm, opts);<br>&lt;/script&gt;</code>
                 </div>
                 
                 <li>As a nodejs library:</li>
@@ -328,7 +374,7 @@ this page is based on https://github.com/aaronlidman/osm-and-geojson (c)Aaron Li
             </ul>
             Read more about the API in the official <a class="link" target="_blank" href="https://github.com/tibetty/osm2geojson-lite#api">documentation</a>.
             <div id="download">
-                <p><a class="button" href="https://raw.githubusercontent.com/tibetty/osm2geojson-lite/master/dist/osm2geojson-lite.js">Download osm2geojson-lite.js</a><br/><br/>
+                <p><a class="button" href="../dist/index.mjs" download="osm2geojson-lite.mjs">Download osm2geojson-lite.mjs</a><br/><br/>
                     github: <a class="link" target="_blank" href="https://github.com/tibetty/osm2geojson-lite">tibetty/osm2geojson-lite</a><br/>
                     npm: <a class="link" target="_blank" href="https://npmjs.org/package/osm2geojson-lite">osm2geojson-lite</a><br/>
                 </p>
