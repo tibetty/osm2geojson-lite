@@ -84,12 +84,14 @@ export class XmlParser {
      */
     private openListenerCount: number = 0;
     /**
-     * Exact paths that have at least one listener, and the set of final tag
-     * components. These let the scanner skip building event strings for the
-     * many `<nd>`/`<tag>` leaves that nobody observes.
+     * Exact paths that have at least one listener, the child paths keyed by
+     * their parent path, and top-level listeners. These let the scanner skip
+     * building event strings for the many `<nd>`/`<tag>` leaves that nobody
+     * observes.
      */
     private watchedPaths: Set<string> = new Set();
-    private watchedLeafTags: Set<string> = new Set();
+    private watchedChildren: Map<string, Set<string>> = new Map();
+    private watchedTopLevel: Set<string> = new Set();
 
     constructor(opts: any) {
         if (opts) {
@@ -268,9 +270,11 @@ export class XmlParser {
             // '?'/'!' prefixed tags were already routed above; treat trailing
             // '/' (and the implicitly self-closing prolog tags) as leaves.
             if (selfClose) {
-                if (progressive && this.watchedLeafTags.has(tag)) {
-                    const fullTag = top ? top.fullTag + '.' + tag : (basePath ? basePath + '.' + tag : tag);
-                    if (this.watchedPaths.has(fullTag)) {
+                if (progressive) {
+                    const parentTag = top ? top.fullTag : basePath;
+                    const watched = top ? this.watchedChildren.get(parentTag) : this.watchedTopLevel;
+                    if (watched && watched.has(tag)) {
+                        const fullTag = top ? parentTag + '.' + tag : (basePath ? basePath + '.' + tag : tag);
                         if (hasOpenListeners) {
                             this.emit('<' + fullTag + '>', node, parentNode);
                         }
@@ -355,7 +359,18 @@ export class XmlParser {
         if (evt.charCodeAt(0) === LT) {
             const path = evt.slice(evt.charCodeAt(1) === SLASH ? 2 : 1, evt.length - 1);
             this.watchedPaths.add(path);
-            this.watchedLeafTags.add(path.slice(path.lastIndexOf('.') + 1));
+            const dot = path.lastIndexOf('.');
+            if (dot < 0) {
+                this.watchedTopLevel.add(path);
+            } else {
+                const parent = path.slice(0, dot);
+                let children = this.watchedChildren.get(parent);
+                if (!children) {
+                    children = new Set();
+                    this.watchedChildren.set(parent, children);
+                }
+                children.add(path.slice(dot + 1));
+            }
         }
     }
 

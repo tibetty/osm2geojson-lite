@@ -3,7 +3,7 @@ import { Way } from "./way";
 import { Node, LatLon } from "./node";
 import { WayCollection } from "./way-collection";
 import { LateBinder } from "./late-binder";
-import { first, pointInsidePolygon } from "./utils";
+import { first, pointInsidePolygon, ringBounds } from "./utils";
 import type { RefElements } from "./ref-elements";
 import type { BBox, Feature, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "geojson";
 
@@ -315,18 +315,4 @@ export class Relation extends OsmObject {
 
         return [...polygonFeatures, ...stringFeatures, ...pointFeatures];
     }
-}
-
-function ringBounds(ring: number[][]): { minX: number, maxX: number, minY: number, maxY: number } {
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (let i = 0; i < ring.length; i++) {
-        const point = ring[i];
-        const x = point[0];
-        const y = point[1];
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-    }
-    return { minX, maxX, minY, maxY };
 }

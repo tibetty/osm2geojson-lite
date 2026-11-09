@@ -45,20 +45,55 @@ export function getFirstFromMap<T>(m: { [k: string]: T[] }, k: string): T | null
 
 // need 3+ different points to form a ring, here using > 3 is 'coz a the first and the last points are actually the same
 export function isRing(a: number[][]): boolean {
-    return a.length > 3 && coordsToKey(first(a)) === coordsToKey(last(a))
+    if (a.length <= 3) {
+        return false;
+    }
+    const firstPoint = a[0];
+    const lastPoint = a[a.length - 1];
+    return firstPoint[0] === lastPoint[0] && firstPoint[1] === lastPoint[1];
 }
+
+export interface RingBounds {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}
+
+/**
+ * Bounds produced by `ringDirection` while it already scans the ring. Polygon
+ * assembly needs both, so reusing that pass avoids a second full scan on
+ * relation-heavy data.
+ */
+const ringBoundsCache = new WeakMap<number[][], RingBounds>();
 
 export function ringDirection(a: number[][], xIdx?: number, yIdx?: number): string {
     xIdx = xIdx || 0, yIdx = yIdx || 1;
-    // get the index of the point which has the maximum x value
+    // get the index of the point which has the maximum x value, while also
+    // collecting the bounding box in the same pass
     let m = 0;
     let maxX = a[0][xIdx];
+    let minX = maxX;
+    let minY = a[0][yIdx];
+    let maxY = minY;
     for (let idx = 1; idx < a.length; idx++) {
-        const x = a[idx][xIdx];
+        const point = a[idx];
+        const x = point[xIdx];
+        const y = point[yIdx];
         if (x >= maxX) {
             maxX = x;
             m = idx;
+        } else if (x < minX) {
+            minX = x;
         }
+        if (y < minY) {
+            minY = y;
+        } else if (y > maxY) {
+            maxY = y;
+        }
+    }
+    if (xIdx === 0 && yIdx === 1) {
+        ringBoundsCache.set(a, { minX, maxX, minY, maxY });
     }
     // 'coz the first point is virtually the same one as the last point,
     // we need to skip a.length - 1 for left when m = 0,
@@ -75,15 +110,43 @@ export function ringDirection(a: number[][], xIdx?: number, yIdx?: number): stri
     return det < 0 ? 'clockwise' : 'counterclockwise';
 };
 
+export function ringBounds(ring: number[][]): RingBounds {
+    const cached = ringBoundsCache.get(ring);
+    if (cached) {
+        return cached;
+    }
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < ring.length; i++) {
+        const point = ring[i];
+        const x = point[0];
+        const y = point[1];
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+    }
+    const bounds = { minX, maxX, minY, maxY };
+    ringBoundsCache.set(ring, bounds);
+    return bounds;
+}
+
 export function pointInsidePolygon(pt: number[], polygon: number[][], xIdx?: number, yIdx?: number): boolean {
     xIdx = xIdx || 0, yIdx = yIdx || 1;
+    const px = pt[xIdx];
+    const py = pt[yIdx];
     let result = false;
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        if ((polygon[i][xIdx] <= pt[xIdx] && pt[xIdx] < polygon[j][xIdx] ||
-            polygon[j][xIdx] <= pt[xIdx] && pt[xIdx] < polygon[i][xIdx]) &&
-            pt[yIdx] < (polygon[j][yIdx] - polygon[i][yIdx]) * (pt[xIdx] - polygon[i][xIdx]) / (polygon[j][xIdx] - polygon[i][xIdx]) + polygon[i][yIdx]) {
+    let xj = polygon[polygon.length - 1][xIdx];
+    let yj = polygon[polygon.length - 1][yIdx];
+    for (let i = 0; i < polygon.length; i++) {
+        const point = polygon[i];
+        const xi = point[xIdx];
+        const yi = point[yIdx];
+        if ((xi <= px && px < xj || xj <= px && px < xi) &&
+            py < (yj - yi) * (px - xi) / (xj - xi) + yi) {
             result = !result;
         }
+        xj = xi;
+        yj = yi;
     }
     return result;
 };

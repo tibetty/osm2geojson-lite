@@ -78,15 +78,15 @@ $ npm run bench
 
 |                 | zhucheng | hebei | tokyodo | usa   |
 |-----------------|----------|-------|---------|-------|
-| vs osmtogeojson | >8.2x    | >15.3x| >10.9x  | >10.7x|
-| vs ultra        | >2.0x    | >2.2x | >2.8x   | >3.1x |
+| vs osmtogeojson | >9.0x    | >17.0x| >12.0x  | >11.4x|
+| vs ultra        | >2.0x    | >2.4x | >3.0x   | >3.2x |
 
 2. Overpass JSON
 
 |                 | zhucheng | hebei  | tokyodo | usa   |
 |-----------------|----------|--------|---------|-------|
-| vs osmtogeojson | >13.1x   | >49.3x | >18.7x  | >29.2x|
-| vs ultra        | >4.1x    | >6.5x  | >12.5x  | >23.1x|
+| vs osmtogeojson | >13.1x   | >51.7x | >20.4x  | >28.6x|
+| vs ultra        | >4.1x    | >6.8x  | >13.6x  | >21.5x|
 
 > **Note on column values:** the numbers are `hz` ratios reported by Vitest on
 > the reference machine (Node 26, Apple silicon). Run `npm run bench` on your
