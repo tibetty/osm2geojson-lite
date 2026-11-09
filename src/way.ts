@@ -54,7 +54,7 @@ export class Way extends OsmObject {
     public addNodeRef(ref: string) {
         const binder = new LateBinder(this.latLngArray, (id: string) => {
             const node = this.refElems.get(`node/${id}`) as Node;
-            if (node) {
+            if (node && node.hasCoordinates()) {
                 node.refCount++;
                 return node.getLatLng();
             }
@@ -69,15 +69,36 @@ export class Way extends OsmObject {
      * Coordinates are normalised to numbers in a single pass here. Previously
      * the strings were joined for map keys and parsed again during output, so
      * every coordinate was converted twice and several intermediate arrays
-     * were allocated.
+     * were allocated. Missing coordinates (Overpass writes `null` for missing
+     * `out geom` nodes) are skipped and mark the way as tainted.
      */
     public toCoordsArray(): number[][] {
-        const source = this.latLngArray as LatLon[];
+        const source = this.latLngArray as unknown as Array<LatLon | null | undefined>;
         const coords: number[][] = new Array(source.length);
+        let at = 0;
         for (let i = 0; i < source.length; i++) {
             const latLng = source[i];
-            coords[i] = [+latLng.lon, +latLng.lat];
+            if (!latLng) {
+                this.tainted = true;
+                continue;
+            }
+            const lat = latLng.lat;
+            const lon = latLng.lon;
+            if ((typeof lat !== 'number' && typeof lat !== 'string') ||
+                (typeof lon !== 'number' && typeof lon !== 'string') ||
+                lat === '' || lon === '') {
+                this.tainted = true;
+                continue;
+            }
+            const x = +lon;
+            const y = +lat;
+            if (!Number.isFinite(x) || !Number.isFinite(y)) {
+                this.tainted = true;
+                continue;
+            }
+            coords[at++] = [x, y];
         }
+        coords.length = at;
         return coords;
     }
 

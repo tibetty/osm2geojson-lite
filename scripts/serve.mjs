@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 import { createServer } from 'node:http';
-import { createReadStream, statSync } from 'node:fs';
+import { createReadStream, realpathSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { spawn } from 'node:child_process';
 
 const root = resolve(process.cwd());
-const port = Number.parseInt(process.env.PORT || '3000', 10);
+const requestedPort = Number.parseInt(process.env.PORT || '3000', 10);
+const port = Number.isInteger(requestedPort) && requestedPort > 0 && requestedPort < 65536
+    ? requestedPort
+    : 3000;
 const entry = '/test/index.html';
 const url = `http://localhost:${port}${entry}`;
 
@@ -29,6 +32,8 @@ const MIME = {
 };
 
 const rootPrefix = root.endsWith(sep) ? root : root + sep;
+const rootReal = realpathSync(root);
+const rootRealPrefix = rootReal.endsWith(sep) ? rootReal : rootReal + sep;
 
 function send(res, status, body, headers = {}) {
     res.writeHead(status, {
@@ -65,6 +70,12 @@ const server = createServer((req, res) => {
         return;
     }
 
+    // Never expose dotfiles such as .git/config or .env.
+    if (pathname.split('/').some((part) => part.startsWith('.'))) {
+        send(res, 403, 'Forbidden', { 'Content-Type': 'text/plain; charset=utf-8' });
+        return;
+    }
+
     let filePath = normalize(join(root, pathname));
     if (filePath !== root && !filePath.startsWith(rootPrefix)) {
         send(res, 403, 'Forbidden', { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -87,6 +98,19 @@ const server = createServer((req, res) => {
             send(res, 404, 'Not Found', { 'Content-Type': 'text/plain; charset=utf-8' });
             return;
         }
+    }
+
+    // Block symlinks that escape the repository root.
+    let realPath;
+    try {
+        realPath = realpathSync(filePath);
+    } catch {
+        send(res, 404, 'Not Found', { 'Content-Type': 'text/plain; charset=utf-8' });
+        return;
+    }
+    if (realPath !== rootReal && !realPath.startsWith(rootRealPrefix)) {
+        send(res, 403, 'Forbidden', { 'Content-Type': 'text/plain; charset=utf-8' });
+        return;
     }
 
     const type = MIME[extname(filePath).toLowerCase()] || 'application/octet-stream';
@@ -122,7 +146,7 @@ server.on('error', (error) => {
     } else {
         console.error(error);
     }
-    process.exitCode = 1;
+    process.exit(1);
 });
 
 server.listen(port, '127.0.0.1', () => {

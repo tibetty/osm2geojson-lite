@@ -192,6 +192,11 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
                     output.setGeometry(geometry);
                 }
             } else {
+                for (const k in frame.attrs) {
+                    if (k !== 'id') {
+                        relation.addProp(k, frame.attrs![k]);
+                    }
+                }
                 if (frame.tags) {
                     relation.addTags(frame.tags);
                 }
