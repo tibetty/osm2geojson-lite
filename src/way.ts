@@ -2,19 +2,33 @@ import { Feature } from "geojson";
 import { OsmObject } from "./osm-object";
 import { LatLon, Node } from "./node";
 import { LateBinder } from "./late-binder";
-import { isRing, ringDirection, strArrayArrayToFloat } from "./utils";
+import { boundsToRing, isRing, ringDirection } from "./utils";
 import polygonTags from './polytags.json';
 import type { RefElements } from "./ref-elements";
 
+export type PolygonRule = {
+    ignore?: string[];
+    include?: string[];
+    exclude?: string[];
+    // legacy spellings kept for backwards compatibility with older polytags files
+    whitelist?: string[];
+    blacklist?: string[];
+};
+
+export type PolygonTags = Record<string, PolygonRule>;
+
+const defaultPolygonRules = polygonTags as PolygonTags;
 
 export class Way extends OsmObject {
     private latLngArray: Array<LatLon | LateBinder<LatLon>>;
-    private isPolygon: boolean;
+    private center: LatLon | null;
+    private bounds: number[] | null;
 
-    constructor(id: string, refElems: RefElements) {
-        super('way', id, refElems);
+    constructor(id: string, refElems: RefElements, register: boolean = true) {
+        super('way', id, refElems, register);
         this.latLngArray = [];
-        this.isPolygon = false;
+        this.center = null;
+        this.bounds = null;
     }
 
     public addLatLng(latLng: LatLon) {
@@ -25,6 +39,18 @@ export class Way extends OsmObject {
         this.latLngArray = latLngArray;
     }
 
+    public setCenter(center: LatLon) {
+        this.center = center;
+    }
+
+    public setBounds(bounds: number[]) {
+        this.bounds = bounds;
+    }
+
+    public getBounds(): number[] | null {
+        return this.bounds;
+    }
+
     public addNodeRef(ref: string) {
         const binder = new LateBinder(this.latLngArray, (id: string) => {
             const node = this.refElems.get(`node/${id}`) as Node;
@@ -32,32 +58,32 @@ export class Way extends OsmObject {
                 node.refCount++;
                 return node.getLatLng();
             }
+            this.tainted = true;
         }, this, [ref]);
 
         this.latLngArray.push(binder);
         this.refElems.addBinder(binder);
     }
 
-    public addTags(tags: { [k: string]: string }) {
-        super.addTags(tags);
-        for (const [k, v] of Object.entries(tags)) {
-            this.analyzeTag(k, v);
+    /**
+     * Coordinates are normalised to numbers in a single pass here. Previously
+     * the strings were joined for map keys and parsed again during output, so
+     * every coordinate was converted twice and several intermediate arrays
+     * were allocated.
+     */
+    public toCoordsArray(): number[][] {
+        const source = this.latLngArray as LatLon[];
+        const coords: number[][] = new Array(source.length);
+        for (let i = 0; i < source.length; i++) {
+            const latLng = source[i];
+            coords[i] = [+latLng.lon, +latLng.lat];
         }
-    }
-
-    public addTag(k: string, v: string) {
-        super.addTag(k, v);
-        this.analyzeTag(k, v);
-    }
-
-    public toCoordsArray(): string[][] {
-        return (this.latLngArray as Array<LatLon>).map((latLng) => [latLng.lon, latLng.lat]);
+        return coords;
     }
 
     public toFeatureArray(): Array<Feature<any, any>> {
-        let coordsArrayString = this.toCoordsArray();
-        if (coordsArrayString.length > 1) {
-            const coordsArray = strArrayArrayToFloat(coordsArrayString);
+        const coordsArray = this.toCoordsArray();
+        if (coordsArray.length > 1) {
             const feature: Feature<any, any> = {
                 type: 'Feature',
                 id: this.getCompositeId(),
@@ -68,7 +94,7 @@ export class Way extends OsmObject {
                 },
             };
 
-            if (this.isPolygon && isRing(coordsArray)) {
+            if (isRing(coordsArray) && this.isPolygon()) {
                 if (ringDirection(coordsArray) !== 'counterclockwise') {
                     coordsArray.reverse();
                 }
@@ -77,25 +103,66 @@ export class Way extends OsmObject {
                     type: 'Polygon',
                     coordinates: [coordsArray],
                 };
-
-                return [feature];
             }
 
             return [feature];
         }
 
+        if (this.bounds) {
+            return [{
+                type: 'Feature',
+                id: this.getCompositeId(),
+                properties: this.getProps(),
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [boundsToRing(this.bounds)],
+                },
+            }];
+        }
+
+        if (this.center) {
+            return [{
+                type: 'Feature',
+                id: this.getCompositeId(),
+                properties: this.getProps(),
+                geometry: {
+                    type: 'Point',
+                    coordinates: [+this.center.lon, +this.center.lat],
+                },
+            }];
+        }
+
         return [];
     }
 
-    private analyzeTag(k: string, v: string) {
-        const o = (polygonTags as Record<string, { whitelist?: string[], blacklist?: string[] } >)[k];
-        if (o) {
-            this.isPolygon = true;
-            if (o.whitelist) {
-                this.isPolygon = o.whitelist.indexOf(v) >= 0 ? true : false;
-            } else if (o.blacklist) {
-                this.isPolygon = o.blacklist.indexOf(v) >= 0 ? false : true;
+    /**
+     * Polygon detection is order-independent: a closed way is an area when at
+     * least one polygon tag applies, while tags such as `building=no` or
+     * `area=no` explicitly opt out.
+     */
+    private isPolygon(): boolean {
+        const polygonRules = (this.refElems && this.refElems.polygonTags) || defaultPolygonRules;
+        let area = false;
+        for (const key in polygonRules) {
+            const value = this.tags[key];
+            if (!value) {
+                continue;
+            }
+            const rule = polygonRules[key];
+            if (rule.ignore && rule.ignore.indexOf(value) >= 0) {
+                continue;
+            }
+            area = true;
+            if (rule.include) {
+                area = rule.include.indexOf(value) >= 0;
+            } else if (rule.exclude) {
+                area = rule.exclude.indexOf(value) < 0;
+            } else if (rule.whitelist) {
+                area = rule.whitelist.indexOf(value) >= 0;
+            } else if (rule.blacklist) {
+                area = rule.blacklist.indexOf(value) < 0;
             }
         }
+        return area;
     }
 }

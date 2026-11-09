@@ -15,6 +15,35 @@ function parseEvent(evt: string): { evt: string, exp?: string } {
     return { evt };
 }
 
+const XML_ENTITY = /&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g;
+
+/**
+ * Decode the XML entities that occur in OSM data. The cheap `indexOf` check
+ * keeps the common case (no entities) allocation-free.
+ */
+export function decodeEntities(value: string): string {
+    if (value.indexOf('&') < 0) {
+        return value;
+    }
+    return value.replace(XML_ENTITY, (match, entity: string) => {
+        switch (entity) {
+            case 'amp': return '&';
+            case 'lt': return '<';
+            case 'gt': return '>';
+            case 'quot': return '"';
+            case 'apos': return "'";
+        }
+        if (entity.charCodeAt(0) === 35) { // '#'
+            const hex = entity.charCodeAt(1) === 120 || entity.charCodeAt(1) === 88; // 'x' or 'X'
+            const code = hex ? parseInt(entity.slice(2), 16) : parseInt(entity.slice(1), 10);
+            if (Number.isFinite(code) && code >= 0 && code <= 0x10FFFF) {
+                return String.fromCodePoint(code);
+            }
+        }
+        return match;
+    });
+}
+
 function genConditionFunc(cond: string): (node: { [k: string]: any }) => boolean {
     const body = 'return ' + cond.replace(/(\$.+?)(?=[=!.])/g, 'node.$&') + ';';
     return new Function('node', body) as (node: { [k: string]: any }) => boolean;
@@ -54,6 +83,15 @@ export class XmlParser {
      * building open-event strings for the overwhelmingly common leaf elements.
      */
     private openListenerCount: number = 0;
+    /**
+     * Exact paths that have at least one listener, the child paths keyed by
+     * their parent path, and top-level listeners. These let the scanner skip
+     * building event strings for the many `<nd>`/`<tag>` leaves that nobody
+     * observes.
+     */
+    private watchedPaths: Set<string> = new Set();
+    private watchedChildren: Map<string, Set<string>> = new Map();
+    private watchedTopLevel: Set<string> = new Set();
 
     constructor(opts: any) {
         if (opts) {
@@ -118,10 +156,11 @@ export class XmlParser {
                 const parentNode = parentFrame ? parentFrame.node : undefined;
 
                 if (!node.$innerNodes && lt > frame.textStart) {
-                    node.$innerText = xml.slice(frame.textStart, lt);
+                    const raw = xml.slice(frame.textStart, lt);
+                    node.$innerText = raw.indexOf('&') < 0 ? raw : decodeEntities(raw);
                 }
 
-                if (progressive) {
+                if (progressive && this.watchedPaths.has(frame.fullTag)) {
                     this.emit('</' + frame.fullTag + '>', node, parentNode);
                 }
 
@@ -212,7 +251,8 @@ export class XmlParser {
                         if (valEnd < 0) {
                             valEnd = len;
                         }
-                        node[attrName] = xml.slice(j, valEnd);
+                        const raw = xml.slice(j, valEnd);
+                        node[attrName] = raw.indexOf('&') < 0 ? raw : decodeEntities(raw);
                         j = valEnd + 1;
                     }
                 } else if (attrName) {
@@ -221,7 +261,6 @@ export class XmlParser {
             }
             i = j;
 
-            const fullTag = top ? top.fullTag + '.' + tag : (basePath ? basePath + '.' + tag : tag);
             const parentNode = top ? top.node : undefined;
 
             if (queryParent && parentNode) {
@@ -232,10 +271,15 @@ export class XmlParser {
             // '/' (and the implicitly self-closing prolog tags) as leaves.
             if (selfClose) {
                 if (progressive) {
-                    if (hasOpenListeners) {
-                        this.emit('<' + fullTag + '>', node, parentNode);
+                    const parentTag = top ? top.fullTag : basePath;
+                    const watched = top ? this.watchedChildren.get(parentTag) : this.watchedTopLevel;
+                    if (watched && watched.has(tag)) {
+                        const fullTag = top ? parentTag + '.' + tag : (basePath ? basePath + '.' + tag : tag);
+                        if (hasOpenListeners) {
+                            this.emit('<' + fullTag + '>', node, parentNode);
+                        }
+                        this.emit('</' + fullTag + '>', node, parentNode);
                     }
-                    this.emit('</' + fullTag + '>', node, parentNode);
                 }
                 if (parentNode) {
                     const inner = parentNode.$innerNodes;
@@ -250,7 +294,8 @@ export class XmlParser {
                 continue;
             }
 
-            if (hasOpenListeners) {
+            const fullTag = top ? top.fullTag + '.' + tag : (basePath ? basePath + '.' + tag : tag);
+            if (hasOpenListeners && this.watchedPaths.has(fullTag)) {
                 this.emit('<' + fullTag + '>', node, parentNode);
             }
             const frame: Frame = { node, fullTag, textStart: i };
@@ -310,6 +355,22 @@ export class XmlParser {
         // open-tag events look like `<path>`; close-tag events like `</path>`.
         if (evt.charCodeAt(1) !== SLASH) {
             this.openListenerCount++;
+        }
+        if (evt.charCodeAt(0) === LT) {
+            const path = evt.slice(evt.charCodeAt(1) === SLASH ? 2 : 1, evt.length - 1);
+            this.watchedPaths.add(path);
+            const dot = path.lastIndexOf('.');
+            if (dot < 0) {
+                this.watchedTopLevel.add(path);
+            } else {
+                const parent = path.slice(0, dot);
+                let children = this.watchedChildren.get(parent);
+                if (!children) {
+                    children = new Set();
+                    this.watchedChildren.set(parent, children);
+                }
+                children.add(path.slice(dot + 1));
+            }
         }
     }
 

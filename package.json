@@ -22,25 +22,31 @@
   ],
   "scripts": {
     "build": "rolldown -c && cp src/polytags.json dist/",
-    "test": "vitest test/e2e.test.ts --coverage",
-    "bench": "vitest bench --run"
+    "test": "vitest run --coverage",
+    "bench": "vitest bench --run --reporter=verbose",
+    "prebench": "npm run build"
   },
   "optionalDependencies": {
     "@types/geojson": "^7946.0.16"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",
-    "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/coverage-v8": "^5.1.0",
     "@xmldom/xmldom": "^0.9.10",
-    "osm2geojson-ultra": "^4.0.1",
+    "osm2geojson-ultra": "^4.1.0",
     "osmtogeojson": "^3.0.0-beta.5",
     "rolldown": "^1.1.1",
     "rolldown-plugin-dts": "^0.25.2",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^5.1.0"
   },
   "bin": {
     "osm2geojson-lite": "dist/cli.mjs"
+  },
+  "overrides": {
+    "osmtogeojson": {
+      "@xmldom/xmldom": "^0.9.12"
+    }
   },
   "directories": {
     "lib": "lib",

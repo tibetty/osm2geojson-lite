@@ -1,9 +1,9 @@
 import { OsmObject } from "./osm-object";
 import { Way } from "./way";
-import { Node } from "./node";
+import { Node, LatLon } from "./node";
 import { WayCollection } from "./way-collection";
 import { LateBinder } from "./late-binder";
-import { first, pointInsidePolygon } from "./utils";
+import { boundsToRing, first, pointInsidePolygon, ringBounds } from "./utils";
 import type { RefElements } from "./ref-elements";
 import type { BBox, Feature, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "geojson";
 
@@ -16,15 +16,20 @@ export class Relation extends OsmObject {
     private relations: (LateBinder<Relation> | Relation)[] = [];
     private nodes: (LateBinder<Node> | Node)[] = [];
     private bounds: number[] | undefined = undefined;
+    private center: LatLon | null = null;
     public ways: (LateBinder<Way> | Way)[] = [];
     public roles: string[] = [];
 
-    constructor(id: string, refElems: RefElements) {
-        super('relation', id, refElems);
+    constructor(id: string, refElems: RefElements, register: boolean = true) {
+        super('relation', id, refElems, register);
     }
 
     public setBounds(bounds: any[]) {
         this.bounds = bounds;
+    }
+
+    public setCenter(center: LatLon) {
+        this.center = center;
     }
 
     public addMember(member: { [k: string]: any }) {
@@ -37,6 +42,9 @@ export class Relation extends OsmObject {
                         relation.refCount++;
                         return relation;
                     }
+                    this.tainted = true;
+                    // Keep a placeholder so `roles` stays aligned with `ways`.
+                    return new Relation(id, this.refElems, false);
                 }, this, [member.ref]);
                 this.relations.push(binder);
                 this.refElems.addBinder(binder);
@@ -47,13 +55,13 @@ export class Relation extends OsmObject {
                     member.role = '';
                 }
                 if (member.geometry) {
-                    const way = new Way(member.ref, this.refElems);
+                    const way = new Way(member.ref, this.refElems, false);
                     way.setLatLngArray(member.geometry);
                     way.refCount++;
                     this.ways.push(way);
                     this.roles.push(member.role);
                 } else if (member.nodes) {
-                    const way = new Way(member.ref, this.refElems);
+                    const way = new Way(member.ref, this.refElems, false);
                     for (const nid of member.nodes) {
                         way.addNodeRef(nid);
                     }
@@ -67,6 +75,9 @@ export class Relation extends OsmObject {
                             way.refCount++;
                             return way;
                         }
+                        this.tainted = true;
+                        // Keep a placeholder so `roles` stays aligned with `ways`.
+                        return new Way(nid, this.refElems, false);
                     }, this, [member.ref]);
                     this.ways.push(binder);
                     this.roles.push(member.role);
@@ -76,8 +87,8 @@ export class Relation extends OsmObject {
 
             case 'node':
                 let node: Node | null = null;
-                if (member.lat && member.lon) {
-                    node = new Node(member.ref, this.refElems);
+                if (member.lat !== undefined && member.lon !== undefined) {
+                    node = new Node(member.ref, this.refElems, false);
                     node.setLatLng({ lon: member.lon, lat: member.lat });
                     if (member.tags) {
                         node.addTags(member.tags);
@@ -97,6 +108,7 @@ export class Relation extends OsmObject {
                             nn.refCount++;
                             return nn;
                         }
+                        this.tainted = true;
                     }, this, [member.ref]);
                     this.nodes.push(binder);
                     this.refElems.addBinder(binder);
@@ -123,22 +135,34 @@ export class Relation extends OsmObject {
 
         if (outerRings.length > 0) {
             const compositPolyons: any[] = [];
+            const outerBounds: { minX: number, maxX: number, minY: number, maxY: number }[] = [];
 
-            let ring: number[][] | undefined;
-            for (ring of outerRings) {
+            for (const ring of outerRings) {
                 compositPolyons.push([ring]);
             }
 
-            // link inner polygons to outer containers
-            ring = innerRings.shift();
-            while (ring) {
-                for (const idx in outerRings) {
-                    if (pointInsidePolygon(first(ring), outerRings[idx])) {
+            // Bounding boxes are only needed to cheaply reject inner rings.
+            if (innerRings.length > 0) {
+                for (const ring of outerRings) {
+                    outerBounds.push(ringBounds(ring));
+                }
+            }
+
+            // Link inner rings to their outer container. A bbox pre-check avoids
+            // the full ray cast for rings that cannot possibly be contained.
+            for (let i = 0; i < innerRings.length; i++) {
+                const ring = innerRings[i];
+                const pt = first(ring);
+                for (let idx = 0; idx < outerRings.length; idx++) {
+                    const b = outerBounds[idx];
+                    if (pt[0] < b.minX || pt[0] > b.maxX || pt[1] < b.minY || pt[1] > b.maxY) {
+                        continue;
+                    }
+                    if (pointInsidePolygon(pt, outerRings[idx])) {
                         compositPolyons[idx].push(ring);
                         break;
                     }
                 }
-                ring = innerRings.shift();
             }
 
             // construct the Polygon/MultiPolygon geometry
@@ -158,29 +182,67 @@ export class Relation extends OsmObject {
         return null;
     }
 
+    /**
+     * Flatten a relation and its sub-relations into a single way/role list.
+     * Duplicate way references (a common cause of duplicated rings) are removed
+     * while preserving the first occurrence and its role.
+     */
     private collectAllWaysForRelation(relation: Relation, relationToWaysMap: Map<string, WaysAndRoles>): WaysAndRoles {
-        const ways = [...relation.ways as Way[]];
-        const roles = [...relation.roles];
-        if (relation.relations.length === 0) {
-            relationToWaysMap.set(relation.id, { ways, roles });
-            return { ways, roles };
+        const cached = relationToWaysMap.get(relation.id);
+        if (cached) {
+            return cached;
         }
+
+        const ways: Way[] = [];
+        const roles: string[] = [];
+        // Only deduplicate repeated members listed directly by *this* relation
+        // (the cause of duplicated rings in issue #48). A way shared by two
+        // sub-relations must still contribute once per sub-relation, otherwise
+        // legitimate geometry (e.g. a way forming part of two different
+        // routes) would be dropped.
+        const seen = new Set<string>();
+        const addDirect = (way: Way, role: string) => {
+            if (!way) {
+                relation.tainted = true;
+                return;
+            }
+            const key = way.getCompositeId() + '\n' + role;
+            if (seen.has(key)) {
+                return;
+            }
+            seen.add(key);
+            ways.push(way);
+            roles.push(role);
+        };
+
+        for (let i = 0; i < relation.ways.length; i++) {
+            addDirect(relation.ways[i] as Way, relation.roles[i]);
+        }
+
+        // A sub-relation listed more than once would otherwise duplicate all of
+        // its ways. Sharing a way between *different* sub-relations remains
+        // valid and is intentionally preserved.
+        const seenRelations = new Set<string>();
         for (const subRelation of relation.relations as Relation[]) {
             if (!subRelation) {
+                relation.tainted = true;
                 continue;
             }
-            if (!relationToWaysMap.has(subRelation.id)) {   
-                this.collectAllWaysForRelation(subRelation, relationToWaysMap);
+            const id = subRelation.getCompositeId();
+            if (seenRelations.has(id)) {
+                continue;
             }
-
-            const entry = relationToWaysMap.get(subRelation.id)!;
+            seenRelations.add(id);
+            const entry = this.collectAllWaysForRelation(subRelation, relationToWaysMap);
             for (let i = 0; i < entry.ways.length; i++) {
                 ways.push(entry.ways[i]);
                 roles.push(entry.roles[i]);
             }
         }
-        relationToWaysMap.set(relation.id, { ways, roles });
-        return { ways, roles };
+
+        const result = { ways, roles };
+        relationToWaysMap.set(relation.id, result);
+        return result;
     }
 
     public toFeatureArray(): Array<Feature<any, any>> {
@@ -189,7 +251,7 @@ export class Relation extends OsmObject {
         let pointFeatures: Array<Feature<Point | MultiPoint, any>> = [];
 
         const relationToWaysMap: Map<string, WaysAndRoles> = new Map<string, WaysAndRoles>();
-        const waysAndRoles = this.collectAllWaysForRelation(this , relationToWaysMap);
+        const waysAndRoles = this.collectAllWaysForRelation(this, relationToWaysMap);
 
         let templateFeature: Feature<any, any> = {
             type: 'Feature',
@@ -203,39 +265,62 @@ export class Relation extends OsmObject {
             delete templateFeature.bbox;
         }
 
-        
-        if (this.roles.some((r) => r === 'outer')) {
+        let hasGeometry = false;
+        if (waysAndRoles.roles.some((r) => r === 'outer')) {
             const outerWayCollection = new WayCollection();
             const innerWayCollection = new WayCollection();
             for (let i = 0; i < waysAndRoles.ways.length; i++) {
                 const way = waysAndRoles.ways[i];
                 const role = waysAndRoles.roles[i];
-                if (role === 'outer') { 
+                if (role === 'outer') {
                     outerWayCollection.addWay(way);
                 } else if (role === 'inner') {
                     innerWayCollection.addWay(way);
                 }
             }
-            let feature = Object.assign({}, templateFeature);
-            let geometry = this.constructPolygonGeometry(outerWayCollection, innerWayCollection);
+            const geometry = this.constructPolygonGeometry(outerWayCollection, innerWayCollection);
             if (geometry) {
+                const feature = Object.assign({}, templateFeature);
                 feature.geometry = geometry;
                 polygonFeatures.push(feature);
+                hasGeometry = true;
             }
         } else {
             const wayCollection = new WayCollection();
-            for (let way of waysAndRoles.ways) {
+            for (const way of waysAndRoles.ways) {
                 wayCollection.addWay(way);
             }
-            let geometry = this.constructStringGeometry(wayCollection);
+            const geometry = this.constructStringGeometry(wayCollection);
             if (geometry) {
-                let feature = Object.assign({}, templateFeature);
+                const feature = Object.assign({}, templateFeature);
                 feature.geometry = geometry;
                 stringFeatures.push(feature);
+                hasGeometry = true;
             }
         }
 
-        for (let node of this.nodes) {
+        // `out bb` responses may only carry a bounding box.
+        if (!hasGeometry && this.bounds) {
+            const feature = Object.assign({}, templateFeature);
+            feature.geometry = {
+                type: 'Polygon',
+                coordinates: [boundsToRing(this.bounds)],
+            };
+            polygonFeatures.push(feature);
+            hasGeometry = true;
+        }
+
+        // `out center` / derived responses may only carry a centre point.
+        if (!hasGeometry && this.center) {
+            const feature = Object.assign({}, templateFeature);
+            feature.geometry = {
+                type: 'Point',
+                coordinates: [+this.center.lon, +this.center.lat],
+            };
+            pointFeatures.push(feature);
+        }
+
+        for (const node of this.nodes) {
             pointFeatures = pointFeatures.concat((node as Node).toFeatureArray());
         }
 

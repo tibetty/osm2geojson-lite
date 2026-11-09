@@ -55,6 +55,14 @@ Converts OSM data (XML/JSON) to GeoJSON.
     - `completeFeature`:  the default value is `false`. When it's set to `true`, the returned geojson will include all elements that meet the specified conditions in `FeatureCollection` format; otherwise, only the bare geometry of the first `relation` element will be returned.
     - `renderTagged`: the default value is `false`. When it's set to `true`, the returned geojson will include all elements with tags (i.e., tagged) until `excludeWay` changes its behavior a bit; otherwise only the unreferenced ones get returned.
     - `excludeWay`: the default value is `true`. When it's set to `true`, the returned `FeatureCollection` will exclude all referenced `way`s even though they are tagged; otherwise the features of those `way`s will be included in the resulted result as well.
+    - `elementId`: optional, an OSM element id in the form `type/id` (e.g. `way/123`). When set, only that single `Feature` is returned; `undefined` is returned when the element does not exist.
+    - `tainted`: the default value is `false`. When set to `true`, features whose referenced nodes/ways/relations are missing (e.g. partial Overpass responses) receive an `@tainted: true` property.
+    - `polygonTags`: optional, alternative polygon tag rules for ways. The shape matches the bundled `polytags.json`, e.g. `{ "building": { "ignore": ["no"] } }`; the legacy `whitelist`/`blacklist` spellings are still accepted.
+
+Beyond plain OSM data the converter understands the shapes produced by Overpass
+`out geom`, `out center`, `out bb`, `convert`, `make` and `local` (both JSON and
+XML), including derived `Point`/`LineString`/`Polygon`/`GeometryCollection`
+output, member geometries, `center` fallbacks and `bounds`-only rectangles.
 
 
 Performance
@@ -70,16 +78,19 @@ $ npm run bench
 
 |                 | zhucheng | hebei | tokyodo | usa   |
 |-----------------|----------|-------|---------|-------|
-| vs osmtogeojson | >5.0x    | >7.0x | >5.0x   | >3.5x |
-| vs ultra        | ~1.0x    | ~1.0x | >1.1x   | >1.0x |
+| vs osmtogeojson | >10.9x   | >20.8x| >14.9x  | >14.8x|
+| vs ultra        | >2.5x    | >3.0x | >3.7x   | >4.2x |
 
 2. Overpass JSON
 
 |                 | zhucheng | hebei  | tokyodo | usa   |
 |-----------------|----------|--------|---------|-------|
-| vs osmtogeojson | >9.0x    | >16.0x | >3.0x   | >1.6x |
+| vs osmtogeojson | >13.7x   | >56.3x | >21.8x  | >27.5x|
+| vs ultra        | >4.4x    | >7.4x  | >14.2x  | >20.3x|
 
-> **Note on `osm2geojson-ultra`:** for JSON, both libraries skip XML tokenizing and run nearly identical element-iteration code, so the *parsing* cost is effectively the same. The benchmark still reports a difference, but it comes from divergent conversion semantics (ultra dropped the `completeFeature`/`renderTagged`/`excludeWay` options and emits a different output shape — e.g. a `GeometryCollection` where this library emits a `MultiPolygon` plus `Point`s), not from faster JSON reading.
+> **Note on column values:** the numbers are `hz` ratios reported by Vitest on
+> the reference machine (Node 26, Apple silicon). Run `npm run bench` on your
+> own hardware to compare.
 
 
 Correctness

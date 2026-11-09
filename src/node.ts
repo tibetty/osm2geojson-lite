@@ -1,15 +1,14 @@
 import { OsmObject } from "./osm-object";
-import { strArrayToFloat } from "./utils";
 import type { RefElements } from "./ref-elements";
 import type { Feature } from "geojson";
 
-export type LatLon = { lat: string, lon: string };
+export type LatLon = { lat: string | number, lon: string | number };
 
 export class Node extends OsmObject {
     private latLng: LatLon | undefined;
 
-    constructor(id: string, refElems: RefElements) {
-        super('node', id, refElems);
+    constructor(id: string, refElems: RefElements, register: boolean = true) {
+        super('node', id, refElems, register);
     }
 
     public setLatLng(latLng: LatLon) {
@@ -24,7 +23,7 @@ export class Node extends OsmObject {
                 properties: this.getProps(),
                 geometry: {
                     type: 'Point',
-                    coordinates: strArrayToFloat([this.latLng.lon, this.latLng.lat]),
+                    coordinates: [+this.latLng.lon, +this.latLng.lat],
                 },
             }];
         }

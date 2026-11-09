@@ -1,8 +1,10 @@
 import { purgeProps } from './utils';
-import { XmlParser } from './xmlparser';
+import { parseOsmXml } from './osm-xml';
 import { LatLon, Node } from './node';
 import { Way } from './way';
+import type { PolygonTags } from './way';
 import { Relation } from './relation';
+import { Output } from './output';
 import { RefElements } from './ref-elements';
 import type { Feature, FeatureCollection, GeometryObject } from 'geojson';
 
@@ -25,33 +27,67 @@ interface IOptions {
      * @default true
      */
     excludeWay?: boolean;
+    /**
+     * An OSM element ID in the form of `type/id`, e.g. `way/123`. When set, only that
+     * feature is returned instead of a `FeatureCollection`.
+     * @default undefined
+     */
+    elementId?: string;
+    /**
+     * When set to `true`, features that reference missing nodes/ways/relations
+     * receive an `@tainted: true` property. Matches `osm2geojson-ultra`.
+     * @default false
+     */
+    tainted?: boolean;
+    /**
+     * Alternate polygon tag rules for ways. The shape matches `polytags.json`:
+     * `{ key: { ignore?, include?, exclude? } }`. Legacy `whitelist` /
+     * `blacklist` spellings are also accepted.
+     * @default undefined (built-in rules)
+     */
+    polygonTags?: PolygonTags;
 }
 
-function parseOptions(options: IOptions | undefined): { completeFeature: boolean; renderTagged: boolean; excludeWay: boolean } {
+function parseOptions(options: IOptions | undefined): { completeFeature: boolean; renderTagged: boolean; excludeWay: boolean; elementId: string | undefined; tainted: boolean; polygonTags: PolygonTags | undefined } {
     if (!options) {
-        return { completeFeature: false, renderTagged: false, excludeWay: true };
+        return { completeFeature: false, renderTagged: false, excludeWay: true, elementId: undefined, tainted: false, polygonTags: undefined };
     }
     let excludeWay = options.excludeWay === undefined || options.excludeWay;
     let completeFeature = options.completeFeature ? true : false;
     let renderTagged = options.renderTagged ? true : false;
-    return { completeFeature, renderTagged, excludeWay };
+    let tainted = options.tainted ? true : false;
+    return { completeFeature, renderTagged, excludeWay, elementId: options.elementId, tainted, polygonTags: options.polygonTags };
 }
 
 function detectFormat(o: string | { [k: string]: any }): "json" | "xml" | "json-raw" | "invalid" {
-    if ((o as { [k: string]: any }).elements) {
+    if (o && typeof o === 'object' && (o as { [k: string]: any }).elements) {
         return 'json';
     }
-    if (o.indexOf('<osm') >= 0) {
-        return 'xml';
-    }
-    if (o.trim().startsWith('{')) {
-        return 'json-raw';
+    if (typeof o === 'string') {
+        if (o.indexOf('<osm') >= 0) {
+            return 'xml';
+        }
+        if (o.trim().startsWith('{')) {
+            return 'json-raw';
+        }
     }
     return 'invalid';
 };
 
 function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElements): void {
     for (const elem of (osm as { [k: string]: any }).elements) {
+        // Overpass derived geometries (`local`, `convert`, `make`, `out geom`)
+        // may already carry a complete GeoJSON geometry object.
+        if (elem.geometry && typeof elem.geometry === 'object' && elem.geometry.type) {
+            const output = new Output(elem.type, elem.id, refElements);
+            if (elem.tags) {
+                output.addTags(elem.tags);
+            }
+            output.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'geometry']));
+            output.setGeometry(elem.geometry);
+            continue;
+        }
+
         switch (elem.type) {
             case 'node':
                 const node = new Node(elem.id as string, refElements);
@@ -69,10 +105,14 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
                 way.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'nodes', 'geometry']));
                 if (elem.geometry) {
                     way.setLatLngArray(elem.geometry);
+                } else if (elem.center) {
+                    way.setCenter(elem.center);
                 } else if (elem.nodes) {
                     for (const n of elem.nodes) {
                         way.addNodeRef(n);
                     }
+                } else if (elem.bounds) {
+                    way.setBounds([parseFloat(elem.bounds.minlon), parseFloat(elem.bounds.minlat), parseFloat(elem.bounds.maxlon), parseFloat(elem.bounds.maxlat)]);
                 }
                 break;
             case 'relation':
@@ -82,6 +122,9 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
                 }
                 if (elem.tags) {
                     relation.addTags(elem.tags);
+                }
+                if (elem.center) {
+                    relation.setCenter(elem.center);
                 }
                 relation.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'bounds', 'members']));
                 if (elem.members) {
@@ -96,102 +139,17 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
 }
 
 function analyzeFeaturesFromXml(osm: string, refElements: RefElements): void {
-    const xmlParser = new XmlParser({ progressive: true });
-
-    xmlParser.on('</osm.node>', (node: { [k: string]: any }) => {
-        const nd = new Node(node.id, refElements);
-        for (const k in node) {
-            if (k[0] !== '$' && k !== 'id' && k !== 'lon' && k !== 'lat') {
-                nd.addProp(k, node[k]);
-            }
-        }
-        nd.setLatLng(node as LatLon);
-        if (node.$innerNodes) {
-            for (const ind of node.$innerNodes) {
-                if (ind.$tag === 'tag') {
-                    nd.addTag(ind.k, ind.v);
-                }
-            }
-        }
-    });
-
-    xmlParser.on('</osm.way>', (node: { [k: string]: any }) => {
-        const way = new Way(node.id, refElements);
-        for (const k in node) {
-            if (k[0] !== '$' && k !== 'id') {
-                way.addProp(k, node[k]);
-            }
-        }
-        if (node.$innerNodes) {
-            for (const ind of node.$innerNodes) {
-                if (ind.$tag === 'nd') {
-                    if (ind.lon && ind.lat) {
-                        way.addLatLng(ind);
-                    } else if (ind.ref) {
-                        way.addNodeRef(ind.ref);
-                    }
-                } else if (ind.$tag === 'tag') {
-                    way.addTag(ind.k, ind.v);
-                }
-            }
-        }
-    });
-
-    xmlParser.on('<osm.relation>', (node: { [k: string]: any }) => new Relation(node.id, refElements));
-
-    xmlParser.on('</osm.relation.member>', (node: { [k: string]: any }, parent?: { [k: string]: any }) => {
-        const relation = refElements.get(`relation/${parent?.id}`) as Relation;
-        const member: { [k: string]: any } = {
-            type: node.type,
-            role: node.role ? node.role : '',
-            ref: node.ref,
-        };
-
-        if (node.lat && node.lon) {
-            member.lat = node.lat, member.lon = node.lon, member.tags = {};
-            for (const k in node) {
-                if (k[0] !== '$' && k !== 'type' && k !== 'lat' && k !== 'lon') {
-                    member[k] = node[k];
-                }
-            }
-        }
-
-        if (node.$innerNodes) {
-            const geometry: any[] = [];
-            const nodes: any[] = [];
-            for (const ind of node.$innerNodes) {
-                if (ind.lat && ind.lon) {
-                    geometry.push(ind);
-                } else if (ind.ref) {
-                    nodes.push(ind.ref);
-                }
-            }
-            if (geometry.length > 0) {
-                member.geometry = geometry;
-            } else if (nodes.length > 0) {
-                member.nodes = nodes;
-            }
-        }
-        relation.addMember(member);
-    });
-
-    xmlParser.on('</osm.relation.bounds>', (node: { [k: string]: any }, parent?: { [k: string]: any }) => {
-        (refElements.get(`relation/${parent?.id}`) as Relation).setBounds([parseFloat(node.minlon), parseFloat(node.minlat), parseFloat(node.maxlon), parseFloat(node.maxlat)]);
-    });
-
-    xmlParser.on('</osm.relation.tag>', (node: { [k: string]: any }, parent?: { [k: string]: any }) => {
-        (refElements.get(`relation/${parent?.id}`) as Relation).addTag(node.k, node.v);
-    });
-
-    xmlParser.parse(osm);
+    parseOsmXml(osm, refElements);
 };
 
-function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): FeatureCollection<GeometryObject> {
-    let { completeFeature, renderTagged, excludeWay } = parseOptions(opts);
+function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): FeatureCollection<GeometryObject> | Feature<any, any> | GeometryObject | undefined {
+    let { completeFeature, renderTagged, excludeWay, elementId, tainted, polygonTags } = parseOptions(opts);
 
     let format = detectFormat(osm);
 
     const refElements = new RefElements();
+    refElements.reportTainted = tainted;
+    refElements.polygonTags = polygonTags;
     let featureArray: Feature<any, any>[] = [];
 
     if (format === 'json-raw') {
@@ -211,6 +169,11 @@ function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): Featu
 
     refElements.bindAll();
 
+    if (elementId) {
+        const element = refElements.get(elementId);
+        return element ? element.toFeatureArray()[0] : undefined;
+    }
+
     for (const v of refElements.values()) {
         if (v.refCount > 0 && (!v.hasTag || !renderTagged || (v instanceof Way && excludeWay))) {
             continue;
@@ -220,7 +183,9 @@ function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): Featu
         if (v instanceof Relation && !completeFeature && features.length > 0) {
             return features[0].geometry;
         }
-        featureArray = featureArray.concat(features);
+        for (const feature of features) {
+            featureArray.push(feature);
+        }
     }
 
     return { type: 'FeatureCollection', features: featureArray };
