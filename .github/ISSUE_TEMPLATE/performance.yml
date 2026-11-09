@@ -1,0 +1,44 @@
+name: Performance report
+description: Report a slow path, memory issue or benchmark regression.
+title: "perf: "
+labels: ["performance"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is slow, and which input shape triggers it?
+    validations:
+      required: true
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Fixture / dataset
+      description: Minimal input or a description of the dataset (size, relation shape, node count).
+    validations:
+      required: true
+  - type: textarea
+    id: measurement
+    attributes:
+      label: Measurement
+      description: Command used, before/after numbers, and machine details if available.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: profile
+    attributes:
+      label: Profile (optional)
+      description: CPU profile summary or hot functions.
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction
+      description: Algorithmic change, caching, allocation reduction, etc.
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: The change should keep output behavior identical
+        - label: The change must keep zero runtime dependencies

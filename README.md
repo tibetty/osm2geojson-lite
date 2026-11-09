@@ -120,6 +120,10 @@ Dependencies
 ---
   - No 3rd party dependency
 
+Contributing
+---
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, benchmarks and the release process. Security reports should follow [SECURITY.md](SECURITY.md).
+
 License
 ---
 MIT
