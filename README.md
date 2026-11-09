@@ -101,7 +101,16 @@ Correctness
 
 Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also quite representative) in the `data` subfolders under `test` and `bench` directories, which also outperforms `osmtogeojson`.
 
-To use the playground, run `npm run build` once and serve the repository root (for example `npx serve .`), then open `/test/index.html`.
+From a repository checkout, run:
+
+```sh
+npm run valid
+```
+
+This builds the package, starts a local static server on port 3000 and opens
+`http://localhost:3000/test/index.html`. If the port is busy, use
+`PORT=3001 npm run valid`. The dev server disables caching, so you won't see
+confusing HTTP 304 responses while editing.
 
 Node.JS version
 ---
