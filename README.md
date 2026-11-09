@@ -95,9 +95,11 @@ $ npm run bench
 
 Correctness
 ---
-You can copy the converted results to [geojsonlint](http://geojsonlint.com) for the correctness validation.  Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also quite representative) in the `data` subfolers under `test` and `bench` directories, which also outperforms `osmtogeojson`. 
+`test/index.html` is a browser playground that validates the converted GeoJSON locally with [`geojsonhint`](https://github.com/mapbox/geojsonhint) — no external service or CORS workaround is involved. It still offers copy-to-clipboard if you prefer to inspect the output elsewhere.
 
-The client side example shipped along with this package, `test/index.html` - due to CORS limitation, the direct post to geojsonlint is blocked, so there's a "copy to clipboard" button for you to ease the validation.
+Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also quite representative) in the `data` subfolders under `test` and `bench` directories, which also outperforms `osmtogeojson`.
+
+To use the playground, run `npm run build` once and serve the repository root (for example `npx serve .`), then open `/test/index.html`.
 
 Node.JS version
 ---
