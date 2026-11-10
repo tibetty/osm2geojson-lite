@@ -256,6 +256,27 @@
     },
     {
       "type": "Feature",
+      "id": "node/691563006",
+      "properties": {
+        "id": "node/691563006",
+        "version": "4",
+        "timestamp": "2014-11-28T13:24:14Z",
+        "changeset": "0",
+        "name": "松前町",
+        "place": "town",
+        "name:en": "Masaki",
+        "name:ja": "松前町"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          132.7120985,
+          33.7881037
+        ]
+      }
+    },
+    {
+      "type": "Feature",
       "id": "relation/4050234",
       "properties": {
         "id": "relation/4050234",

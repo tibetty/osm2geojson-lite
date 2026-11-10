@@ -130,7 +130,9 @@ function linkInnerRings(
 
 export class Relation extends OsmObject {
     private relations: (LateBinder<Relation> | Relation)[] = [];
+    private relationRoles: string[] = [];
     private nodes: (LateBinder<Node> | Node)[] = [];
+    private nodeRoles: string[] = [];
     private bounds: number[] | undefined = undefined;
     private center: LatLon | null = null;
     public ways: (LateBinder<Way> | Way)[] = [];
@@ -167,10 +169,11 @@ export class Relation extends OsmObject {
                         return relation;
                     }
                     this.tainted = true;
-                    // Keep a placeholder so `roles` stays aligned with `ways`.
+                    // Keep a placeholder so roles stay aligned with members.
                     return new Relation(id, this.refElems, false);
-                }, this, [member.ref]);
+                }, this, [member.ref], this.relationRoles, member.role || '');
                 this.relations.push(binder);
+                this.relationRoles.push(member.role || '');
                 this.refElems.addBinder(binder);
                 break;
 
@@ -202,7 +205,7 @@ export class Relation extends OsmObject {
                         this.tainted = true;
                         // Keep a placeholder so `roles` stays aligned with `ways`.
                         return new Way(nid, this.refElems, false);
-                    }, this, [member.ref]);
+                    }, this, [member.ref], this.roles, member.role);
                     this.ways.push(binder);
                     this.roles.push(member.role);
                     this.refElems.addBinder(binder);
@@ -228,6 +231,7 @@ export class Relation extends OsmObject {
 
                     node.refCount++;
                     this.nodes.push(node);
+                    this.nodeRoles.push(member.role || '');
                 } else {
                     let binder = new LateBinder(this.nodes, (id) => {
                         const nn = this.refElems.get(`node/${id}`) as Node;
@@ -236,8 +240,9 @@ export class Relation extends OsmObject {
                             return nn;
                         }
                         this.tainted = true;
-                    }, this, [member.ref]);
+                    }, this, [member.ref], this.nodeRoles, member.role || '');
                     this.nodes.push(binder);
+                    this.nodeRoles.push(member.role || '');
                     this.refElems.addBinder(binder);
                 }
                 break;
@@ -295,6 +300,17 @@ export class Relation extends OsmObject {
 
     public getSubRelations(): Relation[] {
         return this.relations.filter((relation): relation is Relation => relation instanceof Relation);
+    }
+
+    public getRelationEntries(): Array<{ relation: Relation; role: string }> {
+        const entries: Array<{ relation: Relation; role: string }> = [];
+        for (let i = 0; i < this.relations.length; i++) {
+            const relation = this.relations[i];
+            if (relation instanceof Relation) {
+                entries.push({ relation, role: this.relationRoles[i] || '' });
+            }
+        }
+        return entries;
     }
 
     public hasDirectGeometry(): boolean {
@@ -409,12 +425,14 @@ export class Relation extends OsmObject {
             roles: string[];
             seenRelations: Set<string>;
             subIndex: number;
+            subs: Array<{ relation: Relation; role: string }>;
         }
 
         const visiting = new Set<string>();
         const stack: Frame[] = [];
 
         const createFrame = (relation: Relation): Frame => {
+            const kind = relation.getGeometryKind();
             const ways: Way[] = [];
             const roles: string[] = [];
             // Only deduplicate repeated members listed directly by *this*
@@ -439,9 +457,37 @@ export class Relation extends OsmObject {
                 roles.push(role);
             };
             for (let i = 0; i < relation.ways.length; i++) {
-                addDirect(relation.ways[i] as Way, relation.roles[i]);
+                if (kind === 'none') {
+                    break;
+                }
+                const role = relation.roles[i];
+                if (kind === 'polygon' && role !== 'outer' && role !== 'inner' && role !== '') {
+                    continue;
+                }
+                if (kind === 'line' && role === 'platform') {
+                    continue;
+                }
+                addDirect(relation.ways[i] as Way, role);
             }
-            return { relation, ways, roles, seenRelations: new Set(), subIndex: 0 };
+            const subs = kind === 'none'
+                ? []
+                : relation.getRelationEntries().filter((entry) => {
+                    if (kind === 'polygon') {
+                        return entry.role === 'outer' || entry.role === 'inner' || entry.role === '';
+                    }
+                    if (kind === 'line') {
+                        return entry.role !== 'platform';
+                    }
+                    return true;
+                });
+            return {
+                relation,
+                ways,
+                roles,
+                seenRelations: new Set(),
+                subIndex: 0,
+                subs,
+            };
         };
 
         visiting.add(root.id);
@@ -449,20 +495,11 @@ export class Relation extends OsmObject {
 
         while (stack.length > 0) {
             const frame = stack[stack.length - 1];
-            const subs = frame.relation.relations as unknown as Array<Relation | undefined>;
+            const subs = frame.subs;
             let descended = false;
 
             while (frame.subIndex < subs.length) {
-                const sub = subs[frame.subIndex];
-                if (!sub) {
-                    frame.relation.tainted = true;
-                    frame.subIndex++;
-                    continue;
-                }
-                if (!(sub instanceof Relation)) {
-                    frame.subIndex++;
-                    continue;
-                }
+                const sub = subs[frame.subIndex].relation;
                 const id = sub.getCompositeId();
                 if (frame.seenRelations.has(id)) {
                     frame.subIndex++;
