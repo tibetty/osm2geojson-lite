@@ -67,6 +67,15 @@ Converts OSM data (XML/JSON) to GeoJSON.
 - Invalid bounds or center values are ignored rather than emitted as `NaN`.
 - A JSON element carrying an explicit GeoJSON `geometry` object is passed through unchanged.
 
+### Relation types
+
+- `multipolygon` / `boundary` → `Polygon` / `MultiPolygon` (empty member role is treated as `outer`).
+- `route` / `waterway` / `multilinestring` → `MultiLineString`.
+- Other or unknown relation types produce no relation geometry; their members are emitted as independent features where possible.
+- Old-style multipolygons (tags only on the outer way) are attributed to that outer way.
+- `visible=false` elements are skipped.
+- Unclosed derived `<linestring>` polygons are closed for RFC 7946 compliance.
+
 Beyond plain OSM data the converter understands the shapes produced by Overpass
 `out geom`, `out center`, `out bb`, `convert`, `make` and `local` (both JSON and
 XML), including derived `Point`/`LineString`/`Polygon`/`GeometryCollection`
