@@ -59,6 +59,26 @@ export class Way extends OsmObject {
         return this.bounds;
     }
 
+    /**
+     * Adopt the other copy's geometry when this copy has none. Returns true
+     * when the other copy's coordinate array was adopted, so its deferred
+     * binders must be kept.
+     */
+    public adoptCoordinatesFrom(other: Way, preferOther: boolean): boolean {
+        if (this.center === null && other.center) {
+            this.center = other.center;
+        }
+        if (this.bounds === null && other.bounds) {
+            this.bounds = other.bounds;
+        }
+        const takeOther = other.latLngArray.length > 0 && (preferOther || this.latLngArray.length === 0);
+        if (takeOther) {
+            this.latLngArray = other.latLngArray;
+            return true;
+        }
+        return false;
+    }
+
     public addNodeRef(ref: string) {
         const binder = new LateBinder(this.latLngArray, (id: string) => {
             const node = this.refElems.get(`node/${id}`) as Node;

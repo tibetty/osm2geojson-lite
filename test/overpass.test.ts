@@ -201,6 +201,68 @@ describe('coordinate validation', () => {
     });
 });
 
+describe('duplicate input elements', () => {
+    it('merges a geometry copy and a tags copy of the same way', () => {
+        const result = json([
+            { type: 'way', id: 1, nodes: [1, 2] },
+            { type: 'way', id: 1, tags: { highway: 'path' }, version: 2 },
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 1, lon: 1 },
+        ]);
+        const feature = result.features.find((f: any) => f.id === 'way/1');
+        expect(feature).toBeDefined();
+        expect(feature.geometry).toEqual({ type: 'LineString', coordinates: [[0, 0], [1, 1]] });
+        expect(feature.properties.highway).toBe('path');
+    });
+
+    it('merges a tags copy and a geometry copy regardless of order', () => {
+        const result = json([
+            { type: 'way', id: 1, tags: { highway: 'path' }, version: 2 },
+            { type: 'way', id: 1, nodes: [1, 2] },
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 1, lon: 1 },
+        ]);
+        const feature = result.features.find((f: any) => f.id === 'way/1');
+        expect(feature.geometry).toEqual({ type: 'LineString', coordinates: [[0, 0], [1, 1]] });
+        expect(feature.properties.highway).toBe('path');
+    });
+
+    it('keeps the newest version and fills missing tags from older copies', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0, tags: { name: 'old', amenity: 'cafe' }, version: 1 },
+            { type: 'node', id: 1, lat: 1, lon: 1, tags: { name: 'new' }, version: 2 },
+        ]);
+        const feature = result.features[0];
+        expect(feature.geometry).toEqual({ type: 'Point', coordinates: [1, 1] });
+        expect(feature.properties).toMatchObject({ name: 'new', amenity: 'cafe', version: 2 });
+    });
+
+    it('merges XML duplicate ways with geometry and tags', () => {
+        const geometryFirst = '<osm><node id="1" lat="0" lon="0"/><node id="2" lat="1" lon="1"/>'
+            + '<way id="1"><nd ref="1"/><nd ref="2"/></way>'
+            + '<way id="1" version="2"><tag k="highway" v="path"/></way></osm>';
+        const tagsFirst = '<osm><node id="1" lat="0" lon="0"/><node id="2" lat="1" lon="1"/>'
+            + '<way id="1" version="2"><tag k="highway" v="path"/></way>'
+            + '<way id="1"><nd ref="1"/><nd ref="2"/></way></osm>';
+        for (const source of [geometryFirst, tagsFirst]) {
+            const feature = xml(source).features.find((f: any) => f.id === 'way/1');
+            expect(feature).toBeDefined();
+            expect(feature.geometry).toEqual({ type: 'LineString', coordinates: [[0, 0], [1, 1]] });
+            expect(feature.properties.highway).toBe('path');
+        }
+    });
+
+    it('merges XML duplicate node versions', () => {
+        const source = '<osm>'
+            + '<node id="1" version="1" lat="0" lon="0"><tag k="name" v="old"/><tag k="amenity" v="cafe"/></node>'
+            + '<node id="1" version="2" lat="1" lon="1"><tag k="name" v="new"/></node>'
+            + '</osm>';
+        const feature = xml(source).features[0];
+        expect(feature.geometry).toEqual({ type: 'Point', coordinates: [1, 1] });
+        expect(feature.properties).toMatchObject({ name: 'new', amenity: 'cafe', version: '2' });
+    });
+});
+
 describe('XML scanner corner cases', () => {
     it('ignores comments containing markup', () => {
         const source = '<osm><!-- <node id="999" lat="0" lon="0"/> --><node id="1" lat="5" lon="6"/></osm>';
