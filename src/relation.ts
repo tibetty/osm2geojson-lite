@@ -3,7 +3,8 @@ import { Way } from "./way";
 import { Node, LatLon } from "./node";
 import { WayCollection } from "./way-collection";
 import { LateBinder } from "./late-binder";
-import { boundsToRing, first, pointInsidePolygon, ringBounds } from "./utils";
+import { boundsToRing, first, isFiniteBounds, isFiniteCoordinate, pointInsidePolygon, ringBounds } from "./utils";
+import type { RingBounds } from "./utils";
 import type { RefElements } from "./ref-elements";
 import type { BBox, Feature, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "geojson";
 
@@ -11,6 +12,121 @@ type WaysAndRoles = {
     ways: Way[];
     roles: string[];
 };
+
+/**
+ * Assign each inner ring to the first outer ring that contains it.
+ *
+ * Small relations use the straightforward pairwise loop. Large ones use a
+ * uniform grid over the outer rings so the candidate set is bounded by the
+ * rings whose bounding boxes share a cell, rather than scanning every outer
+ * ring for every inner ring.
+ */
+function linkInnerRings(
+    outerRings: number[][][],
+    innerRings: number[][][],
+    compositePolygons: number[][][][],
+    outerBounds: RingBounds[],
+): void {
+    const outerCount = outerRings.length;
+    const innerCount = innerRings.length;
+    if (innerCount === 0) {
+        return;
+    }
+
+    if (outerCount <= 1 || innerCount <= 1 || outerCount * innerCount <= 256) {
+        for (let i = 0; i < innerCount; i++) {
+            const ring = innerRings[i];
+            const pt = first(ring);
+            for (let idx = 0; idx < outerCount; idx++) {
+                const b = outerBounds[idx];
+                if (pt[0] < b.minX || pt[0] > b.maxX || pt[1] < b.minY || pt[1] > b.maxY) {
+                    continue;
+                }
+                if (pointInsidePolygon(pt, outerRings[idx])) {
+                    compositePolygons[idx].push(ring);
+                    break;
+                }
+            }
+        }
+        return;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const b of outerBounds) {
+        if (b.minX < minX) minX = b.minX;
+        if (b.maxX > maxX) maxX = b.maxX;
+        if (b.minY < minY) minY = b.minY;
+        if (b.maxY > maxY) maxY = b.maxY;
+    }
+
+    const cells = Math.max(1, Math.ceil(Math.sqrt(outerCount)));
+    const spanX = maxX - minX;
+    const spanY = maxY - minY;
+    const cellW = spanX > 0 ? spanX / cells : 0;
+    const cellH = spanY > 0 ? spanY / cells : 0;
+    const cellX = (x: number) => cellW > 0
+        ? Math.min(cells - 1, Math.max(0, Math.floor((x - minX) / cellW)))
+        : 0;
+    const cellY = (y: number) => cellH > 0
+        ? Math.min(cells - 1, Math.max(0, Math.floor((y - minY) / cellH)))
+        : 0;
+
+    const grid = new Map<number, number[]>();
+    const globalCandidates: number[] = [];
+    const maxCellsPerRing = cells * 4;
+
+    for (let idx = 0; idx < outerCount; idx++) {
+        const b = outerBounds[idx];
+        const gx0 = cellX(b.minX);
+        const gx1 = cellX(b.maxX);
+        const gy0 = cellY(b.minY);
+        const gy1 = cellY(b.maxY);
+        // Very large rings would occupy most of the grid; keep them in a
+        // shared list instead of inflating every cell.
+        if ((gx1 - gx0 + 1) * (gy1 - gy0 + 1) > maxCellsPerRing) {
+            globalCandidates.push(idx);
+            continue;
+        }
+        for (let gy = gy0; gy <= gy1; gy++) {
+            for (let gx = gx0; gx <= gx1; gx++) {
+                const key = gy * cells + gx;
+                const bucket = grid.get(key);
+                if (bucket) {
+                    bucket.push(idx);
+                } else {
+                    grid.set(key, [idx]);
+                }
+            }
+        }
+    }
+
+    for (let i = 0; i < innerCount; i++) {
+        const ring = innerRings[i];
+        const pt = first(ring);
+        // Containment is tested with the ring's first point, so only the cell
+        // containing that point needs to be queried.
+        const candidates = new Set<number>(globalCandidates);
+        const bucket = grid.get(cellY(pt[1]) * cells + cellX(pt[0]));
+        if (bucket) {
+            for (const idx of bucket) {
+                candidates.add(idx);
+            }
+        }
+
+        // Preserve the original first-outer-wins behaviour.
+        const sorted = [...candidates].sort((a, b) => a - b);
+        for (const idx of sorted) {
+            const outer = outerBounds[idx];
+            if (pt[0] < outer.minX || pt[0] > outer.maxX || pt[1] < outer.minY || pt[1] > outer.maxY) {
+                continue;
+            }
+            if (pointInsidePolygon(pt, outerRings[idx])) {
+                compositePolygons[idx].push(ring);
+                break;
+            }
+        }
+    }
+}
 
 export class Relation extends OsmObject {
     private relations: (LateBinder<Relation> | Relation)[] = [];
@@ -25,11 +141,19 @@ export class Relation extends OsmObject {
     }
 
     public setBounds(bounds: any[]) {
-        this.bounds = bounds;
+        if (isFiniteBounds(bounds)) {
+            this.bounds = bounds;
+        } else {
+            this.tainted = true;
+        }
     }
 
     public setCenter(center: LatLon) {
-        this.center = center;
+        if (isFiniteCoordinate(center.lat, center.lon)) {
+            this.center = center;
+        } else {
+            this.tainted = true;
+        }
     }
 
     public addMember(member: { [k: string]: any }) {
@@ -137,11 +261,11 @@ export class Relation extends OsmObject {
         const innerRings = iws ? iws.toRings('clockwise') : [];
 
         if (outerRings.length > 0) {
-            const compositPolyons: any[] = [];
-            const outerBounds: { minX: number, maxX: number, minY: number, maxY: number }[] = [];
+            const compositePolygons: number[][][][] = [];
+            const outerBounds: RingBounds[] = [];
 
             for (const ring of outerRings) {
-                compositPolyons.push([ring]);
+                compositePolygons.push([ring]);
             }
 
             // Bounding boxes are only needed to cheaply reject inner rings.
@@ -149,36 +273,20 @@ export class Relation extends OsmObject {
                 for (const ring of outerRings) {
                     outerBounds.push(ringBounds(ring));
                 }
-            }
-
-            // Link inner rings to their outer container. A bbox pre-check avoids
-            // the full ray cast for rings that cannot possibly be contained.
-            for (let i = 0; i < innerRings.length; i++) {
-                const ring = innerRings[i];
-                const pt = first(ring);
-                for (let idx = 0; idx < outerRings.length; idx++) {
-                    const b = outerBounds[idx];
-                    if (pt[0] < b.minX || pt[0] > b.maxX || pt[1] < b.minY || pt[1] > b.maxY) {
-                        continue;
-                    }
-                    if (pointInsidePolygon(pt, outerRings[idx])) {
-                        compositPolyons[idx].push(ring);
-                        break;
-                    }
-                }
+                linkInnerRings(outerRings, innerRings, compositePolygons, outerBounds);
             }
 
             // construct the Polygon/MultiPolygon geometry
-            if (compositPolyons.length === 1) {
+            if (compositePolygons.length === 1) {
                 return {
                     type: 'Polygon',
-                    coordinates: compositPolyons[0],
+                    coordinates: compositePolygons[0],
                 };
             }
 
             return {
                 type: 'MultiPolygon',
-                coordinates: compositPolyons,
+                coordinates: compositePolygons,
             };
         }
 
@@ -197,80 +305,136 @@ export class Relation extends OsmObject {
      * Flatten a relation and its sub-relations into a single way/role list.
      * Duplicate way references (a common cause of duplicated rings) are removed
      * while preserving the first occurrence and its role.
+     *
+     * This uses an explicit stack rather than recursion so very deep relation
+     * chains cannot overflow the JS call stack.
      */
-    private collectAllWaysForRelation(relation: Relation, relationToWaysMap: Map<string, WaysAndRoles>, visiting: Set<string>): WaysAndRoles {
-        if (!(relation instanceof Relation)) {
+    private collectAllWaysForRelation(root: Relation, relationToWaysMap: Map<string, WaysAndRoles>): WaysAndRoles {
+        if (!(root instanceof Relation)) {
             return { ways: [], roles: [] };
         }
-        const cached = relationToWaysMap.get(relation.id);
-        if (cached) {
-            return cached;
+        const cachedRoot = relationToWaysMap.get(root.id);
+        if (cachedRoot) {
+            return cachedRoot;
         }
-        // A relation cycle (e.g. A -> B -> A) has no natural root. Stop the
-        // recursion at the first relation already on the stack instead of
-        // overflowing; the outer relation still contributes its direct ways.
-        if (visiting.has(relation.id)) {
-            return { ways: [], roles: [] };
-        }
-        visiting.add(relation.id);
 
-        const ways: Way[] = [];
-        const roles: string[] = [];
-        // Only deduplicate repeated members listed directly by *this* relation
-        // (the cause of duplicated rings in issue #48). A way shared by two
-        // sub-relations must still contribute once per sub-relation, otherwise
-        // legitimate geometry (e.g. a way forming part of two different
-        // routes) would be dropped.
-        const seen = new Set<string>();
-        const addDirect = (way: Way, role: string) => {
-            if (!way) {
-                relation.tainted = true;
-                return;
+        interface Frame {
+            relation: Relation;
+            ways: Way[];
+            roles: string[];
+            seenRelations: Set<string>;
+            subIndex: number;
+        }
+
+        const visiting = new Set<string>();
+        const stack: Frame[] = [];
+
+        const createFrame = (relation: Relation): Frame => {
+            const ways: Way[] = [];
+            const roles: string[] = [];
+            // Only deduplicate repeated members listed directly by *this*
+            // relation (the cause of duplicated rings in issue #48). A way
+            // shared by two sub-relations must still contribute once per
+            // sub-relation, otherwise legitimate geometry would be dropped.
+            const seen = new Set<string>();
+            const addDirect = (way: Way, role: string) => {
+                if (!way) {
+                    relation.tainted = true;
+                    return;
+                }
+                if (way.tainted) {
+                    relation.tainted = true;
+                }
+                const key = way.getCompositeId() + '\n' + role;
+                if (seen.has(key)) {
+                    return;
+                }
+                seen.add(key);
+                ways.push(way);
+                roles.push(role);
+            };
+            for (let i = 0; i < relation.ways.length; i++) {
+                addDirect(relation.ways[i] as Way, relation.roles[i]);
             }
-            if (way.tainted) {
-                relation.tainted = true;
-            }
-            const key = way.getCompositeId() + '\n' + role;
-            if (seen.has(key)) {
-                return;
-            }
-            seen.add(key);
-            ways.push(way);
-            roles.push(role);
+            return { relation, ways, roles, seenRelations: new Set(), subIndex: 0 };
         };
 
-        for (let i = 0; i < relation.ways.length; i++) {
-            addDirect(relation.ways[i] as Way, relation.roles[i]);
-        }
+        visiting.add(root.id);
+        stack.push(createFrame(root));
 
-        // A sub-relation listed more than once would otherwise duplicate all of
-        // its ways. Sharing a way between *different* sub-relations remains
-        // valid and is intentionally preserved.
-        const seenRelations = new Set<string>();
-        for (const subRelation of relation.relations as Relation[]) {
-            if (!subRelation) {
-                relation.tainted = true;
+        while (stack.length > 0) {
+            const frame = stack[stack.length - 1];
+            const subs = frame.relation.relations as unknown as Array<Relation | undefined>;
+            let descended = false;
+
+            while (frame.subIndex < subs.length) {
+                const sub = subs[frame.subIndex];
+                if (!sub) {
+                    frame.relation.tainted = true;
+                    frame.subIndex++;
+                    continue;
+                }
+                if (!(sub instanceof Relation)) {
+                    frame.subIndex++;
+                    continue;
+                }
+                const id = sub.getCompositeId();
+                if (frame.seenRelations.has(id)) {
+                    frame.subIndex++;
+                    continue;
+                }
+                frame.seenRelations.add(id);
+                if (sub.tainted) {
+                    frame.relation.tainted = true;
+                }
+                const cached = relationToWaysMap.get(sub.id);
+                if (cached) {
+                    for (let i = 0; i < cached.ways.length; i++) {
+                        frame.ways.push(cached.ways[i]);
+                        frame.roles.push(cached.roles[i]);
+                    }
+                    frame.subIndex++;
+                    continue;
+                }
+                // A relation cycle (e.g. A -> B -> A) has no natural root.
+                // Stop at the relation already on the stack; the outer
+                // relation still contributes its direct ways.
+                if (visiting.has(sub.id)) {
+                    frame.subIndex++;
+                    continue;
+                }
+                visiting.add(sub.id);
+                stack.push(createFrame(sub));
+                descended = true;
+                break;
+            }
+
+            if (descended) {
                 continue;
             }
-            const id = subRelation.getCompositeId();
-            if (seenRelations.has(id)) {
+
+            stack.pop();
+            visiting.delete(frame.relation.id);
+            const result = { ways: frame.ways, roles: frame.roles };
+            relationToWaysMap.set(frame.relation.id, result);
+
+            const parent = stack.length ? stack[stack.length - 1] : undefined;
+            if (parent) {
+                if (frame.relation.tainted) {
+                    parent.relation.tainted = true;
+                }
+                for (let i = 0; i < result.ways.length; i++) {
+                    parent.ways.push(result.ways[i]);
+                    parent.roles.push(result.roles[i]);
+                }
+                parent.subIndex++;
                 continue;
             }
-            seenRelations.add(id);
-            if (subRelation.tainted) {
-                relation.tainted = true;
-            }
-            const entry = this.collectAllWaysForRelation(subRelation, relationToWaysMap, visiting);
-            for (let i = 0; i < entry.ways.length; i++) {
-                ways.push(entry.ways[i]);
-                roles.push(entry.roles[i]);
-            }
+
+            return result;
         }
 
-        visiting.delete(relation.id);
-        const result = { ways, roles };
-        relationToWaysMap.set(relation.id, result);
-        return result;
+        return { ways: [], roles: [] };
     }
 
     public toFeatureArray(): Array<Feature<any, any>> {
@@ -279,7 +443,7 @@ export class Relation extends OsmObject {
         let pointFeatures: Array<Feature<Point | MultiPoint, any>> = [];
 
         const relationToWaysMap: Map<string, WaysAndRoles> = new Map<string, WaysAndRoles>();
-        const waysAndRoles = this.collectAllWaysForRelation(this, relationToWaysMap, new Set());
+        const waysAndRoles = this.collectAllWaysForRelation(this, relationToWaysMap);
 
         let templateFeature: Feature<any, any> = {
             type: 'Feature',

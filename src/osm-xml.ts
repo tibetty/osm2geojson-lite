@@ -58,6 +58,9 @@ interface Frame {
     member?: { geometry: { lat: string, lon: string }[], nodes: string[] };
     derived?: Derived;
     hasDerived?: boolean;
+    derivedInvalid?: boolean;
+    lineInvalid?: boolean;
+    groupInvalid?: boolean;
     hasNd?: boolean;
     center?: { lat: string, lon: string };
     bounds?: [number, number, number, number];
@@ -139,6 +142,9 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
                 if (geometry) {
                     output.setGeometry(geometry);
                 }
+                if (frame.derivedInvalid) {
+                    output.tainted = true;
+                }
             } else {
                 const node = new Node(frame.id!, refElements);
                 addNodeProps(node, attrs);
@@ -161,6 +167,9 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
                 const geometry = buildDerivedGeometry(frame.derived!);
                 if (geometry) {
                     output.setGeometry(geometry);
+                }
+                if (frame.derivedInvalid) {
+                    output.tainted = true;
                 }
             } else {
                 refElements.add(way.getCompositeId(), way);
@@ -190,6 +199,9 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
                 if (geometry) {
                     output.setGeometry(geometry);
                 }
+                if (frame.derivedInvalid) {
+                    output.tainted = true;
+                }
             } else {
                 for (const k in frame.attrs) {
                     if (k !== 'id') {
@@ -215,6 +227,9 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
             const geometry = buildDerivedGeometry(frame.derived!);
             if (geometry) {
                 output.setGeometry(geometry);
+            }
+            if (frame.derivedInvalid) {
+                output.tainted = true;
             }
             return;
         }
@@ -249,6 +264,9 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
 
         case Kind.LineString: {
             if (parent && (parent.kind === Kind.Node || parent.kind === Kind.Way || parent.kind === Kind.Relation || parent.kind === Kind.Custom)) {
+                if (frame.lineInvalid) {
+                    parent.derivedInvalid = true;
+                }
                 parent.derived!.geometry = {
                     type: 'Polygon',
                     coordinates: [frame.lineCoords!],
@@ -259,6 +277,9 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
 
         case Kind.Group: {
             if (parent && (parent.kind === Kind.Node || parent.kind === Kind.Way || parent.kind === Kind.Relation || parent.kind === Kind.Custom)) {
+                if (frame.groupInvalid) {
+                    parent.derivedInvalid = true;
+                }
                 const derived = parent.derived!;
                 const points = frame.groupPoints!;
                 for (let i = 0; i < points.length; i++) {
@@ -583,28 +604,45 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
             if (parent) {
                 const x = +lon;
                 const y = +lat;
-                switch (parent.kind) {
-                    case Kind.Node:
-                    case Kind.Way:
-                    case Kind.Relation:
-                    case Kind.Custom:
-                        parent.hasDerived = true;
-                        if (tag === 'point') {
-                            parent.derived!.geometry = { type: 'Point', coordinates: [x, y] };
-                        } else {
-                            parent.derived!.lineCoords.push([x, y]);
-                        }
-                        break;
-                    case Kind.Group:
-                        if (tag === 'point') {
-                            parent.groupPoints!.push({ type: 'Point', coordinates: [x, y] });
-                        } else {
-                            parent.groupCoords!.push([x, y]);
-                        }
-                        break;
-                    case Kind.LineString:
-                        parent.lineCoords!.push([x, y]);
-                        break;
+                if (lat === '' || lon === '' || !Number.isFinite(x) || !Number.isFinite(y)) {
+                    switch (parent.kind) {
+                        case Kind.Node:
+                        case Kind.Way:
+                        case Kind.Relation:
+                        case Kind.Custom:
+                            parent.derivedInvalid = true;
+                            break;
+                        case Kind.Group:
+                            parent.groupInvalid = true;
+                            break;
+                        case Kind.LineString:
+                            parent.lineInvalid = true;
+                            break;
+                    }
+                } else {
+                    switch (parent.kind) {
+                        case Kind.Node:
+                        case Kind.Way:
+                        case Kind.Relation:
+                        case Kind.Custom:
+                            parent.hasDerived = true;
+                            if (tag === 'point') {
+                                parent.derived!.geometry = { type: 'Point', coordinates: [x, y] };
+                            } else {
+                                parent.derived!.lineCoords.push([x, y]);
+                            }
+                            break;
+                        case Kind.Group:
+                            if (tag === 'point') {
+                                parent.groupPoints!.push({ type: 'Point', coordinates: [x, y] });
+                            } else {
+                                parent.groupCoords!.push([x, y]);
+                            }
+                            break;
+                        case Kind.LineString:
+                            parent.lineCoords!.push([x, y]);
+                            break;
+                    }
                 }
             }
             if (!selfClose) {
