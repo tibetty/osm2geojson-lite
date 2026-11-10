@@ -83,4 +83,12 @@ describe('Overpass output modes', () => {
             coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
         });
     });
+
+    it('ignores CDATA content instead of parsing it as markup', () => {
+        const source = '<osm><![CDATA[<node id="999" lat="0" lon="0"/>]]><node id="1" lat="5" lon="6"/></osm>';
+        const features = xml(source).features;
+        expect(features).toHaveLength(1);
+        expect(features[0].id).toBe('node/1');
+        expect(features[0].geometry).toEqual({ type: 'Point', coordinates: [6, 5] });
+    });
 });
