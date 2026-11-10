@@ -200,6 +200,68 @@ describe('relation stitching order', () => {
     });
 });
 
+describe('deep relation chains', () => {
+    it('flattens a 20,000-level relation chain without overflowing the stack', () => {
+        const elements: any[] = [
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 1, lon: 1 },
+            { type: 'way', id: 3, nodes: [1, 2], tags: { highway: 'path' } },
+            { type: 'relation', id: 4, members: [{ type: 'way', ref: 3, role: '' }] },
+        ];
+        for (let id = 5; id <= 20000; id++) {
+            elements.push({
+                type: 'relation', id,
+                members: [{ type: 'relation', ref: id - 1, role: '' }],
+            });
+        }
+        const result = json(elements);
+        const feature = result.features.find((f: any) => f.id === 'relation/20000');
+        expect(feature).toBeDefined();
+        expect(feature.geometry).toEqual({
+            type: 'MultiLineString',
+            coordinates: [[[0, 0], [1, 1]]],
+        });
+    });
+});
+
+describe('large multipolygon inner-ring assignment', () => {
+    it('assigns every inner ring to its containing outer ring', () => {
+        const elements: any[] = [];
+        const members: any[] = [];
+        let nodeId = 1;
+        let wayId = 1000;
+
+        const addSquare = (offset: number, inner: boolean) => {
+            const coords = inner
+                ? [[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]]
+                : [[0, 0], [1, 0], [1, 1], [0, 1]];
+            const ids = coords.map(([x, y]) => {
+                const id = nodeId++;
+                elements.push({ type: 'node', id, lat: y + offset, lon: x + offset });
+                return id;
+            });
+            elements.push({ type: 'way', id: wayId, nodes: [...ids, ids[0]] });
+            members.push({ type: 'way', ref: wayId, role: inner ? 'inner' : 'outer' });
+            wayId++;
+        };
+
+        for (let i = 0; i < 20; i++) {
+            const offset = i * 2;
+            addSquare(offset, false);
+            addSquare(offset, true);
+        }
+        elements.push({ type: 'relation', id: 1, tags: { type: 'multipolygon' }, members });
+
+        const result = json(elements);
+        const feature = result.features.find((f: any) => f.id === 'relation/1');
+        expect(feature.geometry.type).toBe('MultiPolygon');
+        expect(feature.geometry.coordinates).toHaveLength(20);
+        for (const polygon of feature.geometry.coordinates) {
+            expect(polygon).toHaveLength(2);
+        }
+    });
+});
+
 describe('XML entity decoding', () => {
     it('decodes named and numeric entities in attributes and text', () => {
         const xml = '<osm><node id="1" lat="0" lon="0"><tag k="name" v="A &amp; B &#65; &#x42; &lt;&gt;&quot;&apos;"/></node></osm>';

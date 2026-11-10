@@ -84,11 +84,73 @@ describe('Overpass output modes', () => {
         });
     });
 
+    it('joins across null entries at the start and end (documented behavior)', () => {
+        const start = json([{
+            type: 'way', id: 1, tags: { highway: 'path' },
+            geometry: [null, { lat: 0, lon: 0 }, { lat: 1, lon: 1 }],
+        }], { tainted: true });
+        expect(start.features[0].geometry).toEqual({ type: 'LineString', coordinates: [[0, 0], [1, 1]] });
+        expect(start.features[0].properties['@tainted']).toBe(true);
+
+        const end = json([{
+            type: 'way', id: 2, tags: { highway: 'path' },
+            geometry: [{ lat: 0, lon: 0 }, { lat: 1, lon: 1 }, null],
+        }], { tainted: true });
+        expect(end.features[0].geometry).toEqual({ type: 'LineString', coordinates: [[0, 0], [1, 1]] });
+        expect(end.features[0].properties['@tainted']).toBe(true);
+    });
+
+    it('does not emit a way when every geometry entry is null', () => {
+        expect(json([{
+            type: 'way', id: 1, tags: { highway: 'path' },
+            geometry: [null, null],
+        }]).features).toEqual([]);
+    });
+
     it('ignores CDATA content instead of parsing it as markup', () => {
         const source = '<osm><![CDATA[<node id="999" lat="0" lon="0"/>]]><node id="1" lat="5" lon="6"/></osm>';
         const features = xml(source).features;
         expect(features).toHaveLength(1);
         expect(features[0].id).toBe('node/1');
         expect(features[0].geometry).toEqual({ type: 'Point', coordinates: [6, 5] });
+    });
+});
+
+describe('coordinate validation', () => {
+    it('skips invalid derived XML coordinates and marks the output tainted', () => {
+        const source = '<osm><way id="1"><tag k="highway" v="path"/>'
+            + '<vertex lat="0" lon="0"/><vertex lat="bad" lon="1"/><vertex lat="1" lon="1"/>'
+            + '</way></osm>';
+        const result = xml(source, { tainted: true });
+        expect(result.features[0].geometry).toEqual({
+            type: 'LineString',
+            coordinates: [[0, 0], [1, 1]],
+        });
+        expect(result.features[0].properties['@tainted']).toBe(true);
+    });
+
+    it('ignores invalid bounds and centers', () => {
+        const jsonWay = json([{
+            type: 'way', id: 1, tags: { highway: 'path' },
+            center: { lat: 'bad', lon: 0 },
+            bounds: { minlat: 'bad', minlon: 0, maxlat: 1, maxlon: 1 },
+        }], { tainted: true });
+        expect(jsonWay.features).toEqual([]);
+
+        const jsonRelation = json([{
+            type: 'relation', id: 2, tags: { type: 'route' },
+            center: { lat: Number.NaN, lon: 0 },
+        }], { tainted: true });
+        expect(jsonRelation.features).toEqual([]);
+
+        const xmlWay = xml('<osm><way id="1"><center lat="bad" lon="0"/>'
+            + '<bounds minlat="bad" minlon="0" maxlat="1" maxlon="1"/></way></osm>', { tainted: true });
+        expect(xmlWay.features).toEqual([]);
+    });
+
+    it('passes explicit JSON geometry objects through unchanged', () => {
+        const geometry = { type: 'Point', coordinates: [Number.NaN, Number.NaN] };
+        const result = json([{ type: 'custom', id: 1, geometry }]);
+        expect(result.features[0].geometry).toEqual(geometry);
     });
 });

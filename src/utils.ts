@@ -15,6 +15,34 @@ export function first<T>(a: T[]): T { return  a[0] }
 export function last<T>(a: T[]): T { return a[a.length - 1]}
 export function coordsToKey<T>(a: T[]): string { return a.join(',')}
 
+/**
+ * Whether a lat/lon pair can be emitted as a finite GeoJSON position.
+ * Accepts numeric strings because Overpass XML stores attributes as strings.
+ */
+export function isFiniteCoordinate(lat: unknown, lon: unknown): boolean {
+    if ((typeof lat !== 'number' && typeof lat !== 'string') ||
+        (typeof lon !== 'number' && typeof lon !== 'string') ||
+        lat === '' || lon === '') {
+        return false;
+    }
+    return Number.isFinite(+lat) && Number.isFinite(+lon);
+}
+
+/** Whether `[minlon, minlat, maxlon, maxlat]` is a usable bounding box. */
+export function isFiniteBounds(bounds: unknown): boolean {
+    if (!Array.isArray(bounds) || bounds.length < 4) {
+        return false;
+    }
+    for (let i = 0; i < 4; i++) {
+        const value = bounds[i];
+        if ((typeof value !== 'number' && typeof value !== 'string') ||
+            value === '' || !Number.isFinite(+value)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 export function addToMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
     const a = m[k];
     if (a) {

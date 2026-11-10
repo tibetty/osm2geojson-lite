@@ -2,7 +2,7 @@ import { Feature } from "geojson";
 import { OsmObject } from "./osm-object";
 import { LatLon, Node } from "./node";
 import { LateBinder } from "./late-binder";
-import { boundsToRing, isRing, ringDirection } from "./utils";
+import { boundsToRing, isFiniteBounds, isFiniteCoordinate, isRing, ringDirection } from "./utils";
 import polygonTags from './polytags.json';
 import type { RefElements } from "./ref-elements";
 
@@ -40,11 +40,19 @@ export class Way extends OsmObject {
     }
 
     public setCenter(center: LatLon) {
-        this.center = center;
+        if (isFiniteCoordinate(center.lat, center.lon)) {
+            this.center = center;
+        } else {
+            this.tainted = true;
+        }
     }
 
     public setBounds(bounds: number[]) {
-        this.bounds = bounds;
+        if (isFiniteBounds(bounds)) {
+            this.bounds = bounds;
+        } else {
+            this.tainted = true;
+        }
     }
 
     public getBounds(): number[] | null {

@@ -1,4 +1,5 @@
 import { OsmObject } from "./osm-object";
+import { isFiniteCoordinate } from "./utils";
 import type { RefElements } from "./ref-elements";
 import type { Feature } from "geojson";
 
@@ -17,17 +18,7 @@ export class Node extends OsmObject {
 
     public hasCoordinates(): boolean {
         const latLng = this.latLng;
-        if (!latLng) {
-            return false;
-        }
-        const lat = latLng.lat;
-        const lon = latLng.lon;
-        if ((typeof lat !== 'number' && typeof lat !== 'string') ||
-            (typeof lon !== 'number' && typeof lon !== 'string') ||
-            lat === '' || lon === '') {
-            return false;
-        }
-        return Number.isFinite(+lat) && Number.isFinite(+lon);
+        return !!latLng && isFiniteCoordinate(latLng.lat, latLng.lon);
     }
 
     public toFeatureArray(): Array<Feature<any, any>> {

@@ -61,6 +61,12 @@ Converts OSM data (XML/JSON) to GeoJSON.
     - `tainted`: the default value is `false`. When set to `true`, features whose referenced nodes/ways/relations are missing (e.g. partial Overpass responses) receive an `@tainted: true` property.
     - `polygonTags`: optional, alternative polygon tag rules for ways. The shape matches the bundled `polytags.json`, e.g. `{ "building": { "ignore": ["no"] } }`; the legacy `whitelist`/`blacklist` spellings are still accepted.
 
+### Coordinate handling
+
+- Missing `null` entries in `out geom` are skipped. The remaining valid points are joined into one line and the feature is marked `@tainted` when the `tainted` option is enabled. This mirrors `osmtogeojson`; it does not split the line at every gap.
+- Invalid bounds or center values are ignored rather than emitted as `NaN`.
+- A JSON element carrying an explicit GeoJSON `geometry` object is passed through unchanged.
+
 Beyond plain OSM data the converter understands the shapes produced by Overpass
 `out geom`, `out center`, `out bb`, `convert`, `make` and `local` (both JSON and
 XML), including derived `Point`/`LineString`/`Polygon`/`GeometryCollection`
