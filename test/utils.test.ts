@@ -4,6 +4,8 @@ import {
     boundsToRing,
     coordsToKey,
     first,
+    isFiniteBounds,
+    isFiniteCoordinate,
     isRing,
     last,
     pointInsidePolygon,
@@ -46,6 +48,32 @@ describe('endpoint maps', () => {
         addToMap(map, 'a', 1);
         addToMap(map, 'a', 2);
         expect(map.a).toEqual([1, 2]);
+    });
+});
+
+describe('finite coordinate and bounds validation', () => {
+    it('accepts finite numbers and numeric strings', () => {
+        expect(isFiniteCoordinate(0, 0)).toBe(true);
+        expect(isFiniteCoordinate('-12.5', '42')).toBe(true);
+    });
+
+    it('rejects missing, empty, non-numeric and non-finite coordinates', () => {
+        expect(isFiniteCoordinate('', 0)).toBe(false);
+        expect(isFiniteCoordinate(null, 0)).toBe(false);
+        expect(isFiniteCoordinate(undefined, 0)).toBe(false);
+        expect(isFiniteCoordinate(Number.NaN, 0)).toBe(false);
+        expect(isFiniteCoordinate(Infinity, 0)).toBe(false);
+        expect(isFiniteCoordinate({}, 0)).toBe(false);
+    });
+
+    it('accepts only four finite bounds', () => {
+        expect(isFiniteBounds([0, 0, 1, 1])).toBe(true);
+        expect(isFiniteBounds(['0', '0', '1', '1'])).toBe(true);
+        expect(isFiniteBounds([0, 0, 1])).toBe(false);
+        expect(isFiniteBounds([0, 0, 1, Number.NaN])).toBe(false);
+        expect(isFiniteBounds([0, 0, 1, ''])).toBe(false);
+        expect(isFiniteBounds(null)).toBe(false);
+        expect(isFiniteBounds('0,0,1,1')).toBe(false);
     });
 });
 

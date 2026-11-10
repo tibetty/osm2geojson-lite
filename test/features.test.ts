@@ -246,19 +246,86 @@ describe('large multipolygon inner-ring assignment', () => {
         };
 
         for (let i = 0; i < 20; i++) {
-            const offset = i * 2;
+            const offset = i * 2 - 50;
             addSquare(offset, false);
             addSquare(offset, true);
         }
+        // This inner ring is outside every outer ring and must be left unassigned.
+        addSquare(1000, true);
         elements.push({ type: 'relation', id: 1, tags: { type: 'multipolygon' }, members });
 
         const result = json(elements);
         const feature = result.features.find((f: any) => f.id === 'relation/1');
         expect(feature.geometry.type).toBe('MultiPolygon');
         expect(feature.geometry.coordinates).toHaveLength(20);
+        let ringCount = 0;
         for (const polygon of feature.geometry.coordinates) {
-            expect(polygon).toHaveLength(2);
+            expect(polygon.length).toBeLessThanOrEqual(2);
+            ringCount += polygon.length;
         }
+        expect(ringCount).toBe(40);
+    });
+});
+
+describe('relation flattening corner cases', () => {
+    it('handles a three-relation cycle', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 1, lon: 1 },
+            { type: 'way', id: 3, nodes: [1, 2], tags: { highway: 'path' } },
+            {
+                type: 'relation', id: 4, tags: { type: 'route' },
+                members: [
+                    { type: 'way', ref: 3, role: '' },
+                    { type: 'relation', ref: 5, role: '' },
+                ],
+            },
+            { type: 'relation', id: 5, members: [{ type: 'relation', ref: 6, role: '' }] },
+            { type: 'relation', id: 6, members: [{ type: 'relation', ref: 4, role: '' }] },
+        ]);
+        const feature = result.features.find((f: any) => f.id === 'relation/4');
+        expect(feature).toBeDefined();
+        expect(feature.geometry.type).toBe('MultiLineString');
+    });
+
+    it('preserves a way shared by different sub-relations', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 1, lon: 1 },
+            { type: 'way', id: 3, nodes: [1, 2], tags: { highway: 'path' } },
+            { type: 'relation', id: 4, members: [{ type: 'way', ref: 3, role: '' }] },
+            { type: 'relation', id: 5, members: [{ type: 'way', ref: 3, role: '' }] },
+            {
+                type: 'relation', id: 6,
+                members: [
+                    { type: 'relation', ref: 4, role: '' },
+                    { type: 'relation', ref: 5, role: '' },
+                ],
+            },
+        ]);
+        const feature = result.features.find((f: any) => f.id === 'relation/6');
+        expect(feature.geometry.type).toBe('MultiLineString');
+        // The collector keeps both contributions; the stitcher joins the
+        // shared way into a single line that traverses it twice.
+        expect(feature.geometry.coordinates).toEqual([[[0, 0], [1, 1], [0, 0]]]);
+    });
+
+    it('marks a relation tainted when a sub-relation is missing', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 1, lon: 1 },
+            { type: 'way', id: 3, nodes: [1, 2], tags: { highway: 'path' } },
+            {
+                type: 'relation', id: 4, tags: { type: 'route' },
+                members: [
+                    { type: 'way', ref: 3, role: '' },
+                    { type: 'relation', ref: 999, role: '' },
+                ],
+            },
+        ], { tainted: true });
+        const feature = result.features.find((f: any) => f.id === 'relation/4');
+        expect(feature).toBeDefined();
+        expect(feature.properties['@tainted']).toBe(true);
     });
 });
 
