@@ -3,10 +3,10 @@
   "features": [
     {
       "type": "Feature",
-      "id": "relation/1",
+      "id": "way/2",
       "properties": {
-        "id": "relation/1",
-        "type": "multipolygon"
+        "id": "way/2",
+        "area": "yes"
       },
       "geometry": {
         "type": "Polygon",

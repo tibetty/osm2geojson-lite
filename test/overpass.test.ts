@@ -317,4 +317,24 @@ describe('XML scanner corner cases', () => {
             expect(() => xml(source)).not.toThrow();
         }
     });
+
+    it('skips visible=false elements', () => {
+        const jsonResult = json([
+            { type: 'node', id: 1, lat: 0, lon: 0, visible: false },
+            { type: 'node', id: 2, lat: 1, lon: 1 },
+        ]);
+        expect(jsonResult.features.map((f: any) => f.id)).toEqual(['node/2']);
+
+        const xmlResult = xml('<osm><node id="1" lat="0" lon="0" visible="false"/><node id="2" lat="1" lon="1"/></osm>');
+        expect(xmlResult.features.map((f: any) => f.id)).toEqual(['node/2']);
+    });
+
+    it('closes unclosed derived linestring polygons', () => {
+        const source = '<osm><relation id="1"><tag k="type" v="multipolygon"/>'
+            + '<linestring><vertex lat="0" lon="0"/><vertex lat="0" lon="1"/><vertex lat="1" lon="0"/></linestring>'
+            + '</relation></osm>';
+        const ring = xml(source).features[0].geometry.coordinates[0];
+        expect(ring).toHaveLength(4);
+        expect(ring[0]).toEqual(ring[ring.length - 1]);
+    });
 });

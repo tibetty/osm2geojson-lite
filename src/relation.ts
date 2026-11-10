@@ -301,6 +301,66 @@ export class Relation extends OsmObject {
         return this.ways.length > 0 || this.nodes.length > 0 || this.center !== null || this.bounds !== undefined;
     }
 
+    public getGeometryKind(): 'polygon' | 'line' | 'none' {
+        const type = this.tags.type;
+        if (type === 'multipolygon' || type === 'boundary') {
+            return 'polygon';
+        }
+        if (type === 'route' || type === 'waterway' || type === 'multilinestring') {
+            return 'line';
+        }
+        if (type) {
+            // Known non-geometry relation types (restriction, site,
+            // associatedStreet, route_master, stop_area, network, ...) and
+            // unknown future types must not be turned into lines/polygons.
+            return 'none';
+        }
+        // Compatibility fallback for legacy untagged relations.
+        if (this.roles.indexOf('outer') >= 0 || this.roles.indexOf('inner') >= 0) {
+            return 'polygon';
+        }
+        return this.ways.length > 0 || this.relations.length > 0 ? 'line' : 'none';
+    }
+
+    public getNodeMembers(): Node[] {
+        return this.nodes.filter((node): node is Node => node instanceof Node);
+    }
+
+    /**
+     * Old-style multipolygons put the descriptive tags on the single tagged
+     * outer way and leave the relation with only `type`. Attribute the feature
+     * to that way, as the OSM ecosystem expects.
+     */
+    private oldStyleOuterWay(): Way | null {
+        if (this.getGeometryKind() !== 'polygon') {
+            return null;
+        }
+        for (const key in this.tags) {
+            if (key !== 'type') {
+                return null;
+            }
+        }
+        let outer: Way | null = null;
+        let outerCount = 0;
+        for (let i = 0; i < this.ways.length; i++) {
+            const way = this.ways[i];
+            if (!(way instanceof Way)) {
+                continue;
+            }
+            const role = this.roles[i];
+            if (role === 'outer' || role === '') {
+                outerCount++;
+                if (outerCount > 1) {
+                    return null;
+                }
+                if (way.hasTag) {
+                    outer = way;
+                }
+            }
+        }
+        return outerCount === 1 ? outer : null;
+    }
+
     /**
      * Adopt the other copy's members when this copy has none. Returns true when
      * the other copy's member arrays were adopted, so its deferred binders must
@@ -468,7 +528,10 @@ export class Relation extends OsmObject {
         let pointFeatures: Array<Feature<Point | MultiPoint, any>> = [];
 
         const relationToWaysMap: Map<string, WaysAndRoles> = new Map<string, WaysAndRoles>();
-        const waysAndRoles = this.collectAllWaysForRelation(this, relationToWaysMap);
+        const kind = this.getGeometryKind();
+        const waysAndRoles = kind === 'none'
+            ? { ways: [], roles: [] }
+            : this.collectAllWaysForRelation(this, relationToWaysMap);
 
         let templateFeature: Feature<any, any> = {
             type: 'Feature',
@@ -483,19 +546,19 @@ export class Relation extends OsmObject {
         }
 
         let hasGeometry = false;
-        if (waysAndRoles.roles.some((r) => r === 'outer')) {
+        if (kind === 'polygon') {
             const outerWayCollection = new WayCollection();
             const innerWayCollection = new WayCollection();
             for (let i = 0; i < waysAndRoles.ways.length; i++) {
                 const way = waysAndRoles.ways[i];
                 const role = waysAndRoles.roles[i];
-                if (role === 'outer') {
-                    outerWayCollection.addWay(way);
+                if (role === 'inner') {
+                    innerWayCollection.addWay(way);
                     if (way.tainted) {
                         this.tainted = true;
                     }
-                } else if (role === 'inner') {
-                    innerWayCollection.addWay(way);
+                } else if (role === 'outer' || role === '') {
+                    outerWayCollection.addWay(way);
                     if (way.tainted) {
                         this.tainted = true;
                     }
@@ -503,12 +566,26 @@ export class Relation extends OsmObject {
             }
             const geometry = this.constructPolygonGeometry(outerWayCollection, innerWayCollection);
             if (geometry) {
-                const feature = Object.assign({}, templateFeature);
-                feature.geometry = geometry;
-                polygonFeatures.push(feature);
+                const oldStyleWay = this.oldStyleOuterWay();
+                if (oldStyleWay) {
+                    const properties: { [k: string]: any } = oldStyleWay.getProps();
+                    if (this.tainted && this.refElems.reportTainted) {
+                        properties['@tainted'] = true;
+                    }
+                    polygonFeatures.push({
+                        type: 'Feature',
+                        id: oldStyleWay.getCompositeId(),
+                        properties,
+                        geometry,
+                    });
+                } else {
+                    const feature = Object.assign({}, templateFeature);
+                    feature.geometry = geometry;
+                    polygonFeatures.push(feature);
+                }
                 hasGeometry = true;
             }
-        } else {
+        } else if (kind === 'line') {
             const wayCollection = new WayCollection();
             for (const way of waysAndRoles.ways) {
                 wayCollection.addWay(way);
@@ -526,7 +603,7 @@ export class Relation extends OsmObject {
         }
 
         // `out bb` responses may only carry a bounding box.
-        if (!hasGeometry && this.bounds) {
+        if (kind !== 'none' && !hasGeometry && this.bounds) {
             const feature = Object.assign({}, templateFeature);
             feature.geometry = {
                 type: 'Polygon',
@@ -551,14 +628,21 @@ export class Relation extends OsmObject {
         // reflected in the feature properties.
         if (this.tainted) {
             const properties = this.getProps();
+            const relationId = this.getCompositeId();
             for (const feature of polygonFeatures) {
-                feature.properties = properties;
+                if (feature.id === relationId) {
+                    feature.properties = properties;
+                }
             }
             for (const feature of stringFeatures) {
-                feature.properties = properties;
+                if (feature.id === relationId) {
+                    feature.properties = properties;
+                }
             }
             for (const feature of pointFeatures) {
-                feature.properties = properties;
+                if (feature.id === relationId) {
+                    feature.properties = properties;
+                }
             }
         }
 
