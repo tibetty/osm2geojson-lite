@@ -24,25 +24,6 @@ export function addToMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
     }
 }
 
-export function removeFromMap<T>(m: { [k: string]: T[] }, k: string, v: T): void {
-    const a = m[k];
-    let idx = -1;
-    if (a) {
-        idx = a.indexOf(v);
-    }
-    if (idx >= 0) {
-        a.splice(idx, 1);
-    }
-}
-
-export function getFirstFromMap<T>(m: { [k: string]: T[] }, k: string): T | null {
-    const a = m[k];
-    if (a && a.length > 0) {
-        return a[0];
-    }
-    return null;
-}
-
 // need 3+ different points to form a ring, here using > 3 is 'coz a the first and the last points are actually the same
 export function isRing(a: number[][]): boolean {
     if (a.length <= 3) {

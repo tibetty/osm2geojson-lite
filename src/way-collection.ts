@@ -1,4 +1,4 @@
-import { addToMap, boundsToRing, coordsToKey, first, getFirstFromMap, isRing, last, removeFromMap, ringDirection } from "./utils";
+import { addToMap, boundsToRing, coordsToKey, first, isRing, last, ringDirection } from "./utils";
 import type { Way } from "./way";
 
 const enum MergeType {
@@ -74,6 +74,8 @@ export class WayCollection {
     private lastKeys: string[];
     private firstMap: Record<string, number[][][]>;
     private lastMap: Record<string, number[][][]>;
+    private firstHeads: Record<string, number>;
+    private lastHeads: Record<string, number>;
     private used: boolean[];
     private indexByWay: Map<number[][], number>;
     private head: number;
@@ -84,6 +86,8 @@ export class WayCollection {
         this.lastKeys = [];
         this.firstMap = {};
         this.lastMap = {};
+        this.firstHeads = {};
+        this.lastHeads = {};
         this.used = [];
         this.indexByWay = new Map();
         this.head = 0;
@@ -164,9 +168,36 @@ export class WayCollection {
 
     private consume(index: number) {
         this.used[index] = true;
-        const way = this.ways[index];
-        removeFromMap(this.firstMap, this.firstKeys[index], way);
-        removeFromMap(this.lastMap, this.lastKeys[index], way);
+    }
+
+    /**
+     * Find the first unconsumed way in an endpoint bucket.
+     *
+     * Consumed entries are left in the bucket instead of being spliced out.
+     * The per-key cursor makes the amortised cost O(1) even when many ways
+     * share the same endpoint, while preserving insertion order.
+     */
+    private firstUnusedFromMap(
+        map: Record<string, number[][][]>,
+        heads: Record<string, number>,
+        key: string,
+    ): number[][] | null {
+        const bucket = map[key];
+        if (!bucket) {
+            return null;
+        }
+        let index = heads[key] || 0;
+        while (index < bucket.length) {
+            const way = bucket[index];
+            const wayIndex = this.indexByWay.get(way);
+            if (wayIndex !== undefined && !this.used[wayIndex]) {
+                heads[key] = index;
+                return way;
+            }
+            index++;
+        }
+        heads[key] = index;
+        return null;
     }
 
     /**
@@ -198,19 +229,19 @@ export class WayCollection {
         // Step 2: Fallback to map-based lookup if no sequential match.
         // Prefer extending the tail, then try the head (a later member may
         // join the front while the next array entry is disconnected).
-        const fromFirst = getFirstFromMap(this.firstMap, tailKey);
+        const fromFirst = this.firstUnusedFromMap(this.firstMap, this.firstHeads, tailKey);
         if (fromFirst) {
             return { next: fromFirst, mergeType: MergeType.EndStart };
         }
-        const fromLast = getFirstFromMap(this.lastMap, tailKey);
+        const fromLast = this.firstUnusedFromMap(this.lastMap, this.lastHeads, tailKey);
         if (fromLast) {
             return { next: fromLast, mergeType: MergeType.EndEnd };
         }
-        const headFirst = getFirstFromMap(this.firstMap, headKey);
+        const headFirst = this.firstUnusedFromMap(this.firstMap, this.firstHeads, headKey);
         if (headFirst) {
             return { next: headFirst, mergeType: MergeType.StartStart };
         }
-        const headLast = getFirstFromMap(this.lastMap, headKey);
+        const headLast = this.firstUnusedFromMap(this.lastMap, this.lastHeads, headKey);
         return { next: headLast, mergeType: MergeType.StartEnd };
     }
 
