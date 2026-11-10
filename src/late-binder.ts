@@ -18,4 +18,8 @@ export class LateBinder<T> {
     public getContainer(): (T | LateBinder<T>)[] {
         return this.container;
     }
+
+    public getOwner(): any {
+        return this.ctx;
+    }
 }

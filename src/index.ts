@@ -74,8 +74,48 @@ function detectFormat(o: string | { [k: string]: any }): "json" | "xml" | "json-
     return 'invalid';
 };
 
+function elementRank(elem: { [k: string]: any }): [number, number] {
+    return [Number(elem.version) || 0, Object.keys(elem).length];
+}
+
+/**
+ * Overpass unions can return the same element more than once, sometimes as a
+ * skeleton (tags only) and sometimes with geometry. Keep the newest/most
+ * complete copy but fill missing fields from the other copies so geometry and
+ * tags are not lost.
+ */
+function deduplicateElements(elements: any[]): any[] {
+    const best = new Map<string, any>();
+    const order: string[] = [];
+    const extra: any[] = [];
+
+    for (const elem of elements) {
+        if (!elem || elem.type === undefined || elem.id === undefined) {
+            extra.push(elem);
+            continue;
+        }
+        const key = `${elem.type}/${elem.id}`;
+        const previous = best.get(key);
+        if (!previous) {
+            best.set(key, elem);
+            order.push(key);
+            continue;
+        }
+        const winner = elementRank(elem) > elementRank(previous) ? elem : previous;
+        const loser = winner === elem ? previous : elem;
+        const merged: { [k: string]: any } = { ...loser, ...winner };
+        if (winner.tags || loser.tags) {
+            merged.tags = { ...(loser.tags || {}), ...(winner.tags || {}) };
+        }
+        best.set(key, merged);
+    }
+
+    return [...extra, ...order.map((key) => best.get(key)!)];
+}
+
 function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElements): void {
-    for (const elem of (osm as { [k: string]: any }).elements) {
+    const elements = Array.isArray(osm.elements) ? deduplicateElements(osm.elements) : [];
+    for (const elem of elements) {
         // Overpass derived geometries (`local`, `convert`, `make`, `out geom`)
         // may already carry a complete GeoJSON geometry object.
         if (elem.geometry && typeof elem.geometry === 'object' && elem.geometry.type) {

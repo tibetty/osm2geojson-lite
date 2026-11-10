@@ -302,6 +302,31 @@ export class Relation extends OsmObject {
     }
 
     /**
+     * Adopt the other copy's members when this copy has none. Returns true when
+     * the other copy's member arrays were adopted, so its deferred binders must
+     * be kept.
+     */
+    public adoptMembersFrom(other: Relation, preferOther: boolean): boolean {
+        if (this.center === null && other.center) {
+            this.center = other.center;
+        }
+        if (this.bounds === undefined && other.bounds) {
+            this.bounds = other.bounds;
+        }
+        const thisCount = this.ways.length + this.relations.length + this.nodes.length;
+        const otherCount = other.ways.length + other.relations.length + other.nodes.length;
+        const takeOther = otherCount > 0 && (preferOther || thisCount === 0);
+        if (takeOther) {
+            this.ways = other.ways;
+            this.roles = other.roles;
+            this.relations = other.relations;
+            this.nodes = other.nodes;
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Flatten a relation and its sub-relations into a single way/role list.
      * Duplicate way references (a common cause of duplicated rings) are removed
      * while preserving the first occurrence and its role.

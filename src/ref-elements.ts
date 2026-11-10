@@ -1,4 +1,8 @@
 import { LateBinder } from "./late-binder";
+import { Node } from "./node";
+import { Output } from "./output";
+import { Relation } from "./relation";
+import { Way } from "./way";
 import type { OsmObject } from "./osm-object";
 import type { PolygonTags } from "./way";
 
@@ -9,15 +13,22 @@ export class RefElements extends Map<string, OsmObject> {
     public polygonTags: PolygonTags | undefined;
 
     private binders: LateBinder<any>[];
+    private duplicates: Array<{ existing: OsmObject; duplicate: OsmObject }>;
 
     constructor() {
         super();
         this.binders = [];
+        this.duplicates = [];
         this.reportTainted = false;
         this.polygonTags = undefined;
     }
 
     public add(k: string, v: OsmObject) {
+        const existing = this.get(k);
+        if (existing && existing !== v) {
+            this.duplicates.push({ existing, duplicate: v });
+            return;
+        }
         this.set(k, v);
     }
 
@@ -33,7 +44,63 @@ export class RefElements extends Map<string, OsmObject> {
      * container and compacting once keeps insertion order and makes binding
      * linear in the number of binders.
      */
+    /**
+     * Merge duplicate element registrations before resolving references.
+     *
+     * Overpass unions can return the same element twice (for example once with
+     * tags and once with geometry). Keeping the first object preserves map
+     * insertion order; the duplicate only fills in missing data.
+     */
+    private mergeDuplicates() {
+        for (const { existing, duplicate } of this.duplicates) {
+            const preferDuplicate = duplicate.getVersion() > existing.getVersion();
+            existing.mergeFrom(duplicate);
+
+            if (duplicate instanceof Output && !(existing instanceof Output)) {
+                // Derived/custom output replaces the relation placeholder.
+                this.set(existing.getCompositeId(), duplicate);
+                this.removeBindersOwnedBy(existing);
+                continue;
+            }
+            if (existing instanceof Output) {
+                this.removeBindersOwnedBy(duplicate);
+                continue;
+            }
+            if (existing instanceof Node && duplicate instanceof Node) {
+                if (duplicate.hasCoordinates() && (!existing.hasCoordinates() || preferDuplicate)) {
+                    existing.setLatLng(duplicate.getLatLng()!);
+                }
+                continue;
+            }
+            if (existing instanceof Way && duplicate instanceof Way) {
+                if (existing.adoptCoordinatesFrom(duplicate, preferDuplicate)) {
+                    this.removeBindersOwnedBy(existing);
+                } else {
+                    this.removeBindersOwnedBy(duplicate);
+                }
+                continue;
+            }
+            if (existing instanceof Relation && duplicate instanceof Relation) {
+                if (existing.adoptMembersFrom(duplicate, preferDuplicate)) {
+                    this.removeBindersOwnedBy(existing);
+                } else {
+                    this.removeBindersOwnedBy(duplicate);
+                }
+                continue;
+            }
+            this.removeBindersOwnedBy(duplicate);
+        }
+        this.duplicates = [];
+    }
+
+    private removeBindersOwnedBy(owner: OsmObject) {
+        this.binders = this.binders.filter((binder) => binder.getOwner() !== owner);
+    }
+
     public bindAll() {
+        if (this.duplicates.length > 0) {
+            this.mergeDuplicates();
+        }
         if (this.binders.length === 0) {
             return;
         }
