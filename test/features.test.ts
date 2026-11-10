@@ -329,6 +329,95 @@ describe('relation flattening corner cases', () => {
     });
 });
 
+describe('OSM relation type semantics', () => {
+    const ring = [
+        { type: 'node', id: 1, lat: 0, lon: 0 },
+        { type: 'node', id: 2, lat: 0, lon: 1 },
+        { type: 'node', id: 3, lat: 1, lon: 1 },
+        { type: 'node', id: 4, lat: 1, lon: 0 },
+        { type: 'way', id: 10, nodes: [1, 2, 3, 4, 1], tags: { building: 'yes' } },
+    ];
+
+    it('treats an empty role as outer for multipolygon and boundary relations', () => {
+        for (const tags of [
+            { type: 'multipolygon', name: 'area' },
+            { type: 'boundary', boundary: 'administrative', name: 'area' },
+        ]) {
+            const result = json([
+                ...ring,
+                { type: 'relation', id: 20, tags, members: [{ type: 'way', ref: 10, role: '' }] },
+            ]);
+            const feature = result.features.find((f: any) => f.id === 'relation/20');
+            expect(feature).toBeDefined();
+            expect(feature.geometry.type).toBe('Polygon');
+        }
+    });
+
+    it('attributes old-style multipolygons to the tagged outer way', () => {
+        const result = json([
+            ...ring,
+            { type: 'relation', id: 20, tags: { type: 'multipolygon' }, members: [{ type: 'way', ref: 10, role: 'outer' }] },
+        ]);
+        const feature = result.features.find((f: any) => f.id === 'way/10');
+        expect(feature).toBeDefined();
+        expect(feature.properties.building).toBe('yes');
+        expect(feature.geometry.type).toBe('Polygon');
+        expect(result.features.some((f: any) => f.id === 'relation/20')).toBe(false);
+    });
+
+    it('does not turn restriction relations into a geometry feature', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 0, lon: 1 },
+            { type: 'node', id: 3, lat: 1, lon: 0 },
+            { type: 'way', id: 10, nodes: [1, 2], tags: { highway: 'residential' } },
+            { type: 'way', id: 11, nodes: [2, 3], tags: { highway: 'service' } },
+            {
+                type: 'relation', id: 20, tags: { type: 'restriction', restriction: 'no_left_turn' },
+                members: [
+                    { type: 'way', ref: 10, role: 'from' },
+                    { type: 'node', ref: 2, role: 'via' },
+                    { type: 'way', ref: 11, role: 'to' },
+                ],
+            },
+        ]);
+        expect(result.features.some((f: any) => f.id === 'relation/20')).toBe(false);
+        expect(result.features.some((f: any) => f.id === 'way/10')).toBe(true);
+        expect(result.features.some((f: any) => f.id === 'way/11')).toBe(true);
+    });
+
+    it('does not turn site relations into a single geometry feature', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0, tags: { tourism: 'museum' } },
+            { type: 'node', id: 2, lat: 0, lon: 1 },
+            { type: 'node', id: 3, lat: 1, lon: 0 },
+            { type: 'way', id: 10, nodes: [2, 3], tags: { building: 'yes' } },
+            {
+                type: 'relation', id: 20, tags: { type: 'site', site: 'museum' },
+                members: [
+                    { type: 'node', ref: 1, role: '' },
+                    { type: 'way', ref: 10, role: '' },
+                ],
+            },
+        ]);
+        expect(result.features.some((f: any) => f.id === 'relation/20')).toBe(false);
+        expect(result.features.some((f: any) => f.id === 'node/1')).toBe(true);
+        expect(result.features.some((f: any) => f.id === 'way/10')).toBe(true);
+    });
+
+    it('does not merge route_master relations into one geometry', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 0, lon: 1 },
+            { type: 'way', id: 10, nodes: [1, 2], tags: { highway: 'residential' } },
+            { type: 'relation', id: 25, tags: { type: 'route', route: 'bus' }, members: [{ type: 'way', ref: 10, role: '' }] },
+            { type: 'relation', id: 26, tags: { type: 'route_master', route_master: 'bus' }, members: [{ type: 'relation', ref: 25, role: '' }] },
+        ]);
+        expect(result.features.some((f: any) => f.id === 'relation/26')).toBe(false);
+        expect(result.features.some((f: any) => f.id === 'relation/25')).toBe(true);
+    });
+});
+
 describe('XML entity decoding', () => {
     it('decodes named and numeric entities in attributes and text', () => {
         const xml = '<osm><node id="1" lat="0" lon="0"><tag k="name" v="A &amp; B &#65; &#x42; &lt;&gt;&quot;&apos;"/></node></osm>';

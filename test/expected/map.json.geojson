@@ -556,15 +556,21 @@
     },
     {
       "type": "Feature",
-      "id": "relation/121733",
+      "id": "way/33748706",
       "properties": {
-        "id": "relation/121733",
-        "timestamp": "2009-04-27T17:28:49Z",
-        "version": 1,
-        "changeset": 993143,
+        "id": "way/33748706",
+        "timestamp": "2013-03-27T21:58:57Z",
+        "version": 3,
+        "changeset": 15520809,
         "user": "tyr_asd",
         "uid": 115612,
-        "type": "multipolygon"
+        "amenity": "place_of_worship",
+        "building": "yes",
+        "denomination": "catholic",
+        "name": "Pfarrkirche Sankt Michael",
+        "old_name": "Kapuzinerkirche zur Heimsuchung Mariens",
+        "religion": "christian",
+        "wheelchair": "yes"
       },
       "geometry": {
         "type": "Polygon",

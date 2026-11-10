@@ -267,9 +267,17 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
                 if (frame.lineInvalid) {
                     parent.derivedInvalid = true;
                 }
+                const ring = frame.lineCoords!;
+                if (ring.length > 0) {
+                    const first = ring[0];
+                    const last = ring[ring.length - 1];
+                    if (first[0] !== last[0] || first[1] !== last[1]) {
+                        ring.push([first[0], first[1]]);
+                    }
+                }
                 parent.derived!.geometry = {
                     type: 'Polygon',
-                    coordinates: [frame.lineCoords!],
+                    coordinates: [ring],
                 };
             }
             return;
@@ -533,7 +541,11 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
         }
         i = j;
 
-        if (kind === Kind.Skip && attrMode === AttrMode.Bag && attrs && attrs.id) {
+        if ((kind === Kind.Node || kind === Kind.Way || kind === Kind.Relation) &&
+            attrs && attrs.visible === 'false') {
+            kind = Kind.Skip;
+        }
+        if (kind === Kind.Skip && attrMode === AttrMode.Bag && attrs && attrs.id && attrs.visible !== 'false') {
             kind = Kind.Custom;
         }
 

@@ -116,6 +116,10 @@ function deduplicateElements(elements: any[]): any[] {
 function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElements): void {
     const elements = Array.isArray(osm.elements) ? deduplicateElements(osm.elements) : [];
     for (const elem of elements) {
+        // Deleted elements from history/Overpass should not produce geometry.
+        if (elem.visible === false || elem.visible === 'false') {
+            continue;
+        }
         // Overpass derived geometries (`local`, `convert`, `make`, `out geom`)
         // may already carry a complete GeoJSON geometry object.
         if (elem.geometry && typeof elem.geometry === 'object' && elem.geometry.type) {
@@ -298,6 +302,35 @@ function ensureRelationCyclesHaveRoot(refElements: RefElements): void {
     }
 }
 
+/**
+ * Relations without a geometry type (restriction, site, associatedStreet,
+ * route_master, stop_area, ...) must not absorb their members. Their members
+ * should be emitted as independent features, so release the reference counts
+ * contributed by those relations.
+ */
+function releaseNonGeometryRelationMembers(refElements: RefElements): void {
+    for (const value of refElements.values()) {
+        if (!(value instanceof Relation) || value.getGeometryKind() !== 'none') {
+            continue;
+        }
+        for (const way of value.ways) {
+            if (way instanceof Way && way.refCount > 0) {
+                way.refCount--;
+            }
+        }
+        for (const relation of value.getSubRelations()) {
+            if (relation.refCount > 0) {
+                relation.refCount--;
+            }
+        }
+        for (const node of value.getNodeMembers()) {
+            if (node.refCount > 0) {
+                node.refCount--;
+            }
+        }
+    }
+}
+
 function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): FeatureCollection<GeometryObject> | Feature<any, any> | GeometryObject | undefined {
     let { completeFeature, renderTagged, excludeWay, elementId, tainted, polygonTags } = parseOptions(opts);
 
@@ -330,6 +363,7 @@ function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): Featu
         return element ? element.toFeatureArray()[0] : undefined;
     }
 
+    releaseNonGeometryRelationMembers(refElements);
     ensureRelationCyclesHaveRoot(refElements);
 
     for (const v of refElements.values()) {
