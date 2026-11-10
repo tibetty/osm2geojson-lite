@@ -418,6 +418,94 @@ describe('OSM relation type semantics', () => {
     });
 });
 
+describe('role-aware relation members', () => {
+    it('keeps route platform ways and stop nodes independent', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 0, lon: 1 },
+            { type: 'node', id: 3, lat: 1, lon: 0 },
+            { type: 'node', id: 4, lat: 1, lon: 1 },
+            { type: 'node', id: 5, lat: 5, lon: 5, tags: { highway: 'bus_stop' } },
+            { type: 'way', id: 10, nodes: [1, 2], tags: { highway: 'residential' } },
+            { type: 'way', id: 11, nodes: [3, 4], tags: { amenity: 'parking' } },
+            {
+                type: 'relation', id: 20, tags: { type: 'route', route: 'bus' },
+                members: [
+                    { type: 'way', ref: 10, role: '' },
+                    { type: 'way', ref: 11, role: 'platform' },
+                    { type: 'node', ref: 5, role: 'stop' },
+                ],
+            },
+        ]);
+        const route = result.features.find((f: any) => f.id === 'relation/20');
+        expect(route.geometry).toEqual({
+            type: 'MultiLineString',
+            coordinates: [[[0, 0], [1, 0]]],
+        });
+        expect(result.features.some((f: any) => f.id === 'way/11')).toBe(true);
+        expect(result.features.some((f: any) => f.id === 'node/5')).toBe(true);
+        expect(result.features.find((f: any) => f.id === 'node/5').geometry)
+            .toEqual({ type: 'Point', coordinates: [5, 5] });
+    });
+
+    it('keeps boundary subarea relations and admin_centre nodes independent', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 0, lon: 1 },
+            { type: 'node', id: 3, lat: 1, lon: 1 },
+            { type: 'node', id: 4, lat: 1, lon: 0 },
+            { type: 'node', id: 5, lat: 2, lon: 2 },
+            { type: 'node', id: 6, lat: 2, lon: 3 },
+            { type: 'node', id: 7, lat: 3, lon: 3 },
+            { type: 'node', id: 8, lat: 3, lon: 2 },
+            { type: 'node', id: 12, lat: 9, lon: 9, tags: { place: 'town' } },
+            { type: 'way', id: 10, nodes: [1, 2, 3, 4, 1] },
+            { type: 'way', id: 11, nodes: [5, 6, 7, 8, 5] },
+            {
+                type: 'relation', id: 13, tags: { type: 'boundary', boundary: 'administrative', name: 'child' },
+                members: [{ type: 'way', ref: 11, role: 'outer' }],
+            },
+            {
+                type: 'relation', id: 20, tags: { type: 'boundary', boundary: 'administrative', name: 'parent' },
+                members: [
+                    { type: 'way', ref: 10, role: 'outer' },
+                    { type: 'relation', ref: 13, role: 'subarea' },
+                    { type: 'node', ref: 12, role: 'admin_centre' },
+                ],
+            },
+        ]);
+        const parent = result.features.find((f: any) => f.id === 'relation/20');
+        expect(parent.geometry.type).toBe('Polygon');
+        expect(parent.geometry.coordinates[0]).toHaveLength(5);
+        expect(result.features.some((f: any) => f.id === 'relation/13')).toBe(true);
+        expect(result.features.some((f: any) => f.id === 'node/12')).toBe(true);
+    });
+
+    it('does not absorb polygon way members with non-geometric roles', () => {
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 0, lon: 1 },
+            { type: 'node', id: 3, lat: 1, lon: 1 },
+            { type: 'node', id: 4, lat: 1, lon: 0 },
+            { type: 'node', id: 5, lat: 5, lon: 5 },
+            { type: 'node', id: 6, lat: 5, lon: 6 },
+            { type: 'way', id: 10, nodes: [1, 2, 3, 4, 1] },
+            { type: 'way', id: 11, nodes: [5, 6], tags: { highway: 'path' } },
+            {
+                type: 'relation', id: 20, tags: { type: 'multipolygon', name: 'area' },
+                members: [
+                    { type: 'way', ref: 10, role: 'outer' },
+                    { type: 'way', ref: 11, role: 'subarea' },
+                ],
+            },
+        ]);
+        const area = result.features.find((f: any) => f.id === 'relation/20');
+        expect(area.geometry.type).toBe('Polygon');
+        expect(area.geometry.coordinates[0]).toHaveLength(5);
+        expect(result.features.some((f: any) => f.id === 'way/11')).toBe(true);
+    });
+});
+
 describe('XML entity decoding', () => {
     it('decodes named and numeric entities in attributes and text', () => {
         const xml = '<osm><node id="1" lat="0" lon="0"><tag k="name" v="A &amp; B &#65; &#x42; &lt;&gt;&quot;&apos;"/></node></osm>';

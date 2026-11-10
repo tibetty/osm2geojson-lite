@@ -122,6 +122,7 @@ export class RefElements extends Map<string, OsmObject> {
             for (const binder of binders) {
                 resolved.set(binder, binder.resolve());
             }
+            const roleContainer = binders[0].getRoleContainer();
 
             let write = 0;
             for (let read = 0; read < container.length; read++) {
@@ -129,13 +130,24 @@ export class RefElements extends Map<string, OsmObject> {
                 if (bindersInContainer.has(item)) {
                     const value = resolved.get(item);
                     if (value !== undefined) {
-                        container[write++] = value;
+                        container[write] = value;
+                        if (roleContainer) {
+                            roleContainer[write] = (item as LateBinder<any>).getRole();
+                        }
+                        write++;
                     }
                 } else {
-                    container[write++] = item;
+                    container[write] = item;
+                    if (roleContainer) {
+                        roleContainer[write] = roleContainer[read];
+                    }
+                    write++;
                 }
             }
             container.length = write;
+            if (roleContainer) {
+                roleContainer.length = write;
+            }
         }
 
         this.binders = [];

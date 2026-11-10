@@ -310,22 +310,63 @@ function ensureRelationCyclesHaveRoot(refElements: RefElements): void {
  */
 function releaseNonGeometryRelationMembers(refElements: RefElements): void {
     for (const value of refElements.values()) {
-        if (!(value instanceof Relation) || value.getGeometryKind() !== 'none') {
+        if (!(value instanceof Relation)) {
             continue;
         }
-        for (const way of value.ways) {
-            if (way instanceof Way && way.refCount > 0) {
-                way.refCount--;
-            }
-        }
-        for (const relation of value.getSubRelations()) {
-            if (relation.refCount > 0) {
-                relation.refCount--;
-            }
-        }
+        const kind = value.getGeometryKind();
+
+        // Node members are never part of a line or polygon geometry; they are
+        // stops, admin centres, labels, etc. and should stay independent.
         for (const node of value.getNodeMembers()) {
             if (node.refCount > 0) {
                 node.refCount--;
+            }
+        }
+
+        if (kind === 'none') {
+            for (const way of value.ways) {
+                if (way instanceof Way && way.refCount > 0) {
+                    way.refCount--;
+                }
+            }
+            for (const entry of value.getRelationEntries()) {
+                if (entry.relation.refCount > 0) {
+                    entry.relation.refCount--;
+                }
+            }
+            continue;
+        }
+
+        if (kind === 'polygon') {
+            // Only outer/inner/empty roles participate in the polygon.
+            if (value.ways.length === value.roles.length) {
+                for (let i = 0; i < value.ways.length; i++) {
+                    const way = value.ways[i];
+                    const role = value.roles[i];
+                    if (way instanceof Way && role !== 'outer' && role !== 'inner' && role !== '' && way.refCount > 0) {
+                        way.refCount--;
+                    }
+                }
+            }
+            for (const entry of value.getRelationEntries()) {
+                const role = entry.role;
+                if (role !== 'outer' && role !== 'inner' && role !== '' && entry.relation.refCount > 0) {
+                    entry.relation.refCount--;
+                }
+            }
+        } else if (kind === 'line') {
+            if (value.ways.length === value.roles.length) {
+                for (let i = 0; i < value.ways.length; i++) {
+                    const way = value.ways[i];
+                    if (way instanceof Way && value.roles[i] === 'platform' && way.refCount > 0) {
+                        way.refCount--;
+                    }
+                }
+            }
+            for (const entry of value.getRelationEntries()) {
+                if (entry.role === 'platform' && entry.relation.refCount > 0) {
+                    entry.relation.refCount--;
+                }
             }
         }
     }
