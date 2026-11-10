@@ -1,5 +1,6 @@
 Changelog:
 -----
+* 2026-11 (2.4.0): Role-aware relation member handling: polygon subarea/other roles and node members (stops, admin centres, labels) are emitted independently; route platform members are excluded from relation geometry; member roles stay aligned through late binding.
 * 2026-11 (2.3.0): Align relation semantics with OSM: type-based geometry dispatch, empty role treated as outer, old-style multipolygon attribution to the tagged outer way, non-geometry relations no longer synthesized, `visible=false` skipped and derived polygon rings closed.
 * 2026-11 (2.2.1): Merge duplicate Overpass/OSM elements (JSON and XML) by version and completeness, filling missing tags/geometry and removing orphaned reference binders.
 * 2026-11 (2.2.0): Iterative relation flattening, lazy endpoint-bucket stitching, grid-based inner-ring assignment, consistent finite coordinate/bounds validation, documented missing-coordinate gap semantics, hermetic snapshot tests, CDATA handling, exported `IOptions` and removal of the unused generic `XmlParser`. Added corner-case coverage across the XML scanner, relation flattening, multipolygons and validation.
