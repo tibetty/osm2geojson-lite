@@ -45,7 +45,7 @@ npm run build
 
 ## Snapshots
 
-`test/expected/*.geojson` are committed fixtures. Review snapshot diffs carefully and include intentional changes in the PR. (Making missing-fixture regeneration fail by default is tracked in #66.)
+`test/expected/*.geojson` are committed fixtures. If you intentionally change output, run `npm run test:update` and commit the diff. Missing fixtures fail the test instead of being regenerated silently.
 
 ## Performance work
 

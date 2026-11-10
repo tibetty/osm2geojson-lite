@@ -8,7 +8,7 @@ import { Output } from './output';
 import { RefElements } from './ref-elements';
 import type { Feature, FeatureCollection, GeometryObject } from 'geojson';
 
-interface IOptions {
+export interface IOptions {
     /**
      * When it's set to `true`, the returned geojson will include all elements that meet the specified conditions in `FeatureCollection` format; 
      * otherwise, only the bare geometry of the first `relation` element will be returned.

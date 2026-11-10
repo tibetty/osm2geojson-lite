@@ -4,12 +4,10 @@ import {
     boundsToRing,
     coordsToKey,
     first,
-    getFirstFromMap,
     isRing,
     last,
     pointInsidePolygon,
     purgeProps,
-    removeFromMap,
     ringBounds,
     ringDirection,
     strArrayArrayToFloat,
@@ -48,22 +46,6 @@ describe('endpoint maps', () => {
         addToMap(map, 'a', 1);
         addToMap(map, 'a', 2);
         expect(map.a).toEqual([1, 2]);
-    });
-
-    it('returns the first value or null', () => {
-        expect(getFirstFromMap({ a: [1, 2] }, 'a')).toBe(1);
-        expect(getFirstFromMap({ a: [] }, 'a')).toBeNull();
-        expect(getFirstFromMap({}, 'a')).toBeNull();
-    });
-
-    it('removes values and tolerates missing keys/values', () => {
-        const map: Record<string, number[]> = { a: [1, 2] };
-        removeFromMap(map, 'a', 1);
-        expect(map.a).toEqual([2]);
-        removeFromMap(map, 'a', 99);
-        expect(map.a).toEqual([2]);
-        removeFromMap(map, 'missing', 1);
-        expect(map.missing).toBeUndefined();
     });
 });
 

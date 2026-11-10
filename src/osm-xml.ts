@@ -4,19 +4,18 @@ import { Output } from "./output";
 import { RefElements } from "./ref-elements";
 import { Relation } from "./relation";
 import { Way } from "./way";
-import { decodeEntities } from "./xmlparser";
+import { decodeEntities } from "./xml-entities";
 
 /**
  * A purpose-built scanner for OpenStreetMap XML.
  *
- * The generic `XmlParser` builds a full `$tag`/`$innerNodes` tree and dispatches
+ * Generic XML parsers build a full `$tag`/`$innerNodes` tree and dispatch
  * events for every element. That is flexible but allocates an object per
  * `<nd>`/`<tag>` and re-scans children in the converters. OSM XML has a small,
  * well-known vocabulary, so this scanner applies the element's effect directly
  * to the `Node`/`Way`/`Relation` being built.
  *
- * Unknown elements are skipped (including their subtree), which matches the old
- * path: listeners only ever fired for `osm.*` paths.
+ * Unknown elements are skipped (including their subtree).
  */
 
 const enum Kind {
@@ -313,6 +312,9 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
         if (c === BANG) {
             if (xml.charCodeAt(i + 1) === 45 && xml.charCodeAt(i + 2) === 45) {
                 const end = xml.indexOf('-->', i + 3);
+                i = end < 0 ? len : end + 3;
+            } else if (xml.startsWith('![CDATA[', i)) {
+                const end = xml.indexOf(']]>', i + 8);
                 i = end < 0 ? len : end + 3;
             } else {
                 const gt = xml.indexOf('>', i);
