@@ -23,6 +23,7 @@
   "scripts": {
     "build": "rolldown -c && cp src/polytags.json dist/",
     "test": "vitest run --coverage",
+    "test:update": "UPDATE_SNAPSHOTS=1 vitest run test/e2e.test.ts",
     "bench": "vitest bench --run --reporter=verbose",
     "prebench": "npm run build",
     "valid": "node scripts/serve.mjs",
