@@ -1,7 +1,11 @@
 import { purgeProps } from './utils';
-import { parseOsmXml } from './osm-xml';
+import { parseOsmXml, parseOsmXmlElements } from './osm-xml';
 import { parseOsmPbf } from './pbf';
 import { detectCompression } from './compressed';
+import { mergeResolved, resolveElementHistory } from './elements';
+import type { MergeConflict, MergedDocument } from './elements';
+
+export type { MergeConflict, MergedDocument } from './elements';
 import { LatLon, Node } from './node';
 import { Way } from './way';
 import type { PolygonTags } from './way';
@@ -48,6 +52,13 @@ export interface IOptions {
      * @default undefined (built-in rules)
      */
     polygonTags?: PolygonTags;
+    /**
+     * Used by `applyOsmChange` and `mergeOsmChange`. When `true`, a change entry
+     * whose version does not advance the base version throws instead of being
+     * reported in `conflicts`.
+     * @default false
+     */
+    strict?: boolean;
 }
 
 function parseOptions(options: IOptions | undefined): { completeFeature: boolean; renderTagged: boolean; excludeWay: boolean; elementId: string | undefined; tainted: boolean; polygonTags: PolygonTags | undefined } {
@@ -86,99 +97,8 @@ function detectFormat(o: OsmInput): "json" | "xml" | "json-raw" | "pbf" | "inval
     return 'invalid';
 };
 
-function elementRank(elem: { [k: string]: any }): [number, number] {
-    return [Number(elem.version) || 0, Object.keys(elem).length];
-}
-
-function isDeletedElement(elem: { [k: string]: any }): boolean {
-    return elem.visible === false || elem.visible === 'false' || elem.action === 'delete';
-}
-
-/**
- * Merge copies of the same element that share a version. Overpass unions can
- * return an element twice (once as a skeleton, once with geometry), so the
- * most complete copy wins while missing tags and fields are filled in.
- */
-function mergeCopies(copies: any[]): any {
-    let merged = copies[0];
-    for (let i = 1; i < copies.length; i++) {
-        const elem = copies[i];
-        const winner = elementRank(elem) > elementRank(merged) ? elem : merged;
-        const loser = winner === elem ? merged : elem;
-        const next: { [k: string]: any } = { ...loser, ...winner };
-        if (winner.tags || loser.tags) {
-            next.tags = { ...(loser.tags || {}), ...(winner.tags || {}) };
-        }
-        merged = next;
-    }
-    return merged;
-}
-
-/**
- * Resolve duplicate elements.
- *
- * Overpass unions repeat the same element within one version; history extracts
- * (`.osh`, `[adiff]`, `out meta`) repeat it across versions. Copies of one
- * version are merged into the most complete one, while the newest version wins
- * outright. A newest version that is deleted records a tombstone instead.
- */
-function deduplicateElements(elements: any[], refElements: RefElements): any[] {
-    const groups = new Map<string, any[]>();
-    const order: string[] = [];
-    const extra: any[] = [];
-
-    for (const elem of elements) {
-        if (!elem || elem.type === undefined || elem.id === undefined) {
-            extra.push(elem);
-            continue;
-        }
-        const key = `${elem.type}/${elem.id}`;
-        const group = groups.get(key);
-        if (group) {
-            group.push(elem);
-        } else {
-            groups.set(key, [elem]);
-            order.push(key);
-        }
-    }
-
-    const result = [...extra];
-    for (const key of order) {
-        const group = groups.get(key)!;
-        let newest = group[0];
-        let newestVersion = 0;
-        for (const elem of group) {
-            if (elementRank(elem) > elementRank(newest)) {
-                newest = elem;
-            }
-            const version = Number(elem.version) || 0;
-            if (version > newestVersion) {
-                newestVersion = version;
-            }
-        }
-
-        if (isDeletedElement(newest)) {
-            refElements.markDeleted(key, newestVersion);
-            continue;
-        }
-
-        // Copies without a version are incomplete duplicates rather than an
-        // older state, so they still contribute to the newest version.
-        const survivors = group.filter((elem) => {
-            if (isDeletedElement(elem)) {
-                return false;
-            }
-            const version = Number(elem.version) || 0;
-            return version === 0 || version === newestVersion;
-        });
-        result.push(survivors.length === 1 ? survivors[0] : mergeCopies(survivors));
-    }
-
-    return result;
-}
-
 function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElements): void {
-    const elements = Array.isArray(osm.elements) ? deduplicateElements(osm.elements, refElements) : [];
+    const elements = Array.isArray(osm.elements) ? resolveElementHistory(osm.elements).elements : [];
     for (const elem of elements) {
         // Deleted elements from history/Overpass/osmChange must not produce geometry.
         if (elem.visible === false || elem.visible === 'false' || elem.action === 'delete') {
@@ -436,37 +356,38 @@ function releaseNonGeometryRelationMembers(refElements: RefElements): void {
     }
 }
 
-function osm2geojson(osm: OsmInput, opts?: IOptions): FeatureCollection<GeometryObject> | Feature<any, any> | GeometryObject | undefined {
-    let { completeFeature, renderTagged, excludeWay, elementId, tainted, polygonTags } = parseOptions(opts);
-
+function analyzeInput(osm: OsmInput, refElements: RefElements): void {
     let format = detectFormat(osm);
-
-    const refElements = new RefElements();
-    refElements.reportTainted = tainted;
-    refElements.polygonTags = polygonTags;
-    let featureArray: Feature<any, any>[] = [];
+    let document = osm;
 
     if (format === 'json-raw') {
-        osm = JSON.parse(osm as string) as { [k: string]: any };
-        if ((osm as { [k: string]: any }).elements) {
-            format = 'json';
-        } else {
-            format = 'invalid';
-        }
+        document = JSON.parse(osm as string) as { [k: string]: any };
+        format = (document as { [k: string]: any }).elements ? 'json' : 'invalid';
     }
 
     if (format === 'json') {
-        analyzeFeaturesFromJson(osm as { [k: string]: any }, refElements);
+        analyzeFeaturesFromJson(document as { [k: string]: any }, refElements);
     } else if (format === 'xml') {
-        analyzeFeaturesFromXml(osm as string, refElements);
+        analyzeFeaturesFromXml(document as string, refElements);
     } else if (format === 'pbf') {
-        const bytes = osm instanceof Uint8Array ? osm : new Uint8Array(osm as ArrayBuffer);
+        const bytes = document instanceof Uint8Array ? document : new Uint8Array(document as ArrayBuffer);
         const compression = detectCompression(bytes);
         if (compression) {
             throw new Error(`${compression} input is not supported by the library, decompress it first (the CLI does this automatically)`);
         }
         analyzeFeaturesFromJson(parseOsmPbf(bytes), refElements);
     }
+}
+
+function convert(osm: OsmInput, opts?: IOptions): FeatureCollection<GeometryObject> | Feature<any, any> | GeometryObject | undefined {
+    let { completeFeature, renderTagged, excludeWay, elementId, tainted, polygonTags } = parseOptions(opts);
+
+    const refElements = new RefElements();
+    refElements.reportTainted = tainted;
+    refElements.polygonTags = polygonTags;
+    let featureArray: Feature<any, any>[] = [];
+
+    analyzeInput(osm, refElements);
 
     refElements.bindAll();
 
@@ -494,5 +415,83 @@ function osm2geojson(osm: OsmInput, opts?: IOptions): FeatureCollection<Geometry
 
     return { type: 'FeatureCollection', features: featureArray };
 };
+
+/** Read any supported input into raw element objects, without resolving them. */
+function readElements(osm: OsmInput): any[] {
+    let format = detectFormat(osm);
+    let document = osm;
+
+    if (format === 'json-raw') {
+        document = JSON.parse(osm as string) as { [k: string]: any };
+        format = (document as { [k: string]: any }).elements ? 'json' : 'invalid';
+    }
+
+    if (format === 'json') {
+        const elements = (document as { [k: string]: any }).elements;
+        return Array.isArray(elements) ? elements : [];
+    }
+    if (format === 'xml') {
+        return parseOsmXmlElements(document as string);
+    }
+    if (format === 'pbf') {
+        const bytes = document instanceof Uint8Array ? document : new Uint8Array(document as ArrayBuffer);
+        const compression = detectCompression(bytes);
+        if (compression) {
+            throw new Error(`${compression} input is not supported by the library, decompress it first (the CLI does this automatically)`);
+        }
+        return parseOsmPbf(bytes).elements;
+    }
+    return [];
+}
+
+/**
+ * Normalise any supported input into Overpass-shaped element objects.
+ *
+ * Duplicate and multi-version copies are collapsed to the newest version, and
+ * elements deleted at their newest version are dropped, so the result is the
+ * current state of the document. Use this to inspect or transform OSM data
+ * before converting it with `osm2geojson`.
+ */
+export function toElements(osm: OsmInput): any[] {
+    return resolveElementHistory(readElements(osm)).elements;
+}
+
+/**
+ * Apply an osmChange diff to a base extract, at the element level.
+ *
+ * A change only overrides what it advances: an entry whose version is not
+ * newer than the base copy leaves the base intact and is reported in
+ * `conflicts`. Elements absent from the base are creates and are appended.
+ * Pass `{ strict: true }` to throw on the first conflict instead.
+ */
+export function mergeOsmChange(base: OsmInput, change: OsmInput, opts?: IOptions): MergedDocument {
+    const baseDocument = resolveElementHistory(readElements(base));
+    const changeDocument = resolveElementHistory(readElements(change));
+    return mergeResolved(baseDocument, changeDocument, opts !== undefined && opts.strict === true);
+}
+
+export interface AppliedChange {
+    geojson: FeatureCollection<GeometryObject> | Feature<any, any> | GeometryObject | undefined;
+    /** Change entries that did not advance the base, in document order. */
+    conflicts: MergeConflict[];
+}
+
+/**
+ * Apply an osmChange diff to a base extract and convert the resulting state.
+ *
+ * Conflicts are returned rather than thrown unless `{ strict: true }` is set,
+ * so a pipeline can reconcile a mismatched pair instead of losing the output.
+ */
+export function applyOsmChange(base: OsmInput, change: OsmInput, opts?: IOptions): AppliedChange {
+    const merged = mergeOsmChange(base, change, opts);
+    return {
+        geojson: convert({ elements: merged.elements }, opts),
+        conflicts: merged.conflicts,
+    };
+}
+
+function osm2geojson(osm: OsmInput, opts?: IOptions): FeatureCollection<GeometryObject> | Feature<any, any> | GeometryObject | undefined {
+    return convert(osm, opts);
+}
 
 export default osm2geojson;

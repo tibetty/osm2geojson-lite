@@ -11,7 +11,6 @@ export class RefElements extends Map<string, OsmObject> {
     public reportTainted: boolean;
     /** Overrides the built-in polygon tag rules when provided. */
     public polygonTags: PolygonTags | undefined;
-
     private binders: LateBinder<any>[];
     private duplicates: Array<{ existing: OsmObject; duplicate: OsmObject }>;
     /** composite id -> newest version known to be deleted */
@@ -87,6 +86,7 @@ export class RefElements extends Map<string, OsmObject> {
         for (const { existing, duplicate } of this.duplicates) {
             const existingVersion = existing.getVersion();
             const duplicateVersion = duplicate.getVersion();
+
             // History extracts carry several versions of the same element: the
             // newest version defines it and older copies must not contribute
             // tags or geometry. Copies without a version are treated as

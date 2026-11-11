@@ -83,6 +83,24 @@ them for you.
 - History extracts (`.osh`, Overpass `[adiff]` or `out meta`) are resolved to the newest version of each element; older versions contribute no tags or geometry. A deletion at the newest version removes the element, and references to it stay unresolved, so the referencing feature gets `@tainted` when the `tainted` option is enabled.
 - Copies of the same version are still merged, because Overpass can return one element twice with complementary data; copies without a version are treated as incomplete duplicates.
 
+### Applying an osmChange to a base
+
+A diff can be applied to a base extract, so a daily `.osc` can update a cached area without re-downloading it:
+
+```js
+import { applyOsmChange, mergeOsmChange, toElements } from 'osm2geojson-lite';
+
+const { geojson, conflicts } = applyOsmChange(base, diff, opts);
+
+const merged = mergeOsmChange(base, diff);    // { elements, conflicts }
+const elements = toElements(base);            // current state of any input
+```
+
+- `toElements(input)` normalises XML, PBF or JSON into element objects, collapsing duplicate and multi-version copies to the newest version and dropping elements deleted at their newest version.
+- `mergeOsmChange(base, diff)` applies a diff at the element level: an entry only overrides what it advances, elements missing from the base are appended as creates, and stale entries leave the base intact. They are reported as `{ id, changeVersion, baseVersion }` in `conflicts`, and `{ strict: true }` turns the first conflict into an error instead.
+- `applyOsmChange(base, diff)` merges and converts in one call, returning `{ geojson, conflicts }`.
+- Base and diff can be any supported input, in any combination — a PBF base with an `.osc` diff, an XML base with an osmChange, and so on.
+
 ### Coordinate handling
 
 - Missing `null` entries in `out geom` are skipped. The remaining valid points are joined into one line and the feature is marked `@tainted` when the `tainted` option is enabled. This mirrors `osmtogeojson`; it does not split the line at every gap.
