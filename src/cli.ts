@@ -18,16 +18,38 @@ function printHelp () {
     ].join('\n'))
 }
 
-async function main (positionals: Array<string>) {
-    const [
-        inputFile = "/dev/stdin",
-        outputFile = "/dev/stdout",
-    ] = positionals;
+/**
+ * Read the whole of stdin. `/dev/stdin` is not portable: on Linux it is a
+ * symlink to a pipe for `cat file | cli` and opening it fails with ENXIO.
+ */
+function readStdin (): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+        const chunks: Array<Buffer> = [];
+        process.stdin.on('data', (chunk: Buffer) => chunks.push(chunk));
+        process.stdin.on('end', () => resolve(Buffer.concat(chunks)));
+        process.stdin.on('error', reject);
+    });
+}
 
-    const osm = decodeInput(await readFile(inputFile));
+function writeStdout (payload: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        process.stdout.write(payload, (error) => (error ? reject(error) : resolve()));
+    });
+}
+
+async function main (positionals: Array<string>) {
+    const [inputFile, outputFile] = positionals;
+
+    const data = inputFile ? await readFile(inputFile) : await readStdin();
+    const osm = decodeInput(data);
     const geojson = osm2geojson(osm, { completeFeature: true, renderTagged: true });
-    const geoJsonData = JSON.stringify(geojson);
-    await writeFile(outputFile, `${geoJsonData}\n`);
+    const payload = `${JSON.stringify(geojson)}\n`;
+
+    if (outputFile) {
+        await writeFile(outputFile, payload);
+        return;
+    }
+    await writeStdout(payload);
 }
 
 const { values, positionals } = parseArgs({
