@@ -1,5 +1,6 @@
 import { purgeProps } from './utils';
 import { parseOsmXml } from './osm-xml';
+import { parseOsmPbf } from './pbf';
 import { LatLon, Node } from './node';
 import { Way } from './way';
 import type { PolygonTags } from './way';
@@ -59,7 +60,17 @@ function parseOptions(options: IOptions | undefined): { completeFeature: boolean
     return { completeFeature, renderTagged, excludeWay, elementId: options.elementId, tainted, polygonTags: options.polygonTags };
 }
 
-function detectFormat(o: string | { [k: string]: any }): "json" | "xml" | "json-raw" | "invalid" {
+type OsmInput = string | { [k: string]: any } | Uint8Array | ArrayBuffer;
+
+/** Binary input is OSM PBF; text input is OSM XML or OSM/Overpass JSON. */
+function isBinary(o: OsmInput): boolean {
+    return o instanceof Uint8Array || o instanceof ArrayBuffer;
+}
+
+function detectFormat(o: OsmInput): "json" | "xml" | "json-raw" | "pbf" | "invalid" {
+    if (isBinary(o)) {
+        return 'pbf';
+    }
     if (o && typeof o === 'object' && (o as { [k: string]: any }).elements) {
         return 'json';
     }
@@ -372,7 +383,7 @@ function releaseNonGeometryRelationMembers(refElements: RefElements): void {
     }
 }
 
-function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): FeatureCollection<GeometryObject> | Feature<any, any> | GeometryObject | undefined {
+function osm2geojson(osm: OsmInput, opts?: IOptions): FeatureCollection<GeometryObject> | Feature<any, any> | GeometryObject | undefined {
     let { completeFeature, renderTagged, excludeWay, elementId, tainted, polygonTags } = parseOptions(opts);
 
     let format = detectFormat(osm);
@@ -395,6 +406,9 @@ function osm2geojson(osm: string | { [k: string]: any }, opts?: IOptions): Featu
         analyzeFeaturesFromJson(osm as { [k: string]: any }, refElements);
     } else if (format === 'xml') {
         analyzeFeaturesFromXml(osm as string, refElements);
+    } else if (format === 'pbf') {
+        const bytes = osm instanceof Uint8Array ? osm : new Uint8Array(osm as ArrayBuffer);
+        analyzeFeaturesFromJson(parseOsmPbf(bytes), refElements);
     }
 
     refElements.bindAll();

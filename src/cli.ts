@@ -7,7 +7,7 @@ import osm2geojson from './index.js';
 
 function printHelp () {
     process.stdout.write([
-        'Convert OpenStreetMap XML or JSON data to GeoJSON.',
+        'Convert OpenStreetMap XML, PBF or JSON data to GeoJSON.',
         '',
         'Usage:',
         '  npx osm2geojson-lite INPUT_FILE OUTPUT_FILE',
@@ -16,14 +16,30 @@ function printHelp () {
     ].join('\n'))
 }
 
+/**
+ * PBF is a binary container, XML and JSON start with '<' or '{'. Sniffing the
+ * content instead of the file extension keeps stdin working.
+ */
+function looksLikeText (data: Buffer) {
+    let i = 0;
+    if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
+        i = 3;
+    }
+    while (i < data.length && (data[i] === 0x20 || data[i] === 0x09 || data[i] === 0x0a || data[i] === 0x0d)) {
+        i++;
+    }
+    return data[i] === 0x3c || data[i] === 0x7b;
+}
+
 async function main (positionals: Array<string>) {
     const [
         inputFile = "/dev/stdin",
         outputFile = "/dev/stdout",
     ] = positionals;
 
-    const data = await readFile(inputFile, "utf-8");
-    const geojson = osm2geojson(data, { completeFeature: true, renderTagged: true });
+    const data = await readFile(inputFile);
+    const osm = looksLikeText(data) ? data.toString('utf-8') : data;
+    const geojson = osm2geojson(osm, { completeFeature: true, renderTagged: true });
     const geoJsonData = JSON.stringify(geojson);
     await writeFile(outputFile, `${geoJsonData}\n`);
 }
