@@ -72,7 +72,9 @@ function mergeCopies(copies: any[]): any {
  * outright. A newest version that is deleted is reported and dropped.
  */
 export function resolveElementHistory(elements: any[]): ResolvedDocument {
-    const groups = new Map<string, any[]>();
+    // One element in, one element out: only ids that actually repeat need an
+    // array, so a plain extract allocates no per-element containers.
+    const groups = new Map<string, any | any[]>();
     const order: string[] = [];
     const extra: any[] = [];
     const deleted = new Map<string, number>();
@@ -83,18 +85,29 @@ export function resolveElementHistory(elements: any[]): ResolvedDocument {
             continue;
         }
         const key = elementKey(elem);
-        const group = groups.get(key);
-        if (group) {
-            group.push(elem);
-        } else {
-            groups.set(key, [elem]);
+        const existing = groups.get(key);
+        if (existing === undefined) {
+            groups.set(key, elem);
             order.push(key);
+        } else if (Array.isArray(existing)) {
+            existing.push(elem);
+        } else {
+            groups.set(key, [existing, elem]);
         }
     }
 
     const resolved = [...extra];
     for (const key of order) {
-        const group = groups.get(key)!;
+        const entry = groups.get(key)!;
+        if (!Array.isArray(entry)) {
+            if (isDeletedElement(entry)) {
+                deleted.set(key, elementVersion(entry));
+            } else {
+                resolved.push(entry);
+            }
+            continue;
+        }
+        const group = entry as any[];
         let newest = group[0];
         let newestVersion = 0;
         for (const elem of group) {
