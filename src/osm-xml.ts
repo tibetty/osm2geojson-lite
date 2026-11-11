@@ -20,6 +20,8 @@ import { decodeEntities } from "./xml-entities";
 
 const enum Kind {
     Root,
+    /** Transparent `<create>`/`<modify>`/`<delete>` wrapper of an `osmChange`. */
+    Wrapper,
     Node,
     Way,
     Relation,
@@ -49,6 +51,8 @@ interface Derived {
 
 interface Frame {
     kind: Kind;
+    /** Set on `<delete>` wrappers: their children are deletions, not data. */
+    deleted?: boolean;
     id?: string;
     type?: string;
     attrs?: Record<string, string>;
@@ -125,7 +129,7 @@ function addDerivedProps(output: Output, attrs: Record<string, string>) {
 }
 
 function isRoot(kind: Kind): boolean {
-    return kind === Kind.Root;
+    return kind === Kind.Root || kind === Kind.Wrapper;
 }
 
 function finish(frame: Frame, parent: Frame | undefined, refElements: RefElements): void {
@@ -385,7 +389,17 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
                 }
                 break;
             case 'osm':
+            case 'osmChange':
                 kind = Kind.Root;
+                break;
+            case 'create':
+            case 'modify':
+            case 'delete':
+                // osmChange sections are transparent: their children are
+                // ordinary node/way/relation elements at the document root.
+                if (topKind === Kind.Root) {
+                    kind = Kind.Wrapper;
+                }
                 break;
             case 'member':
                 if (topKind === Kind.Relation) {
@@ -541,20 +555,24 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
         }
         i = j;
 
-        if ((kind === Kind.Node || kind === Kind.Way || kind === Kind.Relation) &&
-            attrs && attrs.visible === 'false') {
+        const parent = stack.length ? stack[stack.length - 1] : undefined;
+        const inDelete = parent !== undefined && parent.deleted === true;
+
+        // `visible=false` (history extracts), `action="delete"` and the
+        // `<delete>` section of an osmChange all mean the element is gone.
+        const discarded = attrMode === AttrMode.Bag && attrs !== undefined &&
+            (attrs.visible === 'false' || attrs.action === 'delete' || inDelete);
+        if ((kind === Kind.Node || kind === Kind.Way || kind === Kind.Relation) && discarded) {
             // Remember the deletion so a surviving older version is dropped
-            // when references are bound (history extracts, osmChange).
-            if (attrs.id) {
+            // when references are bound.
+            if (attrs && attrs.id) {
                 refElements.markDeleted(`${tag}/${attrs.id}`, Number(attrs.version) || 0);
             }
             kind = Kind.Skip;
         }
-        if (kind === Kind.Skip && attrMode === AttrMode.Bag && attrs && attrs.id && attrs.visible !== 'false') {
+        if (kind === Kind.Skip && attrMode === AttrMode.Bag && attrs && attrs.id && !discarded) {
             kind = Kind.Custom;
         }
-
-        const parent = stack.length ? stack[stack.length - 1] : undefined;
 
         if (attrMode === AttrMode.Nd) {
             if (parent) {
@@ -731,6 +749,9 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
             case Kind.Root:
             case Kind.Skip:
                 frame = { kind };
+                break;
+            case Kind.Wrapper:
+                frame = { kind, deleted: tag === 'delete' };
                 break;
         }
 

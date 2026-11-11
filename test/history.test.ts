@@ -144,3 +144,22 @@ describe('history resolution (XML)', () => {
         expect(way.properties['@tainted']).toBe(true);
     });
 });
+
+describe('history resolution (osmChange)', () => {
+    it('keeps a created element that is newer than its deletion', () => {
+        const result = xml(`<osmChange>
+            <create><node id="1" version="2" lat="1" lon="2"/></create>
+            <delete><node id="1" version="1"/></delete>
+        </osmChange>`);
+        expect(result.features).toHaveLength(1);
+        expect(result.features[0].geometry.coordinates).toEqual([2, 1]);
+    });
+
+    it('drops an element deleted at the version being modified', () => {
+        const result = xml(`<osmChange>
+            <modify><node id="1" version="2" lat="1" lon="2"/></modify>
+            <delete><node id="1" version="2"/></delete>
+        </osmChange>`);
+        expect(result.features).toEqual([]);
+    });
+});
