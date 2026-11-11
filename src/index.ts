@@ -116,8 +116,8 @@ function deduplicateElements(elements: any[]): any[] {
 function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElements): void {
     const elements = Array.isArray(osm.elements) ? deduplicateElements(osm.elements) : [];
     for (const elem of elements) {
-        // Deleted elements from history/Overpass should not produce geometry.
-        if (elem.visible === false || elem.visible === 'false') {
+        // Deleted elements from history/Overpass/osmChange must not produce geometry.
+        if (elem.visible === false || elem.visible === 'false' || elem.action === 'delete') {
             continue;
         }
         // Overpass derived geometries (`local`, `convert`, `make`, `out geom`)
