@@ -306,3 +306,25 @@ describe('PBF input', () => {
         expect(() => convert(file.subarray(0, file.length - 10))).toThrow(/truncated PBF blob/);
     });
 });
+
+describe('PBF history', () => {
+    it('drops nodes marked invisible in DenseInfo', () => {
+        const nodes = [
+            { id: 1, lat: 0, lon: 0 },
+            { id: 2, lat: 0, lon: 1 },
+            { id: 3, lat: 1, lon: 1 },
+        ];
+        const info = denseInfo(nodes.map((node, index) => ({
+            version: 5, timestamp: 1577836800, uid: 1, user: 'alice', visible: index !== 1,
+        })), STRINGS);
+        const file = pbfFile([
+            { type: 'OSMHeader', payload: headerBlock(['OsmSchema-V0.6', 'DenseNodes', 'HistoricalInformation']) },
+            { type: 'OSMData', payload: primitiveBlock(STRINGS, denseNodes(nodes, info), [way(10, [1, 2, 3], [1], [2])], []) },
+        ]);
+
+        const result = convert(file, { tainted: true });
+        expect(result.features.map((f: any) => f.id)).toEqual(['way/10']);
+        expect(result.features[0].geometry.coordinates).toEqual([[0, 0], [1, 1]]);
+        expect(result.features[0].properties['@tainted']).toBe(true);
+    });
+});

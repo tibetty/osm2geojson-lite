@@ -563,6 +563,11 @@ export function parseOsmXml(xml: string, refElements: RefElements): void {
         const discarded = attrMode === AttrMode.Bag && attrs !== undefined &&
             (attrs.visible === 'false' || attrs.action === 'delete' || inDelete);
         if ((kind === Kind.Node || kind === Kind.Way || kind === Kind.Relation) && discarded) {
+            // Remember the deletion so a surviving older version is dropped
+            // when references are bound.
+            if (attrs && attrs.id) {
+                refElements.markDeleted(`${tag}/${attrs.id}`, Number(attrs.version) || 0);
+            }
             kind = Kind.Skip;
         }
         if (kind === Kind.Skip && attrMode === AttrMode.Bag && attrs && attrs.id && !discarded) {
