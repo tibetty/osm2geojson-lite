@@ -46,8 +46,10 @@ Modern browsers load the ESM build directly via `<script type="module">`. Import
     npx osm2geojson-lite monaco.osm.pbf monaco.geojson
 ```
 
-The CLI reads the input as bytes and sniffs whether it is text (XML/JSON) or
-binary (PBF), so extensions do not matter and stdin still works.
+The CLI reads the input as bytes, decompresses gzip (`.gz`) and zstd (`.zst`)
+containers, and sniffs whether the payload is text (XML/JSON) or binary (PBF),
+so extensions do not matter and stdin still works. `bzip2` and `xz` are
+rejected with a hint, because Node ships no decoder for them.
 
 API
 ---
@@ -70,6 +72,10 @@ Converts OSM data to GeoJSON.
 - **XML**: `<osm>` extracts and `<osmChange>` (`.osc`) diffs. `node`, `way` and `relation` elements are read inside `<create>`, `<modify>` and `<delete>` sections.
 - **JSON**: OSM/Overpass JSON, as an object or a JSON string.
 - **PBF**: OSM PBF (`.osm.pbf`) byte buffers. Blobs are inflated by a bundled synchronous zlib/DEFLATE decoder, so PBF needs neither `node:zlib` nor a third-party package. `lzma`, `bzip2`, `lz4` and `zstd` blobs, and unknown required features, are rejected with an error.
+
+The library does not uncompress files: pass decompressed data. Handing it
+gzip/zstd bytes raises an error naming the container, and the CLI decompresses
+them for you.
 
 ### Deletions and history
 
