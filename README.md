@@ -6,7 +6,7 @@ osm2geojson-lite
 [![NPM Version](https://img.shields.io/npm/v/osm2geojson-lite)](https://www.npmjs.com/package/osm2geojson-lite) [![Codecov](https://img.shields.io/codecov/c/github/tibetty/osm2geojson-lite/main.svg)](https://codecov.io/gh/tibetty/osm2geojson-lite/)
 
 
-A lightweight (not as lightweight as xml2geojson though) yet faster convertor for [OSM](http://openstreetmap.org) [data](http://wiki.openstreetmap.org/wiki/OSM_XML) whatever in XML or JSON formats to [GeoJSON](http://www.geojson.org/) - much faster (the more complex the data source is, the more performance advantages it posesses) than osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency.
+A lightweight (not as lightweight as xml2geojson though) yet faster convertor for [OSM](http://openstreetmap.org) [data](http://wiki.openstreetmap.org/wiki/OSM_XML) - XML, PBF or JSON - to [GeoJSON](http://www.geojson.org/) - much faster (the more complex the data source is, the more performance advantages it posesses) than osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency.
 
 History
 -----
@@ -43,16 +43,20 @@ Modern browsers load the ESM build directly via `<script type="module">`. Import
 ### In the command line
 ```sh
     npx osm2geojson-lite --help
+    npx osm2geojson-lite monaco.osm.pbf monaco.geojson
 ```
+
+The CLI reads the input as bytes and sniffs whether it is text (XML/JSON) or
+binary (PBF), so extensions do not matter and stdin still works.
 
 API
 ---
 
 ### `osm2geojson(osm, opts)`
 
-Converts OSM data (XML/JSON) to GeoJSON.
+Converts OSM data to GeoJSON.
 
-* `osm`: the OSM XML data in String, or OSM/Overpass JSON as object or in String
+* `osm`: OSM XML or osmChange XML in a string, OSM/Overpass JSON as an object or a string, or OSM PBF as a `Uint8Array` / `ArrayBuffer`
 * `opts?`: optional, the options object, right now supports below properties/fields:
     - `completeFeature`:  the default value is `false`. When it's set to `true`, the returned geojson will include all elements that meet the specified conditions in `FeatureCollection` format; otherwise, only the bare geometry of the first `relation` element will be returned.
     - `renderTagged`: the default value is `false`. When it's set to `true`, the returned geojson will include all elements with tags (i.e., tagged) until `excludeWay` changes its behavior a bit; otherwise only the unreferenced ones get returned.
@@ -60,6 +64,18 @@ Converts OSM data (XML/JSON) to GeoJSON.
     - `elementId`: optional, an OSM element id in the form `type/id` (e.g. `way/123`). When set, only that single `Feature` is returned; `undefined` is returned when the element does not exist.
     - `tainted`: the default value is `false`. When set to `true`, features whose referenced nodes/ways/relations are missing (e.g. partial Overpass responses) receive an `@tainted: true` property.
     - `polygonTags`: optional, alternative polygon tag rules for ways. The shape matches the bundled `polytags.json`, e.g. `{ "building": { "ignore": ["no"] } }`; the legacy `whitelist`/`blacklist` spellings are still accepted.
+
+### Input formats
+
+- **XML**: `<osm>` extracts and `<osmChange>` (`.osc`) diffs. `node`, `way` and `relation` elements are read inside `<create>`, `<modify>` and `<delete>` sections.
+- **JSON**: OSM/Overpass JSON, as an object or a JSON string.
+- **PBF**: OSM PBF (`.osm.pbf`) byte buffers. Blobs are inflated by a bundled synchronous zlib/DEFLATE decoder, so PBF needs neither `node:zlib` nor a third-party package. `lzma`, `bzip2`, `lz4` and `zstd` blobs, and unknown required features, are rejected with an error.
+
+### Deletions and history
+
+- Deleted elements produce no geometry: elements inside an osmChange `<delete>` section, elements carrying `action="delete"` (XML or JSON) and elements with `visible=false`.
+- History extracts (`.osh`, Overpass `[adiff]` or `out meta`) are resolved to the newest version of each element; older versions contribute no tags or geometry. A deletion at the newest version removes the element, and references to it stay unresolved, so the referencing feature gets `@tainted` when the `tainted` option is enabled.
+- Copies of the same version are still merged, because Overpass can return one element twice with complementary data; copies without a version are treated as incomplete duplicates.
 
 ### Coordinate handling
 
@@ -73,14 +89,14 @@ Converts OSM data (XML/JSON) to GeoJSON.
 - `route` / `waterway` / `multilinestring` → `MultiLineString`.
 - Other or unknown relation types produce no relation geometry; their members are emitted as independent features where possible.
 - Old-style multipolygons (tags only on the outer way) are attributed to that outer way.
-- `visible=false` elements are skipped.
 - Unclosed derived `<linestring>` polygons are closed for RFC 7946 compliance.
 - Member roles are respected: polygon relations absorb only `outer`/`inner`/empty roles; route `platform` members and stop/admin-centre/label nodes are emitted as independent features.
 
-Beyond plain OSM data the converter understands the shapes produced by Overpass
-`out geom`, `out center`, `out bb`, `convert`, `make` and `local` (both JSON and
-XML), including derived `Point`/`LineString`/`Polygon`/`GeometryCollection`
-output, member geometries, `center` fallbacks and `bounds`-only rectangles.
+Beyond plain OSM data the converter understands osmChange diffs, history
+extracts and the shapes produced by Overpass `out geom`, `out center`, `out bb`,
+`convert`, `make` and `local` (both JSON and XML), including derived
+`Point`/`LineString`/`Polygon`/`GeometryCollection` output, member geometries,
+`center` fallbacks and `bounds`-only rectangles.
 
 
 Performance
