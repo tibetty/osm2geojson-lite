@@ -171,12 +171,15 @@ export function mergeResolved(base: ResolvedDocument, change: ResolvedDocument, 
         const replacement = replacements.get(key);
         if (replacement) {
             const changeVersion = elementVersion(replacement);
+            // The id exists in the base, so the entry is a replacement either
+            // way: applied, or stale and dropped. Leaving it in `replacements`
+            // would append it again as a create and duplicate the element.
+            replacements.delete(key);
             if (changeVersion !== 0 && changeVersion <= baseVersion) {
                 reportConflict(conflicts, strict, key, changeVersion, baseVersion);
                 elements.push(elem);
             } else {
                 elements.push(replacement);
-                replacements.delete(key);
             }
             continue;
         }

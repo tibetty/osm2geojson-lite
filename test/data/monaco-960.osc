@@ -1,0 +1,346 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osmChange version="0.6" generator="osmium/1.16.0">
+  <modify>
+    <node id="6684051501" version="34" timestamp="2026-11-06T15:52:40Z" lat="43.7323492" lon="7.4276832">
+      <tag k="ISO3166-1:alpha2" v="MC"/>
+      <tag k="flag" v="File:Flag of Monaco.svg"/>
+      <tag k="name" v="Monaco"/>
+      <tag k="name:ar" v="موناكو"/>
+      <tag k="name:be" v="Манака"/>
+      <tag k="name:bg" v="Монако"/>
+      <tag k="name:br" v="Monako"/>
+      <tag k="name:ckb" v="مۆناکۆ"/>
+      <tag k="name:cs" v="Monako"/>
+      <tag k="name:de" v="Monaco"/>
+      <tag k="name:el" v="Μονακό"/>
+      <tag k="name:en" v="Monaco"/>
+      <tag k="name:eo" v="Monako"/>
+      <tag k="name:es" v="Mónaco"/>
+      <tag k="name:et" v="Monaco"/>
+      <tag k="name:eu" v="Monako"/>
+      <tag k="name:fa" v="موناکو"/>
+      <tag k="name:fr" v="Monaco"/>
+      <tag k="name:he" v="מונקו"/>
+      <tag k="name:hr" v="Monako"/>
+      <tag k="name:hu" v="Monaco"/>
+      <tag k="name:it" v="Monaco"/>
+      <tag k="name:ja" v="モナコ"/>
+      <tag k="name:ko" v="모나코"/>
+      <tag k="name:ks" v="مونیٚکو"/>
+      <tag k="name:kw" v="Monako"/>
+      <tag k="name:lij" v="Mùnegu"/>
+      <tag k="name:mr" v="मोनाको"/>
+      <tag k="name:pl" v="Monako"/>
+      <tag k="name:pnb" v="موناکو"/>
+      <tag k="name:pt" v="Mónaco"/>
+      <tag k="name:ro" v="Monako"/>
+      <tag k="name:ru" v="Монако"/>
+      <tag k="name:sk" v="Monako"/>
+      <tag k="name:sl" v="Monako"/>
+      <tag k="name:sr" v="Монако"/>
+      <tag k="name:szl" v="Mōnako"/>
+      <tag k="name:tk" v="Monako"/>
+      <tag k="name:tr" v="Monako"/>
+      <tag k="name:ug" v="موناكو"/>
+      <tag k="name:uk" v="Монако"/>
+      <tag k="name:ur" v="موناکو"/>
+      <tag k="name:wal" v="Monaakko"/>
+      <tag k="name:zh" v="摩纳哥/摩納哥"/>
+      <tag k="name:zh-Hans" v="摩纳哥"/>
+      <tag k="name:zh-Hant" v="摩納哥"/>
+      <tag k="official_name:be" v="Княства Манака"/>
+      <tag k="official_name:br" v="Priñselezh Monako"/>
+      <tag k="official_name:de" v="Fürstentum Monaco"/>
+      <tag k="official_name:en" v="Principality of Monaco"/>
+      <tag k="official_name:et" v="Monaco Vürstiriik"/>
+      <tag k="official_name:fr" v="Principauté de Monaco"/>
+      <tag k="official_name:hr" v="Kneževina Monako"/>
+      <tag k="official_name:ko" v="모나코 공국"/>
+      <tag k="official_name:lij" v="Prinçipatu de Mùnegu"/>
+      <tag k="official_name:pt" v="Principado do Mónaco"/>
+      <tag k="official_name:uk" v="Князівство Монако"/>
+      <tag k="place" v="country"/>
+      <tag k="population" v="38857"/>
+      <tag k="population:date" v="2025"/>
+      <tag k="source:population" v="census"/>
+      <tag k="wikidata" v="Q235"/>
+      <tag k="wikipedia" v="fr:Monaco"/>
+    </node>
+  </modify>
+  <create>
+    <node id="14354106001" version="1" timestamp="2026-11-06T10:06:56Z" lat="43.7284687" lon="7.4184846">
+      <tag k="addr:city" v="Monaco"/>
+      <tag k="addr:housenumber" v="9"/>
+      <tag k="addr:postcode" v="98000"/>
+      <tag k="addr:street" v="Avenue des Papalins"/>
+      <tag k="contact:phone" v="+377 92 00 33 74"/>
+      <tag k="name" v="Interaction"/>
+      <tag k="office" v="employment_agency"/>
+      <tag k="opening_hours" v="Mo-Th 08:30-12:30, 13:30-17:30; Fr 08:30-12:30, 13:30-16:30"/>
+    </node>
+  </create>
+  <modify>
+    <relation id="1124039" version="75" timestamp="2026-11-06T15:51:37Z">
+      <member type="node" ref="1790048269" role="admin_centre"/>
+      <member type="node" ref="6684051501" role="label"/>
+      <member type="way" ref="30630044" role="outer"/>
+      <member type="way" ref="770774502" role="outer"/>
+      <member type="way" ref="770774507" role="outer"/>
+      <member type="way" ref="37794470" role="outer"/>
+      <member type="way" ref="398372186" role="outer"/>
+      <member type="way" ref="37794471" role="outer"/>
+      <member type="way" ref="398377196" role="outer"/>
+      <member type="way" ref="398377195" role="outer"/>
+      <member type="way" ref="398362859" role="outer"/>
+      <member type="way" ref="37811853" role="outer"/>
+      <member type="way" ref="176533407" role="outer"/>
+      <member type="way" ref="212810311" role="outer"/>
+      <member type="way" ref="30837497" role="outer"/>
+      <member type="way" ref="46428737" role="outer"/>
+      <member type="relation" ref="2220322" role="subarea"/>
+      <tag k="ISO3166-1" v="MC"/>
+      <tag k="ISO3166-1:alpha2" v="MC"/>
+      <tag k="ISO3166-1:alpha3" v="MCO"/>
+      <tag k="ISO3166-1:numeric" v="492"/>
+      <tag k="admin_level" v="2"/>
+      <tag k="border_type" v="nation"/>
+      <tag k="boundary" v="administrative"/>
+      <tag k="currency" v="EUR"/>
+      <tag k="default_language" v="fr"/>
+      <tag k="flag" v="File:Flag of Monaco.svg"/>
+      <tag k="int_name" v="Monaco"/>
+      <tag k="name" v="Monaco"/>
+      <tag k="name:ace" v="Monakô"/>
+      <tag k="name:af" v="Monaco"/>
+      <tag k="name:als" v="Monaco"/>
+      <tag k="name:am" v="ሞናኮ"/>
+      <tag k="name:an" v="Múnegu"/>
+      <tag k="name:ang" v="Monaco"/>
+      <tag k="name:ar" v="موناكو"/>
+      <tag k="name:arc" v="ܡܘܢܐܩܘ"/>
+      <tag k="name:arz" v="موناكو"/>
+      <tag k="name:ast" v="Mónacu"/>
+      <tag k="name:az" v="Monako"/>
+      <tag k="name:ba" v="Монако"/>
+      <tag k="name:bar" v="Monaco"/>
+      <tag k="name:bcl" v="Monako"/>
+      <tag k="name:be" v="Манака"/>
+      <tag k="name:be-tarask" v="Манака"/>
+      <tag k="name:bg" v="Монако"/>
+      <tag k="name:bi" v="Monaco"/>
+      <tag k="name:bn" v="মোনাকো"/>
+      <tag k="name:bo" v="མོ་ན་ཁོ།"/>
+      <tag k="name:bpy" v="মোনাকো"/>
+      <tag k="name:br" v="Monako"/>
+      <tag k="name:bs" v="Monako"/>
+      <tag k="name:bxr" v="Монако"/>
+      <tag k="name:ca" v="Mònaco"/>
+      <tag k="name:ce" v="Монако"/>
+      <tag k="name:ceb" v="Monako"/>
+      <tag k="name:ckb" v="مۆناکۆ"/>
+      <tag k="name:crh" v="Monako"/>
+      <tag k="name:cs" v="Monako"/>
+      <tag k="name:csb" v="Mònakò"/>
+      <tag k="name:cu" v="Монако"/>
+      <tag k="name:cv" v="Монако"/>
+      <tag k="name:cy" v="Monaco"/>
+      <tag k="name:da" v="Monaco"/>
+      <tag k="name:de" v="Monaco"/>
+      <tag k="name:diq" v="Monako"/>
+      <tag k="name:dsb" v="Monaco"/>
+      <tag k="name:dv" v="މޮނާކޯ"/>
+      <tag k="name:ee" v="Monaco"/>
+      <tag k="name:el" v="Μονακό"/>
+      <tag k="name:en" v="Monaco"/>
+      <tag k="name:eo" v="Monako"/>
+      <tag k="name:es" v="Mónaco"/>
+      <tag k="name:et" v="Monaco"/>
+      <tag k="name:eu" v="Monako"/>
+      <tag k="name:ext" v="Mónacu"/>
+      <tag k="name:fa" v="موناکو"/>
+      <tag k="name:fi" v="Monaco"/>
+      <tag k="name:fo" v="Monako"/>
+      <tag k="name:fr" v="Monaco"/>
+      <tag k="name:frp" v="Monacô"/>
+      <tag k="name:frr" v="Monako"/>
+      <tag k="name:fy" v="Monako"/>
+      <tag k="name:ga" v="Monacó"/>
+      <tag k="name:gag" v="Monako"/>
+      <tag k="name:gd" v="Monaco"/>
+      <tag k="name:gl" v="Mónaco"/>
+      <tag k="name:gn" v="Mónako"/>
+      <tag k="name:gu" v="મોનૅકો"/>
+      <tag k="name:gv" v="Monaco"/>
+      <tag k="name:hak" v="Mô-na̍p-kô"/>
+      <tag k="name:haw" v="Monako"/>
+      <tag k="name:he" v="מונקו"/>
+      <tag k="name:hi" v="मोनैको"/>
+      <tag k="name:hif" v="Monaco"/>
+      <tag k="name:hr" v="Monako"/>
+      <tag k="name:hsb" v="Monako"/>
+      <tag k="name:ht" v="Monako"/>
+      <tag k="name:hu" v="Monaco"/>
+      <tag k="name:hy" v="Մոնակո"/>
+      <tag k="name:ia" v="Monaco"/>
+      <tag k="name:id" v="Monako"/>
+      <tag k="name:ie" v="Mónaco"/>
+      <tag k="name:ilo" v="Monaco"/>
+      <tag k="name:io" v="Monako"/>
+      <tag k="name:is" v="Mónakó"/>
+      <tag k="name:it" v="Monaco"/>
+      <tag k="name:ja" v="モナコ"/>
+      <tag k="name:jv" v="Monako"/>
+      <tag k="name:ka" v="მონაკო"/>
+      <tag k="name:kaa" v="Monako"/>
+      <tag k="name:kbd" v="Монако"/>
+      <tag k="name:kg" v="Monako"/>
+      <tag k="name:kk" v="Монако"/>
+      <tag k="name:kl" v="Monaco"/>
+      <tag k="name:kn" v="ಮೊನಾಕೊ"/>
+      <tag k="name:ko" v="모나코"/>
+      <tag k="name:koi" v="Монако"/>
+      <tag k="name:krc" v="Монако"/>
+      <tag k="name:ks" v="موناکو"/>
+      <tag k="name:ku" v="Monako"/>
+      <tag k="name:kv" v="Монако"/>
+      <tag k="name:kw" v="Monako"/>
+      <tag k="name:la" v="Monoecus"/>
+      <tag k="name:lad" v="Monako"/>
+      <tag k="name:lb" v="Monaco"/>
+      <tag k="name:lez" v="Монако"/>
+      <tag k="name:li" v="Monaco"/>
+      <tag k="name:lij" v="Múnegu"/>
+      <tag k="name:lmo" v="Monach"/>
+      <tag k="name:ln" v="Monaco"/>
+      <tag k="name:lt" v="Monakas"/>
+      <tag k="name:ltg" v="Monaks"/>
+      <tag k="name:lv" v="Monako"/>
+      <tag k="name:mdf" v="Монако"/>
+      <tag k="name:mhr" v="Монако онлык"/>
+      <tag k="name:mi" v="Manako"/>
+      <tag k="name:mk" v="Монако"/>
+      <tag k="name:ml" v="മൊണാക്കോ"/>
+      <tag k="name:mn" v="Монако"/>
+      <tag k="name:mr" v="मोनॅको"/>
+      <tag k="name:ms" v="Monaco"/>
+      <tag k="name:mt" v="Monako"/>
+      <tag k="name:my" v="နိုင်ငံ"/>
+      <tag k="name:na" v="Monako"/>
+      <tag k="name:nah" v="Monaco"/>
+      <tag k="name:nan" v="Monaco"/>
+      <tag k="name:nds" v="Monaco"/>
+      <tag k="name:nds-nl" v="Monaco"/>
+      <tag k="name:ne" v="मोनाको"/>
+      <tag k="name:nl" v="Monaco"/>
+      <tag k="name:nn" v="Monaco"/>
+      <tag k="name:no" v="Monaco"/>
+      <tag k="name:nov" v="Monako"/>
+      <tag k="name:oc" v="Mónegue"/>
+      <tag k="name:or" v="ମୋନାକୋ"/>
+      <tag k="name:os" v="Монако"/>
+      <tag k="name:pa" v="ਮੋਨਾਕੋ"/>
+      <tag k="name:pam" v="Monako"/>
+      <tag k="name:pcd" v="Monaco"/>
+      <tag k="name:pfl" v="Monaggo"/>
+      <tag k="name:pih" v="Monako"/>
+      <tag k="name:pl" v="Monako"/>
+      <tag k="name:pms" v="Mònaco"/>
+      <tag k="name:pnb" v="موناکو"/>
+      <tag k="name:pnt" v="Μονακό"/>
+      <tag k="name:pt" v="Mónaco"/>
+      <tag k="name:pt-BR" v="Mônaco"/>
+      <tag k="name:qu" v="Munaku"/>
+      <tag k="name:rm" v="Monaco"/>
+      <tag k="name:ro" v="Monaco"/>
+      <tag k="name:roa-tara" v="Prengepáte de Monache"/>
+      <tag k="name:ru" v="Монако"/>
+      <tag k="name:rw" v="Monako"/>
+      <tag k="name:sa" v="मोनाको"/>
+      <tag k="name:sah" v="Монако"/>
+      <tag k="name:scn" v="Mònacu"/>
+      <tag k="name:sco" v="Monaco"/>
+      <tag k="name:se" v="Monaco"/>
+      <tag k="name:sgs" v="Muonaks"/>
+      <tag k="name:sh" v="Monako"/>
+      <tag k="name:sk" v="Monako"/>
+      <tag k="name:sl" v="Monako"/>
+      <tag k="name:smn" v="Monaco"/>
+      <tag k="name:sms" v="Monaco"/>
+      <tag k="name:so" v="Monako"/>
+      <tag k="name:sq" v="Monako"/>
+      <tag k="name:sr" v="Монако"/>
+      <tag k="name:ss" v="IMonakho"/>
+      <tag k="name:stq" v="Monaco"/>
+      <tag k="name:su" v="Monako"/>
+      <tag k="name:sv" v="Monaco"/>
+      <tag k="name:sw" v="Monako"/>
+      <tag k="name:szl" v="Mōnako"/>
+      <tag k="name:ta" v="மொனாக்கோ"/>
+      <tag k="name:tg" v="Монако"/>
+      <tag k="name:th" v="ประเทศโมนาโก"/>
+      <tag k="name:tk" v="Monako"/>
+      <tag k="name:tl" v="Monako"/>
+      <tag k="name:tok" v="ma Monako"/>
+      <tag k="name:tr" v="Monako"/>
+      <tag k="name:tt" v="Монако"/>
+      <tag k="name:tw" v="Monako"/>
+      <tag k="name:tzl" v="Mónaco"/>
+      <tag k="name:udm" v="Монако"/>
+      <tag k="name:ug" v="موناكو"/>
+      <tag k="name:uk" v="Монако"/>
+      <tag k="name:ur" v="موناکو"/>
+      <tag k="name:uz" v="Monako"/>
+      <tag k="name:vec" v="Mònaco"/>
+      <tag k="name:vep" v="Monak"/>
+      <tag k="name:vi" v="Monaco"/>
+      <tag k="name:vo" v="Monakän"/>
+      <tag k="name:vro" v="Monaco"/>
+      <tag k="name:war" v="Monaco"/>
+      <tag k="name:wo" v="Monaako"/>
+      <tag k="name:wuu" v="摩纳哥"/>
+      <tag k="name:xal" v="Монакин Нутг"/>
+      <tag k="name:xmf" v="მონაკო"/>
+      <tag k="name:yi" v="מאנאקא"/>
+      <tag k="name:yo" v="Mónakò"/>
+      <tag k="name:yue" v="摩納哥"/>
+      <tag k="name:zea" v="Monaco"/>
+      <tag k="name:zh" v="摩纳哥"/>
+      <tag k="name:zh-Hans" v="摩纳哥"/>
+      <tag k="name:zh-Hant" v="摩納哥"/>
+      <tag k="name:zh-Latn-pinyin" v="Mónàgē"/>
+      <tag k="note" v="this includes the full country (outer roles), i.e. the all territorial waters and the landarea (which is not an &quot;inner&quot; role excluding it, but just a link)"/>
+      <tag k="official_name" v="Principauté de Monaco"/>
+      <tag k="official_name:ar" v="إمارة موناكو"/>
+      <tag k="official_name:be" v="Княства Манака"/>
+      <tag k="official_name:br" v="Priñselezh Monako"/>
+      <tag k="official_name:ca" v="Principat de Mònaco"/>
+      <tag k="official_name:cs" v="Monacké knížectví"/>
+      <tag k="official_name:de" v="Fürstentum Monaco"/>
+      <tag k="official_name:en" v="Principality of Monaco"/>
+      <tag k="official_name:eo" v="Princlando Monako"/>
+      <tag k="official_name:es" v="Principado de Mónaco"/>
+      <tag k="official_name:fi" v="Monacon ruhtinaskunta"/>
+      <tag k="official_name:fr" v="Principauté de Monaco"/>
+      <tag k="official_name:gn" v="Mburuvichavete ra&apos;y rekuái Mónako"/>
+      <tag k="official_name:hr" v="Kneževina Monako"/>
+      <tag k="official_name:hu" v="Monacói Hercegség"/>
+      <tag k="official_name:lij" v="Principatu de Múnegu"/>
+      <tag k="official_name:oc" v="Principat de Mónegue"/>
+      <tag k="official_name:pt" v="Principado do Mónaco"/>
+      <tag k="official_name:pt-BR" v="Principado de Mônaco"/>
+      <tag k="official_name:ru" v="Княжество Монако"/>
+      <tag k="official_name:sk" v="Monacké kniežatstvo"/>
+      <tag k="official_name:sv" v="Furstendömet Monaco"/>
+      <tag k="population" v="38857"/>
+      <tag k="population:date" v="2025"/>
+      <tag k="source:name:oc" v="ieo-bdtopoc"/>
+      <tag k="source:population" v="census"/>
+      <tag k="timezone" v="Europe/Monaco"/>
+      <tag k="type" v="boundary"/>
+      <tag k="website" v="https://www.gouv.mc"/>
+      <tag k="wikidata" v="Q235"/>
+      <tag k="wikimedia_commons" v="Category:Monaco"/>
+      <tag k="wikipedia" v="fr:Monaco"/>
+    </relation>
+  </modify>
+</osmChange>

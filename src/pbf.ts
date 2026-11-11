@@ -58,6 +58,40 @@ class Reader {
         return this.varint();
     }
 
+    /**
+     * Varint as a signed 64-bit integer. Fields that use this (`way.id`,
+     * `relation.id`, `lat_offset`, `lon_offset`) are `int64` rather than
+     * `sint64`, so negatives arrive as ten-byte two's complement. The shift is
+     * done in BigInt because a 64-bit value does not fit a double exactly.
+     */
+    public int64(): number {
+        const data = this.data;
+        let pos = this.pos;
+        let result = 0n;
+        let shift = 0n;
+        for (;;) {
+            if (pos >= data.length) {
+                throw new Error('truncated PBF varint');
+            }
+            const byte = data[pos++];
+            result |= BigInt(byte & 0x7f) << shift;
+            if ((byte & 0x80) === 0) {
+                break;
+            }
+            shift += 7n;
+        }
+        this.pos = pos;
+        return Number(BigInt.asIntN(64, result));
+    }
+
+    /** A length-delimited field; anything else is a malformed message. */
+    public message(tag: number): Uint8Array {
+        if ((tag & 7) !== WIRE_BYTES) {
+            throw new Error(`unexpected PBF wire type ${tag & 7}`);
+        }
+        return this.bytes();
+    }
+
     public bytes(): Uint8Array {
         const length = this.varint();
         const start = this.pos;
@@ -228,13 +262,13 @@ function parseNode(bytes: Uint8Array, context: BlockContext): any {
                 element.id = zigzag(reader.varint());
                 break;
             case 2:
-                appendVarints(keys, reader.bytes());
+                appendVarints(keys, reader.message(tag));
                 break;
             case 3:
-                appendVarints(vals, reader.bytes());
+                appendVarints(vals, reader.message(tag));
                 break;
             case 4:
-                info = parseInfo(reader.bytes(), context);
+                info = parseInfo(reader.message(tag), context);
                 break;
             case 8:
                 lat = zigzag(reader.varint());
@@ -272,7 +306,7 @@ function parseDenseInfo(bytes: Uint8Array): DenseInfo {
         const tag = reader.tag();
         const field = tag >>> 3;
         if (field >= 1 && field <= 6) {
-            const values = packedVarints(reader.bytes());
+            const values = packedVarints(reader.message(tag));
             switch (field) {
                 case 1:
                     info.version = values;
@@ -312,19 +346,19 @@ function parseDenseNodes(bytes: Uint8Array, context: BlockContext): any[] {
         const field = tag >>> 3;
         switch (field) {
             case 1:
-                ids = packedVarints(reader.bytes());
+                ids = packedVarints(reader.message(tag));
                 break;
             case 5:
-                denseInfo = parseDenseInfo(reader.bytes());
+                denseInfo = parseDenseInfo(reader.message(tag));
                 break;
             case 8:
-                lats = packedVarints(reader.bytes());
+                lats = packedVarints(reader.message(tag));
                 break;
             case 9:
-                lons = packedVarints(reader.bytes());
+                lons = packedVarints(reader.message(tag));
                 break;
             case 10:
-                keyVals = packedVarints(reader.bytes());
+                keyVals = packedVarints(reader.message(tag));
                 break;
             default:
                 reader.skip(tag & 7);
@@ -412,25 +446,25 @@ function parseWay(bytes: Uint8Array, context: BlockContext): any {
         const field = tag >>> 3;
         switch (field) {
             case 1:
-                element.id = reader.varint();
+                element.id = reader.int64();
                 break;
             case 2:
-                appendVarints(keys, reader.bytes());
+                appendVarints(keys, reader.message(tag));
                 break;
             case 3:
-                appendVarints(vals, reader.bytes());
+                appendVarints(vals, reader.message(tag));
                 break;
             case 4:
-                info = parseInfo(reader.bytes(), context);
+                info = parseInfo(reader.message(tag), context);
                 break;
             case 8:
-                appendVarints(refs, reader.bytes());
+                appendVarints(refs, reader.message(tag));
                 break;
             case 9:
-                appendVarints(lats, reader.bytes());
+                appendVarints(lats, reader.message(tag));
                 break;
             case 10:
-                appendVarints(lons, reader.bytes());
+                appendVarints(lons, reader.message(tag));
                 break;
             default:
                 reader.skip(tag & 7);
@@ -483,25 +517,25 @@ function parseRelation(bytes: Uint8Array, context: BlockContext): any {
         const field = tag >>> 3;
         switch (field) {
             case 1:
-                element.id = reader.varint();
+                element.id = reader.int64();
                 break;
             case 2:
-                appendVarints(keys, reader.bytes());
+                appendVarints(keys, reader.message(tag));
                 break;
             case 3:
-                appendVarints(vals, reader.bytes());
+                appendVarints(vals, reader.message(tag));
                 break;
             case 4:
-                info = parseInfo(reader.bytes(), context);
+                info = parseInfo(reader.message(tag), context);
                 break;
             case 8:
-                appendVarints(roles, reader.bytes());
+                appendVarints(roles, reader.message(tag));
                 break;
             case 9:
-                appendVarints(memids, reader.bytes());
+                appendVarints(memids, reader.message(tag));
                 break;
             case 10:
-                appendVarints(types, reader.bytes());
+                appendVarints(types, reader.message(tag));
                 break;
             default:
                 reader.skip(tag & 7);
@@ -536,7 +570,7 @@ function parseStringTable(bytes: Uint8Array): string[] {
     while (!reader.atEnd()) {
         const tag = reader.tag();
         if ((tag >>> 3) === 1) {
-            strings.push(decodeUtf8(reader.bytes()));
+            strings.push(decodeUtf8(reader.message(tag)));
         } else {
             reader.skip(tag & 7);
         }
@@ -560,10 +594,10 @@ function parsePrimitiveBlock(bytes: Uint8Array, elements: any[]): void {
         const field = tag >>> 3;
         switch (field) {
             case 1:
-                context.strings = parseStringTable(reader.bytes());
+                context.strings = parseStringTable(reader.message(tag));
                 break;
             case 2:
-                groups.push(reader.bytes());
+                groups.push(reader.message(tag));
                 break;
             case 17:
                 context.granularity = reader.varint();
@@ -572,10 +606,10 @@ function parsePrimitiveBlock(bytes: Uint8Array, elements: any[]): void {
                 context.dateGranularity = reader.varint();
                 break;
             case 19:
-                context.latOffset = zigzag(reader.varint());
+                context.latOffset = reader.int64();
                 break;
             case 20:
-                context.lonOffset = zigzag(reader.varint());
+                context.lonOffset = reader.int64();
                 break;
             default:
                 reader.skip(tag & 7);
@@ -589,18 +623,18 @@ function parsePrimitiveBlock(bytes: Uint8Array, elements: any[]): void {
             const field = tag >>> 3;
             switch (field) {
                 case 1:
-                    elements.push(parseNode(groupReader.bytes(), context));
+                    elements.push(parseNode(groupReader.message(tag), context));
                     break;
                 case 2:
-                    for (const node of parseDenseNodes(groupReader.bytes(), context)) {
+                    for (const node of parseDenseNodes(groupReader.message(tag), context)) {
                         elements.push(node);
                     }
                     break;
                 case 3:
-                    elements.push(parseWay(groupReader.bytes(), context));
+                    elements.push(parseWay(groupReader.message(tag), context));
                     break;
                 case 4:
-                    elements.push(parseRelation(groupReader.bytes(), context));
+                    elements.push(parseRelation(groupReader.message(tag), context));
                     break;
                 default:
                     groupReader.skip(tag & 7);
@@ -615,7 +649,7 @@ function checkHeaderBlock(bytes: Uint8Array): void {
         const tag = reader.tag();
         const field = tag >>> 3;
         if (field === 4) {
-            const feature = decodeUtf8(reader.bytes());
+            const feature = decodeUtf8(reader.message(tag));
             if (SUPPORTED_FEATURES.indexOf(feature) < 0) {
                 throw new Error(`unsupported PBF required feature "${feature}"`);
             }
@@ -638,7 +672,7 @@ function parseBlobHeader(bytes: Uint8Array): BlobHeader {
         const field = tag >>> 3;
         switch (field) {
             case 1:
-                header.type = decodeUtf8(reader.bytes());
+                header.type = decodeUtf8(reader.message(tag));
                 break;
             case 3:
                 header.datasize = reader.varint();
@@ -662,29 +696,29 @@ function readBlob(bytes: Uint8Array): Uint8Array {
         const field = tag >>> 3;
         switch (field) {
             case 1:
-                raw = reader.bytes();
+                raw = reader.message(tag);
                 break;
             case 2:
                 rawSize = reader.varint();
                 break;
             case 3:
-                zlibData = reader.bytes();
+                zlibData = reader.message(tag);
                 break;
             case 4:
                 unsupported = 'lzma';
-                reader.bytes();
+                reader.message(tag);
                 break;
             case 5:
                 unsupported = 'bzip2';
-                reader.bytes();
+                reader.message(tag);
                 break;
             case 6:
                 unsupported = 'lz4';
-                reader.bytes();
+                reader.message(tag);
                 break;
             case 7:
                 unsupported = 'zstd';
-                reader.bytes();
+                reader.message(tag);
                 break;
             default:
                 reader.skip(tag & 7);

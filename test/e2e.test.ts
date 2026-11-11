@@ -16,7 +16,7 @@ function checkSnapshot(outputFile: string, geojson: any) {
 }
 
 describe('osm2geojson', () => {
-    let osmFiles = fs.readdirSync('./test/data').filter((file) => file.endsWith('.osm'));
+    let osmFiles = fs.readdirSync('./test/data').filter((file) => file.endsWith('.osm') || file.endsWith('.osc'));
     for (let xmlFile of osmFiles) {
         it('should convert OSM XML to GeoJSON ' + xmlFile, () => {
             let osm = fs.readFileSync(`./test/data/${xmlFile}`, 'utf-8');

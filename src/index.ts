@@ -100,8 +100,9 @@ function detectFormat(o: OsmInput): "json" | "xml" | "json-raw" | "pbf" | "inval
 function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElements): void {
     const elements = Array.isArray(osm.elements) ? resolveElementHistory(osm.elements).elements : [];
     for (const elem of elements) {
-        // Deleted elements from history/Overpass/osmChange must not produce geometry.
-        if (elem.visible === false || elem.visible === 'false' || elem.action === 'delete') {
+        // Junk entries and deleted elements (history, Overpass, osmChange) must
+        // not produce geometry.
+        if (!elem || elem.visible === false || elem.visible === 'false' || elem.action === 'delete') {
             continue;
         }
         // Overpass derived geometries (`local`, `convert`, `make`, `out geom`)
@@ -111,7 +112,10 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
             if (elem.tags) {
                 output.addTags(elem.tags);
             }
-            output.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'geometry']));
+            output.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'geometry', 'tainted']));
+            if (elem.tainted === true) {
+                output.tainted = true;
+            }
             output.setGeometry(elem.geometry);
             continue;
         }
@@ -122,15 +126,21 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
                 if (elem.tags) {
                     node.addTags(elem.tags);
                 }
-                node.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'lat', 'lon']));
+                node.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'lat', 'lon', 'tainted']));
                 node.setLatLng(elem);
+                if (elem.tainted === true) {
+                    node.tainted = true;
+                }
                 break;
             case 'way':
                 const way = new Way(elem.id as string, refElements);
                 if (elem.tags) {
                     way.addTags(elem.tags);
                 }
-                way.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'nodes', 'geometry']));
+                way.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'nodes', 'geometry', 'tainted']));
+                if (elem.tainted === true) {
+                    way.tainted = true;
+                }
                 if (elem.geometry) {
                     way.setLatLngArray(elem.geometry);
                 } else if (elem.center) {
@@ -154,7 +164,10 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
                 if (elem.center) {
                     relation.setCenter(elem.center);
                 }
-                relation.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'bounds', 'members']));
+                relation.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'bounds', 'members', 'tainted']));
+                if (elem.tainted === true) {
+                    relation.tainted = true;
+                }
                 if (elem.members) {
                     for (const member of elem.members) {
                         relation.addMember(member);
@@ -399,6 +412,12 @@ function convert(osm: OsmInput, opts?: IOptions): FeatureCollection<GeometryObje
     releaseNonGeometryRelationMembers(refElements);
     ensureRelationCyclesHaveRoot(refElements);
 
+    // A relation also reports its node members (stops, labels, `out geom`
+    // member nodes), and separately registered members are emitted by their own
+    // object. Keep the first feature per element so the collection never
+    // carries two features with the same id.
+    const emitted = new Set<string>();
+
     for (const v of refElements.values()) {
         if (v.refCount > 0 && (!v.hasTag || !renderTagged || (v instanceof Way && excludeWay))) {
             continue;
@@ -409,6 +428,13 @@ function convert(osm: OsmInput, opts?: IOptions): FeatureCollection<GeometryObje
             return features[0].geometry;
         }
         for (const feature of features) {
+            const id = feature.id;
+            if (typeof id === 'string') {
+                if (emitted.has(id)) {
+                    continue;
+                }
+                emitted.add(id);
+            }
             featureArray.push(feature);
         }
     }

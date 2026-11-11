@@ -44,8 +44,10 @@ export class RefElements extends Map<string, OsmObject> {
         }
         for (const [compositeId, version] of this.tombstones) {
             const element = this.get(compositeId);
-            // A tombstone without a version cannot be compared, so it wins.
-            if (!element || (version !== 0 && element.getVersion() > version)) {
+            // An unversioned tombstone counts as version 0, so it only removes
+            // an element that carries no version either: a deletion never
+            // overrides a newer state, which keeps XML and JSON consistent.
+            if (!element || element.getVersion() > version) {
                 continue;
             }
             this.removeBindersOwnedBy(element);

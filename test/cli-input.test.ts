@@ -65,3 +65,25 @@ describe('library input', () => {
         expect(() => osm2geojson(new Uint8Array(zstdCompressSync(XML)))).toThrow(/zstd input is not supported by the library/);
     });
 });
+
+describe('CLI input corner cases', () => {
+    it('treats an empty file as no input', () => {
+        expect(decodeInput(Buffer.alloc(0))).toEqual(Buffer.alloc(0));
+    });
+
+    it('surfaces a truncated gzip container', () => {
+        const gz = Buffer.from(gzipSync(XML));
+        expect(() => decodeInput(gz.subarray(0, gz.length - 6))).toThrow();
+    });
+
+    it('surfaces a truncated zstd container', () => {
+        const zst = Buffer.from(zstdCompressSync(XML));
+        expect(() => decodeInput(zst.subarray(0, zst.length - 8))).toThrow();
+    });
+
+    it('does not treat a gzip payload that starts with "<" as compressed text twice', () => {
+        const gz = Buffer.from(gzipSync(XML));
+        expect(gz[0]).toBe(0x1f);
+        expect(decodeInput(gz)).toBe(XML);
+    });
+});

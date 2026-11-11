@@ -157,6 +157,12 @@ Correctness
 
 Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also quite representative) in the `data` subfolders under `test` and `bench` directories, which also outperforms `osmtogeojson`.
 
+The test suite also runs real data: a Geofabrik PBF extract, osmChange diffs
+from the same update stream and history responses from the OSM API, plus a
+corpus-wide check that every fixture converts to unique, well-formed features
+and that the element path agrees with the direct path. Coverage thresholds are
+enforced by `npm test`; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 From a repository checkout, run:
 
 ```sh
@@ -170,7 +176,7 @@ confusing HTTP 304 responses while editing.
 
 Node.JS version
 ---
-  ES5/ES6 features
+  ES2020 (BigInt is used to decode signed 64-bit PBF fields)
   
 Dependencies
 ---

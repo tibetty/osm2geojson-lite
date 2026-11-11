@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osmChange version="0.6" generator="osmium/1.16.0">
+  <modify>
+    <node id="1690189834" version="4" timestamp="2026-09-04T16:50:13Z" lat="43.7380349" lon="7.4198951"/>
+  </modify>
+  <delete>
+    <node id="1690189838" version="4" timestamp="2025-07-23T22:51:32Z" lat="43.7380271" lon="7.419881"/>
+    <node id="8762145135" version="2" timestamp="2024-12-13T10:40:31Z" lat="43.7379511" lon="7.4197697"/>
+    <way id="156780344" version="4" timestamp="2025-07-23T22:51:32Z">
+      <nd ref="1690189834"/>
+      <nd ref="12419484954"/>
+      <nd ref="1690189838"/>
+      <nd ref="1690189840"/>
+      <tag k="highway" v="footway"/>
+    </way>
+  </delete>
+  <modify>
+    <way id="686912272" version="4" timestamp="2026-09-04T16:50:13Z">
+      <nd ref="1690189834"/>
+      <nd ref="1690189832"/>
+      <nd ref="12419484952"/>
+      <tag k="access" v="private"/>
+      <tag k="highway" v="footway"/>
+    </way>
+    <way id="946562630" version="7" timestamp="2026-09-04T16:50:13Z">
+      <nd ref="8762145129"/>
+      <nd ref="8762145139"/>
+      <nd ref="8762145138"/>
+      <nd ref="8762145137"/>
+      <nd ref="1690189832"/>
+      <nd ref="1690189834"/>
+      <nd ref="12419484954"/>
+      <nd ref="13019461738"/>
+      <nd ref="13019461739"/>
+      <nd ref="8762145130"/>
+      <nd ref="13019461741"/>
+      <nd ref="13019461742"/>
+      <nd ref="13019461740"/>
+      <nd ref="1690189848"/>
+      <nd ref="1690189840"/>
+      <nd ref="8762145129"/>
+      <tag k="area" v="yes"/>
+      <tag k="highway" v="pedestrian"/>
+      <tag k="name" v="Parvis Sainte-Dévote"/>
+      <tag k="smoothness" v="excellent"/>
+      <tag k="source" v="Bing"/>
+      <tag k="surface" v="paving_stones"/>
+    </way>
+  </modify>
+</osmChange>
