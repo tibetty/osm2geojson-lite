@@ -1,6 +1,7 @@
 import { purgeProps } from './utils';
 import { parseOsmXml } from './osm-xml';
 import { parseOsmPbf } from './pbf';
+import { detectCompression } from './compressed';
 import { LatLon, Node } from './node';
 import { Way } from './way';
 import type { PolygonTags } from './way';
@@ -460,6 +461,10 @@ function osm2geojson(osm: OsmInput, opts?: IOptions): FeatureCollection<Geometry
         analyzeFeaturesFromXml(osm as string, refElements);
     } else if (format === 'pbf') {
         const bytes = osm instanceof Uint8Array ? osm : new Uint8Array(osm as ArrayBuffer);
+        const compression = detectCompression(bytes);
+        if (compression) {
+            throw new Error(`${compression} input is not supported by the library, decompress it first (the CLI does this automatically)`);
+        }
         analyzeFeaturesFromJson(parseOsmPbf(bytes), refElements);
     }
 

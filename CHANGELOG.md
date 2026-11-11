@@ -1,5 +1,6 @@
 Changelog:
 -----
+* 2026-11 (2.6.0): The CLI decompresses gzip (`.gz`) and zstd (`.zst`) input, including compressed PBF, and reports bzip2/xz with an actionable hint; the library names the compression container instead of failing with a PBF parse error.
 * 2026-11 (2.5.0): Input and history coverage: osmChange (`.osc`) `create`/`modify`/`delete` sections and `action="delete"`; OSM PBF input in the library and the CLI, with a bundled synchronous zlib/DEFLATE decoder that keeps runtime dependencies at zero; full history resolution (newest version wins, deletions become tombstones, references to deleted elements stay unresolved) across XML, JSON and PBF.
 * 2026-11 (2.4.0): Role-aware relation member handling: polygon subarea/other roles and node members (stops, admin centres, labels) are emitted independently; route platform members are excluded from relation geometry; member roles stay aligned through late binding.
 * 2026-11 (2.3.0): Align relation semantics with OSM: type-based geometry dispatch, empty role treated as outer, old-style multipolygon attribution to the tagged outer way, non-geometry relations no longer synthesized, `visible=false` skipped and derived polygon rings closed.
