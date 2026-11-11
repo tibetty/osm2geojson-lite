@@ -1,6 +1,6 @@
 {
   "name": "osm2geojson-lite",
-  "version": "2.7.1",
+  "version": "2.7.2",
   "description": "a lightweight yet faster osm (xml, pbf or json) to geojson convertor - 4x faster than xmldom + osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency",
   "author": "tibetty",
   "license": "MIT",
