@@ -14,13 +14,18 @@ const built = fs.existsSync(cli);
 // The Monaco extract produces ~8 MB of GeoJSON on stdout.
 const run = (args: string[], input?: Buffer | string) => spawnSync(process.execPath, [cli, ...args], { input, maxBuffer: 64 * 1024 * 1024 });
 
+/** Include the CLI's own diagnostics in a failing assertion. */
+const expectOk = (result: ReturnType<typeof run>) => {
+    expect(result.status, result.stderr.toString() || result.error?.message).toBe(0);
+};
+
 const xml = '<osm><node id="1" lat="0" lon="0"><tag k="name" v="a"/></node></osm>';
 
 describe.skipIf(!built)('CLI', () => {
     it('converts a file to a file', () => {
         const output = 'test/expected/.cli-out.json';
         const result = run(['test/data/node.osm', output]);
-        expect(result.status).toBe(0);
+        expectOk(result);
         const geojson = JSON.parse(fs.readFileSync(output, 'utf-8'));
         expect(geojson.type).toBe('FeatureCollection');
         fs.rmSync(output);
@@ -28,7 +33,7 @@ describe.skipIf(!built)('CLI', () => {
 
     it('reads stdin and writes stdout', () => {
         const result = run([], xml);
-        expect(result.status).toBe(0);
+        expectOk(result);
         const geojson = JSON.parse(result.stdout.toString());
         expect(geojson.features[0].properties).toMatchObject({ id: 'node/1', name: 'a' });
     });
@@ -38,20 +43,20 @@ describe.skipIf(!built)('CLI', () => {
         fs.writeFileSync(gzipped, gzipSync(xml));
         const result = run([gzipped]);
         fs.rmSync(gzipped);
-        expect(result.status).toBe(0);
+        expectOk(result);
         expect(JSON.parse(result.stdout.toString()).features).toHaveLength(1);
     });
 
     it('converts a real PBF extract', () => {
         const result = run(['test/data/monaco.osm.pbf']);
-        expect(result.status).toBe(0);
+        expectOk(result);
         const geojson = JSON.parse(result.stdout.toString());
         expect(geojson.features.length).toBeGreaterThan(9000);
     });
 
     it('converts an osmChange diff', () => {
         const result = run(['test/data/monaco-960.osc']);
-        expect(result.status).toBe(0);
+        expectOk(result);
         expect(JSON.parse(result.stdout.toString()).features.map((feature: any) => feature.id).sort())
             .toEqual(['node/14354106001', 'node/6684051501']);
     });
