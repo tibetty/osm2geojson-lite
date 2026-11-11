@@ -14,13 +14,45 @@ export class RefElements extends Map<string, OsmObject> {
 
     private binders: LateBinder<any>[];
     private duplicates: Array<{ existing: OsmObject; duplicate: OsmObject }>;
+    /** composite id -> newest version known to be deleted */
+    private tombstones: Map<string, number>;
 
     constructor() {
         super();
         this.binders = [];
         this.duplicates = [];
+        this.tombstones = new Map();
         this.reportTainted = false;
         this.polygonTags = undefined;
+    }
+
+    /**
+     * Record that an element was deleted at `version` (`visible=false`, an
+     * osmChange `<delete>` section or `action="delete"`). History resolution
+     * removes the surviving copy so a deleted element never yields geometry
+     * and references to it stay unresolved (and therefore tainted).
+     */
+    public markDeleted(compositeId: string, version: number) {
+        const known = this.tombstones.get(compositeId);
+        if (known === undefined || version > known) {
+            this.tombstones.set(compositeId, version);
+        }
+    }
+
+    private resolveHistory() {
+        if (this.tombstones.size === 0) {
+            return;
+        }
+        for (const [compositeId, version] of this.tombstones) {
+            const element = this.get(compositeId);
+            // A tombstone without a version cannot be compared, so it wins.
+            if (!element || (version !== 0 && element.getVersion() > version)) {
+                continue;
+            }
+            this.removeBindersOwnedBy(element);
+            this.delete(compositeId);
+        }
+        this.tombstones.clear();
     }
 
     public add(k: string, v: OsmObject) {
@@ -53,7 +85,23 @@ export class RefElements extends Map<string, OsmObject> {
      */
     private mergeDuplicates() {
         for (const { existing, duplicate } of this.duplicates) {
-            const preferDuplicate = duplicate.getVersion() > existing.getVersion();
+            const existingVersion = existing.getVersion();
+            const duplicateVersion = duplicate.getVersion();
+            // History extracts carry several versions of the same element: the
+            // newest version defines it and older copies must not contribute
+            // tags or geometry. Copies without a version are treated as
+            // incomplete duplicates and still merged.
+            if (existingVersion > 0 && duplicateVersion > 0 && existingVersion !== duplicateVersion) {
+                if (duplicateVersion > existingVersion) {
+                    this.removeBindersOwnedBy(existing);
+                    this.set(existing.getCompositeId(), duplicate);
+                } else {
+                    this.removeBindersOwnedBy(duplicate);
+                }
+                continue;
+            }
+
+            const preferDuplicate = duplicateVersion > existingVersion;
             existing.mergeFrom(duplicate);
 
             if (duplicate instanceof Output && !(existing instanceof Output)) {
@@ -101,6 +149,7 @@ export class RefElements extends Map<string, OsmObject> {
         if (this.duplicates.length > 0) {
             this.mergeDuplicates();
         }
+        this.resolveHistory();
         if (this.binders.length === 0) {
             return;
         }

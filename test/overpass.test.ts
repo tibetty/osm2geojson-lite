@@ -227,14 +227,15 @@ describe('duplicate input elements', () => {
         expect(feature.properties.highway).toBe('path');
     });
 
-    it('keeps the newest version and fills missing tags from older copies', () => {
+    it('keeps only the newest version when versions differ', () => {
         const result = json([
             { type: 'node', id: 1, lat: 0, lon: 0, tags: { name: 'old', amenity: 'cafe' }, version: 1 },
             { type: 'node', id: 1, lat: 1, lon: 1, tags: { name: 'new' }, version: 2 },
         ]);
         const feature = result.features[0];
         expect(feature.geometry).toEqual({ type: 'Point', coordinates: [1, 1] });
-        expect(feature.properties).toMatchObject({ name: 'new', amenity: 'cafe', version: 2 });
+        expect(feature.properties).toMatchObject({ name: 'new', version: 2 });
+        expect(feature.properties.amenity).toBeUndefined();
     });
 
     it('merges XML duplicate ways with geometry and tags', () => {
@@ -252,14 +253,15 @@ describe('duplicate input elements', () => {
         }
     });
 
-    it('merges XML duplicate node versions', () => {
+    it('keeps only the newest XML node version', () => {
         const source = '<osm>'
             + '<node id="1" version="1" lat="0" lon="0"><tag k="name" v="old"/><tag k="amenity" v="cafe"/></node>'
             + '<node id="1" version="2" lat="1" lon="1"><tag k="name" v="new"/></node>'
             + '</osm>';
         const feature = xml(source).features[0];
         expect(feature.geometry).toEqual({ type: 'Point', coordinates: [1, 1] });
-        expect(feature.properties).toMatchObject({ name: 'new', amenity: 'cafe', version: '2' });
+        expect(feature.properties).toMatchObject({ name: 'new', version: '2' });
+        expect(feature.properties.amenity).toBeUndefined();
     });
 });
 

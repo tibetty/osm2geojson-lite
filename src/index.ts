@@ -78,14 +78,40 @@ function elementRank(elem: { [k: string]: any }): [number, number] {
     return [Number(elem.version) || 0, Object.keys(elem).length];
 }
 
+function isDeletedElement(elem: { [k: string]: any }): boolean {
+    return elem.visible === false || elem.visible === 'false' || elem.action === 'delete';
+}
+
 /**
- * Overpass unions can return the same element more than once, sometimes as a
- * skeleton (tags only) and sometimes with geometry. Keep the newest/most
- * complete copy but fill missing fields from the other copies so geometry and
- * tags are not lost.
+ * Merge copies of the same element that share a version. Overpass unions can
+ * return an element twice (once as a skeleton, once with geometry), so the
+ * most complete copy wins while missing tags and fields are filled in.
  */
-function deduplicateElements(elements: any[]): any[] {
-    const best = new Map<string, any>();
+function mergeCopies(copies: any[]): any {
+    let merged = copies[0];
+    for (let i = 1; i < copies.length; i++) {
+        const elem = copies[i];
+        const winner = elementRank(elem) > elementRank(merged) ? elem : merged;
+        const loser = winner === elem ? merged : elem;
+        const next: { [k: string]: any } = { ...loser, ...winner };
+        if (winner.tags || loser.tags) {
+            next.tags = { ...(loser.tags || {}), ...(winner.tags || {}) };
+        }
+        merged = next;
+    }
+    return merged;
+}
+
+/**
+ * Resolve duplicate elements.
+ *
+ * Overpass unions repeat the same element within one version; history extracts
+ * (`.osh`, `[adiff]`, `out meta`) repeat it across versions. Copies of one
+ * version are merged into the most complete one, while the newest version wins
+ * outright. A newest version that is deleted records a tombstone instead.
+ */
+function deduplicateElements(elements: any[], refElements: RefElements): any[] {
+    const groups = new Map<string, any[]>();
     const order: string[] = [];
     const extra: any[] = [];
 
@@ -95,26 +121,52 @@ function deduplicateElements(elements: any[]): any[] {
             continue;
         }
         const key = `${elem.type}/${elem.id}`;
-        const previous = best.get(key);
-        if (!previous) {
-            best.set(key, elem);
+        const group = groups.get(key);
+        if (group) {
+            group.push(elem);
+        } else {
+            groups.set(key, [elem]);
             order.push(key);
-            continue;
         }
-        const winner = elementRank(elem) > elementRank(previous) ? elem : previous;
-        const loser = winner === elem ? previous : elem;
-        const merged: { [k: string]: any } = { ...loser, ...winner };
-        if (winner.tags || loser.tags) {
-            merged.tags = { ...(loser.tags || {}), ...(winner.tags || {}) };
-        }
-        best.set(key, merged);
     }
 
-    return [...extra, ...order.map((key) => best.get(key)!)];
+    const result = [...extra];
+    for (const key of order) {
+        const group = groups.get(key)!;
+        let newest = group[0];
+        let newestVersion = 0;
+        for (const elem of group) {
+            if (elementRank(elem) > elementRank(newest)) {
+                newest = elem;
+            }
+            const version = Number(elem.version) || 0;
+            if (version > newestVersion) {
+                newestVersion = version;
+            }
+        }
+
+        if (isDeletedElement(newest)) {
+            refElements.markDeleted(key, newestVersion);
+            continue;
+        }
+
+        // Copies without a version are incomplete duplicates rather than an
+        // older state, so they still contribute to the newest version.
+        const survivors = group.filter((elem) => {
+            if (isDeletedElement(elem)) {
+                return false;
+            }
+            const version = Number(elem.version) || 0;
+            return version === 0 || version === newestVersion;
+        });
+        result.push(survivors.length === 1 ? survivors[0] : mergeCopies(survivors));
+    }
+
+    return result;
 }
 
 function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElements): void {
-    const elements = Array.isArray(osm.elements) ? deduplicateElements(osm.elements) : [];
+    const elements = Array.isArray(osm.elements) ? deduplicateElements(osm.elements, refElements) : [];
     for (const elem of elements) {
         // Deleted elements from history/Overpass should not produce geometry.
         if (elem.visible === false || elem.visible === 'false') {
