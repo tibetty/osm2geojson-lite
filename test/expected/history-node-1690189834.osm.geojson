@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "node/1690189834",
+      "properties": {
+        "id": "node/1690189834",
+        "visible": "true",
+        "version": "4",
+        "changeset": "188535382",
+        "timestamp": "2026-09-04T16:50:13Z",
+        "user": "GanKonMalade",
+        "uid": "23067975"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4198951,
+          43.7380349
+        ]
+      }
+    }
+  ]
+}

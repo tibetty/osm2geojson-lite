@@ -163,3 +163,61 @@ describe('history resolution (osmChange)', () => {
         expect(result.features).toEqual([]);
     });
 });
+
+describe('history corner cases', () => {
+    it('compares numeric and string versions the same way', () => {
+        const numeric = json([
+            { type: 'node', id: 1, version: 2, lat: 1, lon: 1 },
+            { type: 'node', id: 1, version: 10, lat: 2, lon: 2 },
+        ]);
+        const stringy = json([
+            { type: 'node', id: 1, version: '2', lat: 1, lon: 1 },
+            { type: 'node', id: 1, version: '10', lat: 2, lon: 2 },
+        ]);
+        expect(numeric.features[0].geometry.coordinates).toEqual([2, 2]);
+        expect(stringy.features[0].geometry.coordinates).toEqual([2, 2]);
+    });
+
+    it('never lets an unversioned tombstone remove a versioned element', () => {
+        expect(json([
+            { type: 'node', id: 1, version: 3, lat: 1, lon: 1 },
+            { type: 'node', id: 1, visible: false },
+        ]).features).toHaveLength(1);
+        expect(xml('<osm><node id="1" version="3" lat="1" lon="1"/><node id="1" visible="false"/></osm>').features)
+            .toHaveLength(1);
+        // Both unversioned: the deletion is all the information there is.
+        expect(xml('<osm><node id="1" lat="1" lon="1"/><node id="1" visible="false"/></osm>').features).toEqual([]);
+    });
+
+    it('accepts adiff style deleted elements with a string flag', () => {
+        expect(json([
+            { type: 'node', id: 1, version: 2, lat: 1, lon: 1 },
+            { type: 'node', id: 1, version: 3, visible: 'false' },
+        ]).features).toEqual([]);
+    });
+
+    it('merges duplicates of the newest version and ignores older copies', () => {
+        const result = json([
+            { type: 'node', id: 1, version: 5, tags: { a: '1' } },
+            { type: 'node', id: 1, version: 4, lat: 9, lon: 9, tags: { b: '2' } },
+            { type: 'node', id: 1, version: 5, lat: 1, lon: 2 },
+        ]);
+        expect(result.features).toHaveLength(1);
+        expect(result.features[0].geometry.coordinates).toEqual([2, 1]);
+        expect(result.features[0].properties).toMatchObject({ a: '1' });
+        expect(result.features[0].properties.b).toBeUndefined();
+    });
+
+    it('taints a way when its node is deleted at the newest version', () => {
+        const result = json([
+            { type: 'node', id: 1, version: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, version: 1, lat: 0, lon: 1 },
+            { type: 'node', id: 3, version: 1, lat: 1, lon: 1 },
+            { type: 'node', id: 2, version: 2, visible: false },
+            { type: 'way', id: 10, version: 1, nodes: [1, 2, 3], tags: { highway: 'path' } },
+        ], { tainted: true });
+        const way = result.features.find((f: any) => f.id === 'way/10');
+        expect(way.geometry.coordinates).toEqual([[0, 0], [1, 1]]);
+        expect(way.properties['@tainted']).toBe(true);
+    });
+});

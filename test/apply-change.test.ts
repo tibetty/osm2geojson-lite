@@ -159,3 +159,89 @@ describe('applyOsmChange', () => {
         expect(converted.features).toHaveLength(2);
     });
 });
+
+describe('merge corner cases', () => {
+    it('reports every conflict in base order without duplicating elements', () => {
+        const apply3 = '<osmChange><modify><node id="1" version="1" lat="9" lon="9"/></modify><modify><node id="3" version="1" lat="9" lon="9"/></modify></osmChange>';
+        const merged = mergeOsmChange(base, apply3);
+        expect(merged.conflicts).toEqual([
+            { id: 'node/1', changeVersion: 1, baseVersion: 1 },
+            { id: 'node/3', changeVersion: 1, baseVersion: 1 },
+        ]);
+        const ids = merged.elements.map((element) => `${element.type}/${element.id}`);
+        expect(new Set(ids).size).toBe(ids.length);
+        expect(merged.elements).toHaveLength(4);
+    });
+
+    it('appends a JOSM negative id create', () => {
+        const change = '<osmChange><create><node id="-1" version="1" lat="1" lon="2"><tag k="name" v="new"/></node></create></osmChange>';
+        const merged = mergeOsmChange(base, change);
+        expect(merged.elements).toHaveLength(5);
+        expect(merged.elements[4]).toMatchObject({ type: 'node', id: -1 });
+        expect(merged.conflicts).toEqual([]);
+    });
+
+    it('follows a way whose node list changed', () => {
+        const change = '<osmChange><modify><way id="10" version="2"><nd ref="1"/><nd ref="3"/><tag k="highway" v="path"/></way></modify></osmChange>';
+        const way = apply(base, change).features.find((f: any) => f.id === 'way/10');
+        expect(way.geometry.coordinates).toEqual([[0, 0], [1, 1]]);
+    });
+
+    it('taints a relation that references a deleted way', () => {
+        const withRoute = {
+            elements: [
+                { type: 'node', id: 1, version: 1, lat: 0, lon: 0 },
+                { type: 'node', id: 2, version: 1, lat: 0, lon: 1 },
+                { type: 'node', id: 3, version: 1, lat: 1, lon: 1 },
+                { type: 'node', id: 4, version: 1, lat: 1, lon: 2 },
+                { type: 'way', id: 10, version: 1, nodes: [1, 2], tags: { highway: 'path' } },
+                { type: 'way', id: 11, version: 1, nodes: [3, 4], tags: { highway: 'path' } },
+                {
+                    type: 'relation', id: 20, version: 1, tags: { type: 'route' },
+                    members: [{ type: 'way', ref: 10, role: '' }, { type: 'way', ref: 11, role: '' }],
+                },
+            ],
+        };
+        const applied = applyOsmChange(withRoute, '<osmChange><delete><way id="11" version="2"/></delete></osmChange>', { ...opts, tainted: true });
+        const relation = (applied.geojson as any).features.find((f: any) => f.id === 'relation/20');
+        expect(relation.properties['@tainted']).toBe(true);
+        expect(relation.geometry.coordinates).toEqual([[[0, 0], [1, 0]]]);
+        expect(applied.conflicts).toEqual([]);
+    });
+
+    it('leaves the base untouched for an empty diff', () => {
+        const merged = mergeOsmChange(base, '<osmChange version="0.6"></osmChange>');
+        expect(merged.conflicts).toEqual([]);
+        expect(merged.elements.map((element) => `${element.type}/${element.id}`))
+            .toEqual(['node/1', 'node/2', 'node/3', 'way/10']);
+    });
+
+    it('keeps every element when all entries are stale', () => {
+        const change = '<osmChange><modify><node id="1" version="1" lat="9" lon="9"/></modify><modify><node id="2" version="1" lat="9" lon="9"/></modify></osmChange>';
+        const merged = mergeOsmChange(base, change);
+        expect(merged.conflicts).toHaveLength(2);
+        expect(merged.elements).toHaveLength(4);
+        expect(merged.elements.find((element) => element.id === 1)).toMatchObject({ lat: 0 });
+    });
+
+    it('does not throw in strict mode when there is no conflict', () => {
+        const change = '<osmChange><modify><node id="1" version="2" lat="9" lon="9"/></modify></osmChange>';
+        expect(() => mergeOsmChange(base, change, { strict: true })).not.toThrow();
+    });
+
+    it('keeps node references, not resolved geometry, in merged elements', () => {
+        const merged = mergeOsmChange(base, '<osmChange></osmChange>');
+        expect(merged.elements.find((element) => element.id === 10)).toMatchObject({ nodes: [1, 2, 3] });
+    });
+
+    it('preserves relation member order from an XML base', () => {
+        const xmlBase = `<osm><relation id="20" version="1">
+            <member type="way" ref="10" role="outer"/>
+            <member type="node" ref="2" role="label"/>
+            <member type="relation" ref="21" role="sub"/>
+            <tag k="type" v="multipolygon"/>
+        </relation></osm>`;
+        const merged = mergeOsmChange(xmlBase, '<osmChange></osmChange>');
+        expect(merged.elements[0].members.map((member: any) => member.type)).toEqual(['way', 'node', 'relation']);
+    });
+});

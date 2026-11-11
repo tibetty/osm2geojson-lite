@@ -43,6 +43,39 @@ npm run build
 - Link the issue with `Fixes #123` in the PR description.
 - Keep the PR focused; split unrelated changes.
 
+## Tests
+
+Two layers, both required for new behaviour:
+
+- **Synthetic fixtures** built in the test file (or with `test/pbf-encoder.ts` for
+  PBF) pin a specific corner case: stale diff entries, deleted members, invalid
+  derived vertices, unsupported PBF compression, truncated containers.
+- **Real extracts** under `test/data` (`monaco.osm.pbf` from Geofabrik,
+  `monaco-9xx.osc` from its update stream, `history-*.osm` from the OSM API)
+  catch whatever the synthetic cases forget. Counts and coordinates in
+  `test/pbf-real.test.ts`, `test/osmchange-real.test.ts` and
+  `test/history-real.test.ts` are recorded from those committed files.
+
+`test/data.test.ts` sweeps the whole corpus with three option sets and asserts
+the invariants a consumer relies on: unique feature ids, well-formed features,
+finite coordinates, and that routing a document through `toElements` produces
+the same GeoJSON as converting it directly.
+
+Coverage thresholds live in `vitest.config.ts`. They are the levels the suite
+reaches today, so dropping a code path below them fails `npm test`; raise them
+when you add tests, do not lower them to make a build pass. `src/cli.ts` is
+excluded because it only runs in a child process (`test/cli.test.ts`, which
+skips when `dist/` is missing).
+
+### Refreshing real fixtures
+
+Fixtures are frozen on purpose; refresh them deliberately and update the
+recorded numbers in the same commit.
+
+- PBF: `https://download.geofabrik.de/europe/monaco-latest.osm.pbf`
+- Diffs: `https://download.geofabrik.de/europe/monaco-updates/000/004/<sequence>.osc.gz`
+- History: `https://api.openstreetmap.org/api/0.6/{type}/{id}/history`
+
 ## Snapshots
 
 `test/expected/*.geojson` are committed fixtures. If you intentionally change output, run `npm run test:update` and commit the diff. Missing fixtures fail the test instead of being regenerated silently.

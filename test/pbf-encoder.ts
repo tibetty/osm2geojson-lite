@@ -17,6 +17,23 @@ export class Writer {
         return this;
     }
 
+    /** Signed 64-bit varint (two's complement), as plain `int64` fields use. */
+    public int64(value: number): this {
+        let rest = BigInt(value);
+        if (rest < 0) {
+            rest += 1n << 64n;
+        }
+        for (;;) {
+            const byte = Number(rest & 0x7fn);
+            rest >>= 7n;
+            if (rest === 0n) {
+                this.bytes.push(byte);
+                return this;
+            }
+            this.bytes.push(byte | 0x80);
+        }
+    }
+
     public zigzag(value: number): this {
         return this.varint(value >= 0 ? value * 2 : -value * 2 - 1);
     }
@@ -87,7 +104,7 @@ export function denseInfo(entries: Array<{ version: number, timestamp: number, u
     return writer;
 }
 
-export function denseNodes(nodes: Array<{ id: number, lat: number, lon: number, tags?: number[] }>, info?: Writer): Writer {
+export function denseNodes(nodes: Array<{ id: number, lat: number, lon: number, latRaw?: number, lonRaw?: number, tags?: number[] }>, info?: Writer): Writer {
     const writer = new Writer();
     let id = 0;
     let lat = 0;
@@ -99,8 +116,8 @@ export function denseNodes(nodes: Array<{ id: number, lat: number, lon: number, 
     for (const node of nodes) {
         ids.push(node.id - id);
         id = node.id;
-        const latRaw = Math.round(node.lat * SCALE);
-        const lonRaw = Math.round(node.lon * SCALE);
+        const latRaw = node.latRaw !== undefined ? node.latRaw : Math.round(node.lat * SCALE);
+        const lonRaw = node.lonRaw !== undefined ? node.lonRaw : Math.round(node.lon * SCALE);
         lats.push(latRaw - lat);
         lat = latRaw;
         lons.push(lonRaw - lon);
@@ -117,7 +134,7 @@ export function denseNodes(nodes: Array<{ id: number, lat: number, lon: number, 
     return writer;
 }
 
-export function way(id: number, refs: number[], keys: number[], vals: number[], version = 1): Writer {
+export function way(id: number, refs: number[], keys: number[], vals: number[], version = 1, locations?: Array<{ lat: number, lon: number }>): Writer {
     const writer = new Writer();
     const refDeltas: number[] = [];
     let ref = 0;
@@ -125,13 +142,31 @@ export function way(id: number, refs: number[], keys: number[], vals: number[], 
         refDeltas.push(value - ref);
         ref = value;
     }
-    writer.tag(1, 0).varint(id);
+    writer.tag(1, 0).int64(id);
     writer.packed(2, keys, false);
     writer.packed(3, vals, false);
     // Info: version 1, timestamp 2020-01-01T00:00:00Z, uid 7, user_sid 2.
     const info = new Writer().tag(1, 0).varint(version).tag(2, 0).zigzag(1577836800).tag(4, 0).varint(7).tag(5, 0).varint(2);
     writer.bytes_(4, info.done());
     writer.packed(8, refDeltas, true);
+
+    if (locations && locations.length > 0) {
+        // `LocationsOnWays`: parallel lat/lon arrays, delta coded.
+        const latDeltas: number[] = [];
+        const lonDeltas: number[] = [];
+        let lat = 0;
+        let lon = 0;
+        for (const location of locations) {
+            const latRaw = Math.round(location.lat * SCALE);
+            const lonRaw = Math.round(location.lon * SCALE);
+            latDeltas.push(latRaw - lat);
+            lonDeltas.push(lonRaw - lon);
+            lat = latRaw;
+            lon = lonRaw;
+        }
+        writer.packed(9, latDeltas, true);
+        writer.packed(10, lonDeltas, true);
+    }
     return writer;
 }
 
@@ -143,7 +178,7 @@ export function relation(id: number, members: Array<{ type: number, ref: number,
         refDeltas.push(member.ref - ref);
         ref = member.ref;
     }
-    writer.tag(1, 0).varint(id);
+    writer.tag(1, 0).int64(id);
     writer.packed(2, [5, 6], false);
     writer.packed(3, [6, 7], false);
     writer.packed(8, members.map((member) => member.role), false);
@@ -152,7 +187,7 @@ export function relation(id: number, members: Array<{ type: number, ref: number,
     return writer;
 }
 
-export function primitiveBlock(strings: string[], dense: Writer, ways: Writer[], relations: Writer[]): Uint8Array {
+export function primitiveBlock(strings: string[], dense: Writer, ways: Writer[], relations: Writer[], options: BlockOptions = {}): Uint8Array {
     const stringTable = new Writer();
     for (const value of strings) {
         stringTable.string(1, value);
@@ -165,9 +200,24 @@ export function primitiveBlock(strings: string[], dense: Writer, ways: Writer[],
     for (const entry of relations) {
         group.bytes_(4, entry.done());
     }
+    if (options.changesets) {
+        group.bytes_(5, options.changesets.done());
+    }
     const block = new Writer();
     block.bytes_(1, stringTable.done());
     block.bytes_(2, group.done());
+    if (options.granularity !== undefined) {
+        block.tag(17, 0).varint(options.granularity);
+    }
+    if (options.dateGranularity !== undefined) {
+        block.tag(18, 0).varint(options.dateGranularity);
+    }
+    if (options.latOffset !== undefined) {
+        block.tag(19, 0).int64(options.latOffset);
+    }
+    if (options.lonOffset !== undefined) {
+        block.tag(20, 0).int64(options.lonOffset);
+    }
     return block.done();
 }
 
