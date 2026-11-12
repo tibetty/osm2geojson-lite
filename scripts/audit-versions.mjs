@@ -24,6 +24,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { createRequire } from 'node:module';
 import { deflateSync } from 'node:zlib';
 
 const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -276,6 +277,18 @@ const checks = [
         },
     },
     {
+        name: '2.7.6: CommonJS entry is callable with named exports',
+        since: '2.7.6',
+        run: (module, cjs) => {
+            try {
+                const mod = createRequire(import.meta.url)(cjs);
+                return typeof mod === 'function' && mod.default === mod && typeof mod.applyOsmChange === 'function';
+            } catch {
+                return false;
+            }
+        },
+    },
+    {
         name: '2.7.4: implausible raw_size stays bounded',
         since: '2.7.4',
         run: (m) => {
@@ -398,8 +411,11 @@ const { dir, entry } = versions.length ? install(versions) : { dir: undefined, e
 
 const headDist = path.join(repo, 'dist', 'index.mjs');
 const columns = [
-    ...versions.map((version) => ({ label: version, spec: pathToFileURL(entry(version)).href, cli: path.join(dir, 'node_modules', `v${version.replace(/\./g, '')}`, 'dist', 'cli.mjs') })),
-    { label: 'HEAD', spec: pathToFileURL(headDist).href, cli: path.join(repo, 'dist', 'cli.mjs') },
+    ...versions.map((version) => {
+        const pkg = path.join(dir, 'node_modules', `v${version.replace(/\./g, '')}`, 'dist');
+        return { label: version, spec: pathToFileURL(path.join(pkg, 'index.mjs')).href, cli: path.join(pkg, 'cli.mjs'), cjs: path.join(pkg, 'index.cjs') };
+    }),
+    { label: 'HEAD', spec: pathToFileURL(headDist).href, cli: path.join(repo, 'dist', 'cli.mjs'), cjs: path.join(repo, 'dist', 'index.cjs') },
 ];
 
 if (!fs.existsSync(headDist)) {
@@ -419,7 +435,7 @@ for (const column of columns) {
     const row = [];
     for (const check of checks) {
         let outcome;
-        try { outcome = check.run(module); } catch { outcome = false; }
+        try { outcome = check.run(module, column.cjs); } catch { outcome = false; }
         row.push(outcome === true);
     }
     results.set(column.label, row);
