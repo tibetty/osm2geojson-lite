@@ -65,11 +65,21 @@ describe('mergeOsmChange', () => {
         expect(merged.elements.find((element) => element.id === 1)).toMatchObject({ lat: 0, lon: 0 });
     });
 
-    it('reports a stale delete and keeps the element', () => {
+    it('applies a delete whose version matches the base', () => {
+        // An osmChange delete names the version being deleted, so equality is
+        // the normal case, not a stale entry.
         const current = { elements: [{ type: 'node', id: 2, version: 3, lat: 0, lon: 1 }] };
         const change = '<osmChange><delete><node id="2" version="3"/></delete></osmChange>';
         const merged = mergeOsmChange(current, change);
-        expect(merged.conflicts).toEqual([{ id: 'node/2', changeVersion: 3, baseVersion: 3 }]);
+        expect(merged.conflicts).toEqual([]);
+        expect(merged.elements).toEqual([]);
+    });
+
+    it('reports a delete when the base already moved past it', () => {
+        const current = { elements: [{ type: 'node', id: 2, version: 4, lat: 0, lon: 1 }] };
+        const change = '<osmChange><delete><node id="2" version="3"/></delete></osmChange>';
+        const merged = mergeOsmChange(current, change);
+        expect(merged.conflicts).toEqual([{ id: 'node/2', changeVersion: 3, baseVersion: 4 }]);
         expect(merged.elements.map((element) => element.id)).toEqual([2]);
     });
 });
@@ -114,8 +124,9 @@ describe('applyOsmChange', () => {
         const staleModify = '<osmChange><modify><node id="1" version="1" lat="5" lon="6"/></modify></osmChange>';
         expect(() => apply(base, staleModify, { strict: true }))
             .toThrow(/stale osmChange entry for node\/1: version 1 does not advance base version 1/);
+        const current = { elements: [{ type: 'node', id: 1, version: 2, lat: 0, lon: 0 }] };
         const staleDelete = '<osmChange><delete><node id="1" version="1"/></delete></osmChange>';
-        expect(() => apply(base, staleDelete, { strict: true })).toThrow(/stale osmChange entry for node\/1/);
+        expect(() => apply(current, staleDelete, { strict: true })).toThrow(/stale osmChange entry for node\/1/);
     });
 
     it('takes the newest entry when a diff repeats an element', () => {

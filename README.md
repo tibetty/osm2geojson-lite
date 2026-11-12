@@ -97,7 +97,7 @@ const elements = toElements(base);            // current state of any input
 ```
 
 - `toElements(input)` normalises XML, PBF or JSON into element objects, collapsing duplicate and multi-version copies to the newest version and dropping elements deleted at their newest version.
-- `mergeOsmChange(base, diff)` applies a diff at the element level: an entry only overrides what it advances, elements missing from the base are appended as creates, and stale entries leave the base intact. They are reported as `{ id, changeVersion, baseVersion }` in `conflicts`, and `{ strict: true }` turns the first conflict into an error instead.
+- `mergeOsmChange(base, diff)` applies a diff at the element level: a modification only overrides a base it advances, a deletion applies when the base is at or below the version named in the diff (an osmChange delete carries the version being deleted, not a new one), elements missing from the base are appended as creates, and stale entries leave the base intact. They are reported as `{ id, changeVersion, baseVersion }` in `conflicts`, and `{ strict: true }` turns the first conflict into an error instead.
 - `applyOsmChange(base, diff)` merges and converts in one call, returning `{ geojson, conflicts }`.
 - Base and diff can be any supported input, in any combination — a PBF base with an `.osc` diff, an XML base with an osmChange, and so on.
 
