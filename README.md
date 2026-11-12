@@ -6,11 +6,18 @@ osm2geojson-lite
 [![NPM Version](https://img.shields.io/npm/v/osm2geojson-lite)](https://www.npmjs.com/package/osm2geojson-lite) [![Codecov](https://img.shields.io/codecov/c/github/tibetty/osm2geojson-lite/main.svg)](https://codecov.io/gh/tibetty/osm2geojson-lite/)
 
 
-A lightweight (not as lightweight as xml2geojson though) yet faster convertor for [OSM](http://openstreetmap.org) [data](http://wiki.openstreetmap.org/wiki/OSM_XML) - XML, PBF or JSON - to [GeoJSON](http://www.geojson.org/) - much faster (the more complex the data source is, the more performance advantages it posesses) than osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency.
+A full-featured, dependency-free convertor from [OpenStreetMap](http://openstreetmap.org) [data](http://wiki.openstreetmap.org/wiki/OSM_XML) to [GeoJSON](http://www.geojson.org/), implemented in pure JavaScript. It reads every OSM data format that carries geometry - OSM XML, osmChange diffs, PBF and Overpass JSON - covers the OSM data model end to end, and converts 10-18x faster than `osmtogeojson` on XML and 13-57x on JSON.
+
+What that covers:
+
+- **Inputs** - OSM XML, osmChange (`.osc`), OSM PBF (`.osm.pbf`), Overpass XML/JSON including `out geom`, `out center`, `out bb`, `convert`, `make` and `local`, and gzip/zstd containers in the CLI.
+- **OSM semantics** - multipolygons and boundaries with inner-ring assignment, routes, old-style multipolygons, member roles (outer/inner/subarea/platform/stop), relation cycles and super-relations, `area` polygon rules.
+- **History and changes** - full history extracts resolve to the newest version, deletions remove elements and taint the references to them, and an osmChange can be applied to a base extract with conflict reporting.
+- **Output** - `FeatureCollection`, a single element by id, or merged element documents, all RFC 7946 compliant, in Node and in the browser.
 
 History
 -----
-An internal function inside [query-geo-boundary](https://www.npmjs.com/package/query-geo-boundary) &rightarrow; stripped out to handle OSM XML only [xml2geojson-lite](https://www.npmjs.com/package/xml2geojson-lite) &rightarrow; this library that supports both OSM XML and OSM/Overpass JSON
+An internal function inside [query-geo-boundary](https://www.npmjs.com/package/query-geo-boundary) &rightarrow; stripped out to handle OSM XML only [xml2geojson-lite](https://www.npmjs.com/package/xml2geojson-lite) &rightarrow; this library, which grew from XML and Overpass JSON to the full set above.
 
 Usage
 -----
@@ -125,12 +132,46 @@ extracts and the shapes produced by Overpass `out geom`, `out center`, `out bb`,
 
 Performance
 ---
-1. Workloads include the boundary XML and JSON of 4 administrive areas (zhucheng, hebei, tokyodo, usa)
+
+### Why it is fast
+
+The advantage comes from doing less work, not from micro-optimisation. The
+larger and more relation-heavy the source, the wider the margin gets.
+
+- **A purpose-built XML scanner.** `src/osm-xml.ts` walks the document once and
+  applies each element to the object being built. There is no DOM, no generic
+  `$tag`/`$innerNodes` tree and no object allocated per `<nd>` or `<tag>`, which
+  is what a general XML parser costs before conversion even starts.
+- **References bind once, at the end.** Node, way and relation references are
+  deferred and resolved in a single pass per container
+  (`src/ref-elements.ts`), so a way's 2 000 node references are one linear
+  compaction instead of thousands of O(n²) list removals.
+- **One geometry pipeline, not four.** XML, PBF and Overpass JSON all feed the
+  same element analyser, so duplicate/history resolution, role handling and ring
+  assembly exist once. PBF is decoded straight into elements, with no
+  intermediate JSON string and no second pass.
+- **Numbers stay numbers.** Coordinates are parsed once into a numeric array
+  (`src/way.ts`) rather than joined into keys and parsed again at output time,
+  and end-point keys are cached for way stitching.
+- **Adjacent-index algorithms where the naive version is quadratic.** Ways are
+  stitched through endpoint buckets instead of rescanning candidates, inner rings
+  are assigned against a uniform grid over the outer rings instead of every
+  outer-inner pair (`src/relation.ts`), relations are flattened iteratively, and
+  duplicate resolution allocates one container per *repeated* element rather than
+  per element (`src/elements.ts`).
+- **No runtime dependencies.** No XML parser, no protobuf runtime, no zlib
+  binding: PBF uses a bundled decoder whose bit reader makes one forward pass,
+  reuses its Huffman tables across blocks and verifies the Adler-32 trailer.
+
+### Benchmarks
+
+1. Workloads include the boundary XML and JSON of 4 administrative areas (zhucheng, hebei, tokyodo, usa)
 2. The benchmark is written with [Vitest's `bench`](https://vitest.dev/guide/features.html#benchmarking), which warms up and then samples each conversion many times, comparing this library against [`osm2geojson-ultra`](https://www.npmjs.com/package/osm2geojson-ultra) (which uses the `txml` parser) and `osmtogeojson` (+ `xmldom` for XML).
 ```
 $ npm run bench
 ```
 3. The # listed in the tables below are coarse lowest speed-up factors (this library vs. the competitor) observed on the sample data.
+4. XML and PBF conversion dominate when geometry is built; JSON from Overpass is mostly reference resolution, where the single-pass binding shows the widest margin.
 
 1. XML
 

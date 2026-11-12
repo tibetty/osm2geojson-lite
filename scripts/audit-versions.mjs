@@ -8,8 +8,9 @@
  *   npm run audit:versions -- --from 2.7.0 # shorter range
  *   npm run audit:versions -- --local-only # only the local dist/ build
  *
- * Needs network access to install the published tarballs, so it is a manual
- * tool and not part of `npm test`. The published packages are installed into a
+ * `npm test` runs this too. It needs the network to install the published
+ * tarballs: offline it reports SKIP and audits the local build only, unless
+ * `CI` is set or `--strict` is passed, where an unreachable registry fails. The published packages are installed into a
  * cache directory under node_modules and reused while their version list stays
  * the same. The `HEAD` column runs the local `dist/` build (`npm run build`).
  *
@@ -290,7 +291,31 @@ const checks = [
 ];
 
 const cliChecks = [
-    { name: 'CLI: file, stdin, gzip, bzip2 hint', since: '2.6.0' },
+    {
+        name: 'CLI: file and gzip input, bzip2 hint',
+        since: '2.6.0',
+        // File to file, so this does not depend on the stdin/stdout fix below.
+        run: (cli, scratch) => {
+            const out = path.join(scratch, 'cli-file.json');
+            const gz = path.join(scratch, 'cli-gz.json');
+            const okFile = runCli(cli, [path.join(repo, 'test/data/node.osm'), out]).code === 0 && exists(out);
+            const okGzip = runCli(cli, [path.join(repo, 'test/data/monaco-960.osc.gz'), gz]).code === 0 && exists(gz);
+            const bzip2 = runCli(cli, [bzip2File, out]);
+            fs.rmSync(out, { force: true });
+            fs.rmSync(gz, { force: true });
+            return okFile && okGzip && bzip2.code === 1 && /bzip2 input is not supported/.test(bzip2.err);
+        },
+    },
+    {
+        name: 'CLI: stdin to stdout',
+        since: '2.7.2',
+        // Before 2.7.2 the CLI opened /dev/stdin and /dev/stdout, which fails on
+        // Linux whenever they are pipes.
+        run: (cli) => {
+            const result = runCli(cli, [], '<osm><node id="1" lat="0" lon="0"/></osm>');
+            return result.code === 0 && result.out.trim().startsWith('{');
+        },
+    },
 ];
 
 /* ------------------------------ arguments ------------------------------ */
@@ -316,6 +341,7 @@ if (argv.includes('--help') || argv.includes('-h')) {
 }
 const from = option('--from') || '2.2.0';
 const local = argv.includes('--local-only');
+const strict = argv.includes('--strict') || Boolean(process.env.CI);
 
 /* --------------------------- install & load ---------------------------- */
 const compare = (a, b) => {
@@ -353,7 +379,21 @@ function install(versions) {
     return { dir: cache, entry: (version) => path.join(cache, 'node_modules', alias(version), 'dist', 'index.mjs') };
 }
 
-const versions = local ? [] : publishedVersions();
+let versions = [];
+let skipped = '';
+if (!local) {
+    try {
+        versions = publishedVersions();
+    } catch (error) {
+        if (strict) {
+            process.stderr.write(`cannot reach the npm registry: ${error.message}\n`);
+            process.exit(1);
+        }
+        // Offline: still audit the local build, and say why the rest is missing.
+        skipped = `SKIP published versions: ${error.message.split('\n')[0]}`;
+        process.stdout.write(`${skipped}\n`);
+    }
+}
 const { dir, entry } = versions.length ? install(versions) : { dir: undefined, entry: undefined };
 
 const headDist = path.join(repo, 'dist', 'index.mjs');
@@ -410,27 +450,24 @@ const runCli = (cli, args, input) => {
         return { code: error.status ?? -1, out: String(error.stdout ?? ''), err: String(error.stderr ?? '') };
     }
 };
-const isFeatureCollection = (result) => result.code === 0 && result.out.trim().startsWith('{');
+const exists = (file) => fs.existsSync(file) && fs.statSync(file).size > 0;
 const bzip2File = path.join(repo, 'node_modules', '.cache', 'audit.bz2');
-fs.mkdirSync(path.dirname(bzip2File), { recursive: true });
+const scratch = path.join(repo, 'node_modules', '.cache', 'osm2geojson-audit-scratch');
+fs.mkdirSync(scratch, { recursive: true });
 fs.writeFileSync(bzip2File, Buffer.from('BZh91AY&SY'));
 
 process.stdout.write('\nCLI'.padEnd(width - 1) + columns.map((column) => column.label.padStart(6)).join('') + '\n');
 for (const check of cliChecks) {
     const cells = columns.map((column) => {
         const gated = column.label === 'HEAD' || compare(column.label, check.since) >= 0;
-        const file = runCli(column.cli, [path.join(repo, 'test/data/node.osm')]);
-        const stdin = runCli(column.cli, [], '<osm><node id="1" lat="0" lon="0"/></osm>');
-        const gzip = runCli(column.cli, [path.join(repo, 'test/data/monaco-960.osc.gz')]);
-        const bzip2 = runCli(column.cli, [bzip2File]);
-        const ok = isFeatureCollection(file) && isFeatureCollection(stdin) && isFeatureCollection(gzip)
-            && bzip2.code === 1 && /bzip2 input is not supported/.test(bzip2.err);
+        let ok = false;
+        try { ok = check.run(column.cli, scratch) === true; } catch { ok = false; }
         if (gated && !ok) failures++;
         return cell(ok, gated);
     });
     process.stdout.write(`${check.name.padEnd(width - 1)} ${cells.join('')}\n`);
 }
 
-process.stdout.write(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${failures} gated check(s) failed.\n`);
+process.stdout.write(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${failures} gated check(s) failed.${skipped ? ' (published versions skipped)' : ''}\n`);
 process.stdout.write('ok = passes, -- = before the release that guarantees it, FAIL = regression.\n');
 process.exit(failures === 0 ? 0 : 1);
