@@ -14,6 +14,12 @@ export default defineConfig([
                 dir: 'dist',
                 format: 'cjs',
                 entryFileNames: 'index.cjs',
+                // The entry mixes a default export with named ones, which makes
+                // bundlers expose `module.exports.default`. Keep `require()` a
+                // callable function (as it was before named exports existed)
+                // and attach the named exports to it.
+                exports: 'named',
+                footer: 'module.exports = Object.assign(exports.default, exports);',
             },
         ],
     },

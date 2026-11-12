@@ -35,6 +35,16 @@ Usage:
     let geojson = osm2geojson(osm, opts);
 ```
 
+CommonJS works the same way, and the named helpers are available on the same
+callable:
+
+```js
+    const osm2geojson = require('osm2geojson-lite');
+    const { applyOsmChange, mergeOsmChange, toElements } = require('osm2geojson-lite');
+
+    let geojson = osm2geojson(osm, opts);
+```
+
 ### In the Browser
 
 Modern browsers load the ESM build directly via `<script type="module">`. Import it from a CDN (e.g. [esm.sh](https://esm.sh) or [jsDelivr](https://www.jsdelivr.com)):
