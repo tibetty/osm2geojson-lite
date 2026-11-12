@@ -1,6 +1,6 @@
 {
   "name": "osm2geojson-lite",
-  "version": "2.7.8",
+  "version": "2.7.9",
   "description": "full-featured OpenStreetMap to GeoJSON convertor - OSM XML, osmChange, PBF and Overpass JSON, history and diff application, zero dependencies, 10-18x faster than osmtogeojson on XML",
   "author": "tibetty",
   "license": "MIT",
