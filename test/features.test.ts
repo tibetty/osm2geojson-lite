@@ -418,6 +418,23 @@ describe('OSM relation type semantics', () => {
     });
 });
 
+describe('old-style multipolygons', () => {
+    it('emits the tagged outer way once, without a relation feature', () => {
+        // 2.3.0 attributed the feature to the outer way but also let the
+        // relation re-emit it, so the same id appeared twice until 2.7.2.
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 0, lon: 1 },
+            { type: 'node', id: 3, lat: 1, lon: 1 },
+            { type: 'way', id: 10, nodes: [1, 2, 3, 1], tags: { natural: 'water' } },
+            { type: 'relation', id: 20, tags: { type: 'multipolygon' }, members: [{ type: 'way', ref: 10, role: 'outer' }] },
+        ]);
+        const ids = result.features.map((feature: any) => feature.id);
+        expect(ids).toEqual(['way/10']);
+        expect(result.features[0].geometry.type).toBe('Polygon');
+    });
+});
+
 describe('role-aware relation members', () => {
     it('keeps route platform ways and stop nodes independent', () => {
         const result = json([
