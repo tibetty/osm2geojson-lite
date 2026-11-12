@@ -1,4 +1,3 @@
-import { LateBinder } from "./late-binder";
 import { Node } from "./node";
 import { Output } from "./output";
 import { Relation } from "./relation";
@@ -11,24 +10,29 @@ export class RefElements extends Map<string, OsmObject> {
     public reportTainted: boolean;
     /** Overrides the built-in polygon tag rules when provided. */
     public polygonTags: PolygonTags | undefined;
-    private binders: LateBinder<any>[];
     /** Ways holding unresolved node references, resolved in one pass. */
     private pendingWays: Set<Way>;
+    /** Relations holding unresolved member references. */
+    private pendingRelations: Set<Relation>;
     /**
      * Nodes indexed by their raw id, so resolving a way reference does not have
      * to build a `node/<id>` string for every one of them. Kept in sync with
      * the composite map by overriding `set`/`delete`.
      */
     private nodes: Map<any, Node>;
+    private wayIndex: Map<any, Way>;
+    private relationIndex: Map<any, Relation>;
     private duplicates: Array<{ existing: OsmObject; duplicate: OsmObject }>;
     /** composite id -> newest version known to be deleted */
     private tombstones: Map<string, number>;
 
     constructor() {
         super();
-        this.binders = [];
         this.pendingWays = new Set();
+        this.pendingRelations = new Set();
         this.nodes = new Map();
+        this.wayIndex = new Map();
+        this.relationIndex = new Map();
         this.duplicates = [];
         this.tombstones = new Map();
         this.reportTainted = false;
@@ -60,7 +64,7 @@ export class RefElements extends Map<string, OsmObject> {
             if (!element || element.getVersion() > version) {
                 continue;
             }
-            this.removeBindersOwnedBy(element);
+            this.dropPendingWork(element);
             this.delete(compositeId);
         }
         this.tombstones.clear();
@@ -78,6 +82,10 @@ export class RefElements extends Map<string, OsmObject> {
     public set(key: string, value: OsmObject): this {
         if (value instanceof Node) {
             this.nodes.set(value.id, value);
+        } else if (value instanceof Way) {
+            this.wayIndex.set(value.id, value);
+        } else if (value instanceof Relation) {
+            this.relationIndex.set(value.id, value);
         }
         return super.set(key, value);
     }
@@ -86,25 +94,29 @@ export class RefElements extends Map<string, OsmObject> {
         const existing = super.get(key);
         if (existing instanceof Node) {
             this.nodes.delete(existing.id);
+        } else if (existing instanceof Way) {
+            this.wayIndex.delete(existing.id);
+        } else if (existing instanceof Relation) {
+            this.relationIndex.delete(existing.id);
         }
         return super.delete(key);
-    }
-
-    public addBinder(binder: LateBinder<any>) {
-        this.binders.push(binder);
     }
 
     public addPendingWay(way: Way) {
         this.pendingWays.add(way);
     }
 
-    /** Look up a node by its raw id, tolerating string/number id spellings. */
-    private lookupNode(ref: any): Node | undefined {
-        const direct = this.nodes.get(ref);
+    public addPendingRelation(relation: Relation) {
+        this.pendingRelations.add(relation);
+    }
+
+    /** Look up an element by raw id, tolerating string/number id spellings. */
+    private static lookup<T>(index: Map<any, T>, ref: any): T | undefined {
+        const direct = index.get(ref);
         if (direct !== undefined) {
             return direct;
         }
-        return this.nodes.get(typeof ref === 'number' ? String(ref) : Number(ref));
+        return index.get(typeof ref === 'number' ? String(ref) : Number(ref));
     }
 
     private resolvePendingWays() {
@@ -112,19 +124,25 @@ export class RefElements extends Map<string, OsmObject> {
             return;
         }
         for (const way of this.pendingWays) {
-            way.resolveNodeRefs((ref) => this.lookupNode(ref));
+            way.resolveNodeRefs((ref) => RefElements.lookup(this.nodes, ref));
         }
         this.pendingWays.clear();
     }
 
-    /**
-     * Resolve every deferred reference in one pass per container.
-     *
-     * The previous implementation removed each binder with `indexOf` + `splice`,
-     * which is O(n^2) for containers such as a way's node list. Grouping by
-     * container and compacting once keeps insertion order and makes binding
-     * linear in the number of binders.
-     */
+    private resolvePendingRelations() {
+        if (this.pendingRelations.size === 0) {
+            return;
+        }
+        for (const relation of this.pendingRelations) {
+            relation.resolveMembers(
+                (ref) => RefElements.lookup(this.nodes, ref),
+                (ref) => RefElements.lookup(this.wayIndex, ref),
+                (ref) => RefElements.lookup(this.relationIndex, ref),
+            );
+        }
+        this.pendingRelations.clear();
+    }
+
     /**
      * Merge duplicate element registrations before resolving references.
      *
@@ -143,10 +161,10 @@ export class RefElements extends Map<string, OsmObject> {
             // incomplete duplicates and still merged.
             if (existingVersion > 0 && duplicateVersion > 0 && existingVersion !== duplicateVersion) {
                 if (duplicateVersion > existingVersion) {
-                    this.removeBindersOwnedBy(existing);
+                    this.dropPendingWork(existing);
                     this.set(existing.getCompositeId(), duplicate);
                 } else {
-                    this.removeBindersOwnedBy(duplicate);
+                    this.dropPendingWork(duplicate);
                 }
                 continue;
             }
@@ -157,11 +175,11 @@ export class RefElements extends Map<string, OsmObject> {
             if (duplicate instanceof Output && !(existing instanceof Output)) {
                 // Derived/custom output replaces the relation placeholder.
                 this.set(existing.getCompositeId(), duplicate);
-                this.removeBindersOwnedBy(existing);
+                this.dropPendingWork(existing);
                 continue;
             }
             if (existing instanceof Output) {
-                this.removeBindersOwnedBy(duplicate);
+                this.dropPendingWork(duplicate);
                 continue;
             }
             if (existing instanceof Node && duplicate instanceof Node) {
@@ -172,28 +190,29 @@ export class RefElements extends Map<string, OsmObject> {
             }
             if (existing instanceof Way && duplicate instanceof Way) {
                 if (existing.adoptCoordinatesFrom(duplicate, preferDuplicate)) {
-                    this.removeBindersOwnedBy(existing);
+                    this.dropPendingWork(existing);
                 } else {
-                    this.removeBindersOwnedBy(duplicate);
+                    this.dropPendingWork(duplicate);
                 }
                 continue;
             }
             if (existing instanceof Relation && duplicate instanceof Relation) {
                 if (existing.adoptMembersFrom(duplicate, preferDuplicate)) {
-                    this.removeBindersOwnedBy(existing);
+                    this.dropPendingWork(existing);
                 } else {
-                    this.removeBindersOwnedBy(duplicate);
+                    this.dropPendingWork(duplicate);
                 }
                 continue;
             }
-            this.removeBindersOwnedBy(duplicate);
+            this.dropPendingWork(duplicate);
         }
         this.duplicates = [];
     }
 
-    private removeBindersOwnedBy(owner: OsmObject) {
-        this.binders = this.binders.filter((binder) => binder.getOwner() !== owner);
+    /** A discarded duplicate must not resolve its references. */
+    private dropPendingWork(owner: OsmObject) {
         this.pendingWays.delete(owner as Way);
+        this.pendingRelations.delete(owner as Relation);
     }
 
     public bindAll() {
@@ -202,55 +221,6 @@ export class RefElements extends Map<string, OsmObject> {
         }
         this.resolveHistory();
         this.resolvePendingWays();
-        if (this.binders.length === 0) {
-            return;
-        }
-
-        const groups = new Map<Array<any>, LateBinder<any>[]>();
-        for (const binder of this.binders) {
-            const container = binder.getContainer();
-            const list = groups.get(container);
-            if (list) {
-                list.push(binder);
-            } else {
-                groups.set(container, [binder]);
-            }
-        }
-
-        for (const [container, binders] of groups) {
-            const bindersInContainer = new Set(binders);
-            const resolved = new Map<LateBinder<any>, any>();
-            for (const binder of binders) {
-                resolved.set(binder, binder.resolve());
-            }
-            const roleContainer = binders[0].getRoleContainer();
-
-            let write = 0;
-            for (let read = 0; read < container.length; read++) {
-                const item = container[read];
-                if (bindersInContainer.has(item)) {
-                    const value = resolved.get(item);
-                    if (value !== undefined) {
-                        container[write] = value;
-                        if (roleContainer) {
-                            roleContainer[write] = (item as LateBinder<any>).getRole();
-                        }
-                        write++;
-                    }
-                } else {
-                    container[write] = item;
-                    if (roleContainer) {
-                        roleContainer[write] = roleContainer[read];
-                    }
-                    write++;
-                }
-            }
-            container.length = write;
-            if (roleContainer) {
-                roleContainer.length = write;
-            }
-        }
-
-        this.binders = [];
+        this.resolvePendingRelations();
     }
 }
