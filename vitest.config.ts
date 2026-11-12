@@ -4,6 +4,10 @@ export default defineConfig({
     test: {
         // Benchmarks are run by `npm run bench`, not by the test suite.
         include: ['test/**/*.test.ts'],
+        // The corpus converts multi-megabyte fixtures and the differential runs
+        // osmtogeojson over them; 5s is not enough on a shared CI runner.
+        testTimeout: 30_000,
+        hookTimeout: 30_000,
         coverage: {
             provider: 'v8',
             include: ['src/**/*.ts'],
