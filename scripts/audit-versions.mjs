@@ -291,7 +291,31 @@ const checks = [
 ];
 
 const cliChecks = [
-    { name: 'CLI: file, stdin, gzip, bzip2 hint', since: '2.6.0' },
+    {
+        name: 'CLI: file and gzip input, bzip2 hint',
+        since: '2.6.0',
+        // File to file, so this does not depend on the stdin/stdout fix below.
+        run: (cli, scratch) => {
+            const out = path.join(scratch, 'cli-file.json');
+            const gz = path.join(scratch, 'cli-gz.json');
+            const okFile = runCli(cli, [path.join(repo, 'test/data/node.osm'), out]).code === 0 && exists(out);
+            const okGzip = runCli(cli, [path.join(repo, 'test/data/monaco-960.osc.gz'), gz]).code === 0 && exists(gz);
+            const bzip2 = runCli(cli, [bzip2File, out]);
+            fs.rmSync(out, { force: true });
+            fs.rmSync(gz, { force: true });
+            return okFile && okGzip && bzip2.code === 1 && /bzip2 input is not supported/.test(bzip2.err);
+        },
+    },
+    {
+        name: 'CLI: stdin to stdout',
+        since: '2.7.2',
+        // Before 2.7.2 the CLI opened /dev/stdin and /dev/stdout, which fails on
+        // Linux whenever they are pipes.
+        run: (cli) => {
+            const result = runCli(cli, [], '<osm><node id="1" lat="0" lon="0"/></osm>');
+            return result.code === 0 && result.out.trim().startsWith('{');
+        },
+    },
 ];
 
 /* ------------------------------ arguments ------------------------------ */
@@ -426,21 +450,18 @@ const runCli = (cli, args, input) => {
         return { code: error.status ?? -1, out: String(error.stdout ?? ''), err: String(error.stderr ?? '') };
     }
 };
-const isFeatureCollection = (result) => result.code === 0 && result.out.trim().startsWith('{');
+const exists = (file) => fs.existsSync(file) && fs.statSync(file).size > 0;
 const bzip2File = path.join(repo, 'node_modules', '.cache', 'audit.bz2');
-fs.mkdirSync(path.dirname(bzip2File), { recursive: true });
+const scratch = path.join(repo, 'node_modules', '.cache', 'osm2geojson-audit-scratch');
+fs.mkdirSync(scratch, { recursive: true });
 fs.writeFileSync(bzip2File, Buffer.from('BZh91AY&SY'));
 
 process.stdout.write('\nCLI'.padEnd(width - 1) + columns.map((column) => column.label.padStart(6)).join('') + '\n');
 for (const check of cliChecks) {
     const cells = columns.map((column) => {
         const gated = column.label === 'HEAD' || compare(column.label, check.since) >= 0;
-        const file = runCli(column.cli, [path.join(repo, 'test/data/node.osm')]);
-        const stdin = runCli(column.cli, [], '<osm><node id="1" lat="0" lon="0"/></osm>');
-        const gzip = runCli(column.cli, [path.join(repo, 'test/data/monaco-960.osc.gz')]);
-        const bzip2 = runCli(column.cli, [bzip2File]);
-        const ok = isFeatureCollection(file) && isFeatureCollection(stdin) && isFeatureCollection(gzip)
-            && bzip2.code === 1 && /bzip2 input is not supported/.test(bzip2.err);
+        let ok = false;
+        try { ok = check.run(column.cli, scratch) === true; } catch { ok = false; }
         if (gated && !ok) failures++;
         return cell(ok, gated);
     });
