@@ -1,14 +1,24 @@
-export function purgeProps(obj: { [k: string]: any }, blacklist: string[]): { [k: string]: any } {
-    if (obj) {
-        const rs = Object.assign({}, obj);
-        if (blacklist) {
-            for (const prop of blacklist) {
-                delete rs[prop];
-            }
-        }
-        return rs;
+/**
+ * Copy the element's fields except `blacklist` into a fresh object.
+ *
+ * Building the result with only the wanted keys matters for speed: copying
+ * everything and then deleting puts the object into dictionary mode, and merging
+ * a dictionary-mode object into another one is roughly an order of magnitude
+ * slower than merging a plain one. `seed` lets the caller put `id` first so the
+ * serialized property order stays put.
+ */
+export function purgeProps(obj: { [k: string]: any }, blacklist: string[], seed?: { [k: string]: any }): { [k: string]: any } {
+    const result: { [k: string]: any } = seed || {};
+    if (!obj) {
+        return result;
     }
-    return {};
+    for (const key in obj) {
+        if (blacklist && blacklist.indexOf(key) >= 0) {
+            continue;
+        }
+        result[key] = obj[key];
+    }
+    return result;
 }
 
 export function first<T>(a: T[]): T { return  a[0] }

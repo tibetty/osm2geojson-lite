@@ -112,7 +112,7 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
             if (elem.tags) {
                 output.addTags(elem.tags);
             }
-            output.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'geometry', 'tainted']));
+            output.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'geometry', 'tainted'], { id: output.getCompositeId() }));
             if (elem.tainted === true) {
                 output.tainted = true;
             }
@@ -126,7 +126,7 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
                 if (elem.tags) {
                     node.addTags(elem.tags);
                 }
-                node.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'lat', 'lon', 'tainted']));
+                node.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'lat', 'lon', 'tainted'], { id: node.getCompositeId() }));
                 node.setLatLng(elem);
                 if (elem.tainted === true) {
                     node.tainted = true;
@@ -137,7 +137,7 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
                 if (elem.tags) {
                     way.addTags(elem.tags);
                 }
-                way.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'nodes', 'geometry', 'tainted']));
+                way.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'nodes', 'geometry', 'tainted'], { id: way.getCompositeId() }));
                 if (elem.tainted === true) {
                     way.tainted = true;
                 }
@@ -164,7 +164,7 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
                 if (elem.center) {
                     relation.setCenter(elem.center);
                 }
-                relation.addProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'bounds', 'members', 'tainted']));
+                relation.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'bounds', 'members', 'tainted'], { id: relation.getCompositeId() }));
                 if (elem.tainted === true) {
                     relation.tainted = true;
                 }

@@ -1,7 +1,6 @@
 import { Feature } from "geojson";
 import { OsmObject } from "./osm-object";
 import { LatLon, Node } from "./node";
-import { LateBinder } from "./late-binder";
 import { boundsToRing, isFiniteBounds, isFiniteCoordinate, isRing, ringDirection } from "./utils";
 import polygonTags from './polytags.json';
 import type { RefElements } from "./ref-elements";
@@ -20,7 +19,8 @@ export type PolygonTags = Record<string, PolygonRule>;
 const defaultPolygonRules = polygonTags as PolygonTags;
 
 export class Way extends OsmObject {
-    private latLngArray: Array<LatLon | LateBinder<LatLon>>;
+    /** Coordinates, or still-unresolved node references, in document order. */
+    private latLngArray: Array<LatLon | string | number>;
     private center: LatLon | null;
     private bounds: number[] | null;
 
@@ -79,18 +79,38 @@ export class Way extends OsmObject {
         return false;
     }
 
-    public addNodeRef(ref: string) {
-        const binder = new LateBinder(this.latLngArray, (id: string) => {
-            const node = this.refElems.get(`node/${id}`) as Node;
-            if (node && node.hasCoordinates()) {
-                node.refCount++;
-                return node.getLatLng();
-            }
-            this.tainted = true;
-        }, this, [ref]);
+    /**
+     * Record a node reference. The reference is resolved in bulk when
+     * references are bound, instead of allocating one binder object and closure
+     * per reference — a way-heavy extract has tens of thousands of these.
+     */
+    public addNodeRef(ref: string | number) {
+        this.latLngArray.push(ref);
+        this.refElems.addPendingWay(this);
+    }
 
-        this.latLngArray.push(binder);
-        this.refElems.addBinder(binder);
+    /**
+     * Replace node references by coordinates, dropping the ones that cannot be
+     * resolved and marking the way tainted. Called once from `RefElements`.
+     */
+    public resolveNodeRefs(lookup: (ref: any) => Node | undefined) {
+        const source = this.latLngArray;
+        let write = 0;
+        for (let read = 0; read < source.length; read++) {
+            const entry = source[read];
+            if (typeof entry === 'string' || typeof entry === 'number') {
+                const node = lookup(entry);
+                if (node && node.hasCoordinates()) {
+                    node.refCount++;
+                    source[write++] = node.getLatLng()!;
+                } else {
+                    this.tainted = true;
+                }
+                continue;
+            }
+            source[write++] = entry;
+        }
+        source.length = write;
     }
 
     /**

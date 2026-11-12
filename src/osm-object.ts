@@ -11,6 +11,7 @@ export abstract class OsmObject {
     protected refElems: RefElements;
 
     private type: string;
+    private compositeId: string;
     protected tags: { [k: string]: string };
     private props: { [k: string]: any };
 
@@ -19,7 +20,8 @@ export abstract class OsmObject {
         this.id = id;
         this.refElems = refElems;
         this.tags = {};
-        this.props = { id: this.getCompositeId() };
+        this.compositeId = `${type}/${id}`;
+        this.props = { id: this.compositeId };
         this.refCount = 0;
         this.hasTag = false;
         this.tainted = false;
@@ -47,6 +49,14 @@ export abstract class OsmObject {
     }
 
     /**
+     * Adopt a props object built for this element, without copying it again.
+     * `props.id` must already be the composite id (see `purgeProps(…, seed)`).
+     */
+    public setProps(props: { [k: string]: any }) {
+        this.props = props;
+    }
+
+    /**
      * Merge another copy of the same element into this one. The newest version
      * wins; missing tags/props from the older copy are preserved.
      */
@@ -66,7 +76,7 @@ export abstract class OsmObject {
     }
 
     public getCompositeId(): string {
-        return `${this.type}/${this.id}`;
+        return this.compositeId;
     }
 
     public getVersion(): number {
