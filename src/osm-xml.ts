@@ -250,7 +250,7 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
                     output.tainted = true;
                 }
             } else {
-                refElements!.add(way!.getCompositeId(), way!);
+                refElements!.add(way!);
                 addWayProps(way!, frame.attrs!);
                 if (frame.tags) {
                     way!.addTags(frame.tags);

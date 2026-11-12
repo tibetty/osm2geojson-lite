@@ -5,11 +5,20 @@ import { Way } from "./way";
 import type { OsmObject } from "./osm-object";
 import type { PolygonTags } from "./way";
 
-export class RefElements extends Map<string, OsmObject> {
+export class RefElements {
     /** When true, features with unresolved references expose `@tainted: true`. */
     public reportTainted: boolean;
     /** Overrides the built-in polygon tag rules when provided. */
     public polygonTags: PolygonTags | undefined;
+
+    /**
+     * Elements in registration order, which is the output order. Removals leave
+     * a hole that `compact()` closes, so iteration stays a plain array walk
+     * instead of a map lookup per element.
+     */
+    private ordered: Array<OsmObject | undefined>;
+    /** Other element types (Overpass `convert`, `make`, custom tags). */
+    private others: Map<string, OsmObject>;
     /** Ways holding unresolved node references, resolved in one pass. */
     private pendingWays: Set<Way>;
     /** Relations holding unresolved member references. */
@@ -25,9 +34,11 @@ export class RefElements extends Map<string, OsmObject> {
     private duplicates: Array<{ existing: OsmObject; duplicate: OsmObject }>;
     /** composite id -> newest version known to be deleted */
     private tombstones: Map<string, number>;
+    private hasHoles: boolean;
 
     constructor() {
-        super();
+        this.ordered = [];
+        this.others = new Map();
         this.pendingWays = new Set();
         this.pendingRelations = new Set();
         this.nodes = new Map();
@@ -35,6 +46,7 @@ export class RefElements extends Map<string, OsmObject> {
         this.relationIndex = new Map();
         this.duplicates = [];
         this.tombstones = new Map();
+        this.hasHoles = false;
         this.reportTainted = false;
         this.polygonTags = undefined;
     }
@@ -70,36 +82,97 @@ export class RefElements extends Map<string, OsmObject> {
         this.tombstones.clear();
     }
 
-    public add(k: string, v: OsmObject) {
-        const existing = this.get(k);
-        if (existing && existing !== v) {
-            this.duplicates.push({ existing, duplicate: v });
+    /** Elements in registration order (holes already compacted). */
+    public elements(): OsmObject[] {
+        return this.ordered as OsmObject[];
+    }
+
+    private indexOf(value: OsmObject): Map<any, OsmObject> | undefined {
+        if (value instanceof Node) {
+            return this.nodes;
+        }
+        if (value instanceof Way) {
+            return this.wayIndex;
+        }
+        if (value instanceof Relation) {
+            return this.relationIndex;
+        }
+        return undefined;
+    }
+
+    public add(value: OsmObject) {
+        const index = this.indexOf(value);
+        if (index === undefined) {
+            const key = value.getCompositeId();
+            const existing = this.others.get(key);
+            if (existing !== undefined) {
+                if (existing !== value) {
+                    this.duplicates.push({ existing, duplicate: value });
+                }
+                return;
+            }
+            value.orderIndex = this.ordered.length;
+            this.ordered.push(value);
+            this.others.set(key, value);
             return;
         }
-        this.set(k, v);
+
+        const existing = index.get(value.id);
+        if (existing !== undefined) {
+            if (existing !== value) {
+                this.duplicates.push({ existing, duplicate: value });
+            }
+            return;
+        }
+        value.orderIndex = this.ordered.length;
+        this.ordered.push(value);
+        index.set(value.id, value);
     }
 
-    public set(key: string, value: OsmObject): this {
-        if (value instanceof Node) {
-            this.nodes.set(value.id, value);
-        } else if (value instanceof Way) {
-            this.wayIndex.set(value.id, value);
-        } else if (value instanceof Relation) {
-            this.relationIndex.set(value.id, value);
-        }
-        return super.set(key, value);
+    /** Put `replacement` where `existing` was registered, keeping the order. */
+    public replace(existing: OsmObject, replacement: OsmObject) {
+        replacement.orderIndex = existing.orderIndex;
+        this.ordered[existing.orderIndex] = replacement;
+        this.indexOf(replacement)!.set(replacement.id, replacement);
     }
 
-    public delete(key: string): boolean {
-        const existing = super.get(key);
-        if (existing instanceof Node) {
-            this.nodes.delete(existing.id);
-        } else if (existing instanceof Way) {
-            this.wayIndex.delete(existing.id);
-        } else if (existing instanceof Relation) {
-            this.relationIndex.delete(existing.id);
+    private remove(element: OsmObject) {
+        const index = this.indexOf(element);
+        if (index === undefined) {
+            this.others.delete(element.getCompositeId());
+        } else {
+            index.delete(element.id);
         }
-        return super.delete(key);
+        this.ordered[element.orderIndex] = undefined;
+        this.hasHoles = true;
+    }
+
+    public get(compositeId: string): OsmObject | undefined {
+        const slash = compositeId.indexOf('/');
+        if (slash < 0) {
+            return undefined;
+        }
+        const type = compositeId.slice(0, slash);
+        const id = compositeId.slice(slash + 1);
+        if (type === 'node') {
+            return RefElements.lookup(this.nodes, id);
+        }
+        if (type === 'way') {
+            return RefElements.lookup(this.wayIndex, id);
+        }
+        if (type === 'relation') {
+            return RefElements.lookup(this.relationIndex, id);
+        }
+        return this.others.get(compositeId);
+    }
+
+    public delete(compositeId: string): boolean {
+        const element = this.get(compositeId);
+        if (element === undefined) {
+            return false;
+        }
+        this.remove(element);
+        return true;
     }
 
     public addPendingWay(way: Way) {
@@ -124,7 +197,7 @@ export class RefElements extends Map<string, OsmObject> {
             return;
         }
         for (const way of this.pendingWays) {
-            way.resolveNodeRefs((ref) => RefElements.lookup(this.nodes, ref));
+            way.resolveNodeRefs(this.nodes);
         }
         this.pendingWays.clear();
     }
@@ -134,11 +207,7 @@ export class RefElements extends Map<string, OsmObject> {
             return;
         }
         for (const relation of this.pendingRelations) {
-            relation.resolveMembers(
-                (ref) => RefElements.lookup(this.nodes, ref),
-                (ref) => RefElements.lookup(this.wayIndex, ref),
-                (ref) => RefElements.lookup(this.relationIndex, ref),
-            );
+            relation.resolveMembers(this.nodes, this.wayIndex, this.relationIndex);
         }
         this.pendingRelations.clear();
     }
@@ -162,7 +231,7 @@ export class RefElements extends Map<string, OsmObject> {
             if (existingVersion > 0 && duplicateVersion > 0 && existingVersion !== duplicateVersion) {
                 if (duplicateVersion > existingVersion) {
                     this.dropPendingWork(existing);
-                    this.set(existing.getCompositeId(), duplicate);
+                    this.replace(existing, duplicate);
                 } else {
                     this.dropPendingWork(duplicate);
                 }
@@ -174,7 +243,7 @@ export class RefElements extends Map<string, OsmObject> {
 
             if (duplicate instanceof Output && !(existing instanceof Output)) {
                 // Derived/custom output replaces the relation placeholder.
-                this.set(existing.getCompositeId(), duplicate);
+                this.replace(existing, duplicate);
                 this.dropPendingWork(existing);
                 continue;
             }
@@ -222,5 +291,12 @@ export class RefElements extends Map<string, OsmObject> {
         this.resolveHistory();
         this.resolvePendingWays();
         this.resolvePendingRelations();
+        if (this.hasHoles) {
+            this.ordered = this.ordered.filter((element) => element !== undefined);
+            this.ordered.forEach((element, position) => {
+                element!.orderIndex = position;
+            });
+            this.hasHoles = false;
+        }
     }
 }
