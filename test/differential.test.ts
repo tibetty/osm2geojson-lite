@@ -122,11 +122,20 @@ function canonicalGeometry(geometry: any): any {
     return geometry;
 }
 
+const referenceCache = new Map<string, any>();
+
+/** The reference conversion is expensive on the large extracts: convert once. */
 function referenceFeatureCollection(file: string): any {
+    const cached = referenceCache.get(file);
+    if (cached) {
+        return cached;
+    }
     const raw = fs.readFileSync(`./test/data/${file}`, 'utf-8').replace(/^\uFEFF/, '');
-    return file.endsWith('.json')
+    const converted = file.endsWith('.json')
         ? osmtogeojson(JSON.parse(raw))
         : osmtogeojson(new DOMParser().parseFromString(raw, 'text/xml'));
+    referenceCache.set(file, converted);
+    return converted;
 }
 
 describe('differential against osmtogeojson', () => {
@@ -135,7 +144,8 @@ describe('differential against osmtogeojson', () => {
     });
 
     for (const file of fixtures) {
-        it(`matches reference feature selection for ${file}`, () => {
+        // osmtogeojson needs seconds on the large extracts under a shared CI runner.
+        it(`matches reference feature selection for ${file}`, { timeout: 60_000 }, () => {
             const raw = fs.readFileSync(`./test/data/${file}`, 'utf-8').replace(/^\uFEFF/, '');
             const ours = osm2geojson(file.endsWith('.json') ? JSON.parse(raw) : raw, opts) as any;
             const theirs = referenceFeatureCollection(file) as any;
@@ -166,7 +176,7 @@ describe('differential against osmtogeojson', () => {
         });
 
         if (STRICT.has(file)) {
-            it(`matches reference geometry exactly for ${file}`, () => {
+            it(`matches reference geometry exactly for ${file}`, { timeout: 60_000 }, () => {
                 const raw = fs.readFileSync(`./test/data/${file}`, 'utf-8').replace(/^\uFEFF/, '');
                 const ours = osm2geojson(file.endsWith('.json') ? JSON.parse(raw) : raw, opts) as any;
                 const theirs = referenceFeatureCollection(file) as any;
