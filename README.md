@@ -6,7 +6,7 @@ osm2geojson-lite
 [![NPM Version](https://img.shields.io/npm/v/osm2geojson-lite)](https://www.npmjs.com/package/osm2geojson-lite) [![Codecov](https://img.shields.io/codecov/c/github/tibetty/osm2geojson-lite/main.svg)](https://codecov.io/gh/tibetty/osm2geojson-lite/)
 
 
-A full-featured, dependency-free convertor from [OpenStreetMap](http://openstreetmap.org) [data](http://wiki.openstreetmap.org/wiki/OSM_XML) to [GeoJSON](http://www.geojson.org/), implemented in pure JavaScript. It reads every OSM data format that carries geometry - OSM XML, osmChange diffs, PBF and Overpass JSON - covers the OSM data model end to end, and converts 10-18x faster than `osmtogeojson` on XML and 13-57x on JSON.
+A full-featured, dependency-free convertor from [OpenStreetMap](http://openstreetmap.org) [data](http://wiki.openstreetmap.org/wiki/OSM_XML) to [GeoJSON](http://www.geojson.org/), implemented in pure JavaScript. It reads every OSM data format that carries geometry - OSM XML, osmChange diffs, PBF and Overpass JSON - covers the OSM data model end to end, and converts 10-21x faster than `osmtogeojson` on the XML boundary extracts and 13-57x on the JSON ones. The margin depends on the input shape - see [Performance](#performance).
 
 What that covers:
 
@@ -145,17 +145,21 @@ Performance
 
 ### Why it is fast
 
-The advantage comes from doing less work, not from micro-optimisation. The
-larger and more relation-heavy the source, the wider the margin gets.
+The advantage comes from doing less work, not from micro-optimisation. It is
+largest on document-shaped input — XML, or one boundary relation with inline
+member geometry — and smallest on element-dense extracts, where both libraries
+spend their time on per-feature work. The benchmark below is the former; measure
+your own shape.
 
 - **A purpose-built XML scanner.** `src/osm-xml.ts` walks the document once and
   applies each element to the object being built. There is no DOM, no generic
   `$tag`/`$innerNodes` tree and no object allocated per `<nd>` or `<tag>`, which
   is what a general XML parser costs before conversion even starts.
-- **References bind once, at the end.** Node, way and relation references are
-  deferred and resolved in a single pass per container
-  (`src/ref-elements.ts`), so a way's 2 000 node references are one linear
-  compaction instead of thousands of O(n²) list removals.
+- **References resolve once, at the end.** Parsing stores a way's node references
+  and a relation's members as plain values and only resolves them after the whole
+  document is read (`src/ref-elements.ts`): one pass per way or relation against
+  a typed index, instead of one object and closure per reference. A 2 000-node
+  way is one linear pass, not thousands of list removals.
 - **One geometry pipeline, not four.** XML, PBF and Overpass JSON all feed the
   same element analyser, so duplicate/history resolution, role handling and ring
   assembly exist once. PBF is decoded straight into elements, with no
@@ -175,31 +179,38 @@ larger and more relation-heavy the source, the wider the margin gets.
 
 ### Benchmarks
 
-1. Workloads include the boundary XML and JSON of 4 administrative areas (zhucheng, hebei, tokyodo, usa)
+1. Workloads are the boundary XML and JSON of four administrative areas (zhucheng, hebei, tokyodo, usa). Each file holds **one relation** with its member geometry inlined, so these measure boundary flattening plus XML tokenising, not an element-dense conversion.
 2. The benchmark is written with [Vitest's `bench`](https://vitest.dev/guide/features.html#benchmarking), which warms up and then samples each conversion many times, comparing this library against [`osm2geojson-ultra`](https://www.npmjs.com/package/osm2geojson-ultra) (which uses the `txml` parser) and `osmtogeojson` (+ `xmldom` for XML).
 ```
 $ npm run bench
 ```
-3. The # listed in the tables below are coarse lowest speed-up factors (this library vs. the competitor) observed on the sample data.
-4. XML and PBF conversion dominate when geometry is built; JSON from Overpass is mostly reference resolution, where the single-pass binding shows the widest margin.
+3. The # in the tables below are `hz` ratios from one run on the reference machine; treat them as coarse indicators, not guarantees.
+4. The XML fixtures spend their time tokenising the document; the JSON ones spend it flattening the relation, since their member geometry is already inline. Element-dense documents, where reference resolution dominates, are covered by the note under the tables.
 
 1. XML
 
 |                 | zhucheng | hebei | tokyodo | usa   |
-|-----------------|----------|-------|---------|-------|
-| vs osmtogeojson | >10.9x   | >18.6x| >15.0x  | >14.9x|
-| vs ultra        | >2.6x    | >2.7x | >3.8x   | >4.2x |
+| --------------- | -------- | ----- | ------- | ----- |
+| vs osmtogeojson | 10.8x    | 21.2x | 14.7x   | 14.4x |
+| vs ultra        | 2.5x     | 3.0x  | 3.7x    | 4.4x  |
 
 2. Overpass JSON
 
-|                 | zhucheng | hebei  | tokyodo | usa   |
-|-----------------|----------|--------|---------|-------|
-| vs osmtogeojson | >13.2x   | >57.3x | >21.7x  | >27.8x|
-| vs ultra        | >4.3x    | >7.4x  | >14.0x  | >21.4x|
+|                 | zhucheng | hebei | tokyodo | usa   |
+| --------------- | -------- | ----- | ------- | ----- |
+| vs osmtogeojson | 13.7x    | 57.3x | 22.1x   | 27.5x |
+| vs ultra        | 4.7x     | 7.7x  | 15.0x   | 21.4x |
 
-> **Note on column values:** the numbers are `hz` ratios reported by Vitest on
-> the reference machine (Node 26, Apple silicon). Run `npm run bench` on your
-> own hardware to compare.
+> **What these numbers measure.** Each fixture is *one boundary relation* with
+> inline member geometry (8 to 838 members, up to 130,000 coordinate pairs), so
+> the table is boundary flattening, not general conversion throughput. Measured
+> by Vitest as `hz` ratios on Node 26 / Apple silicon; run `npm run bench` on
+> your own hardware.
+>
+> **Element-dense extracts are a different story.** On a 48,472-element extract
+> (10,664 output features, 92,000 references) the same comparison is **1.1x**,
+> because both libraries then spend their time on per-feature work rather than
+> on parsing. Use the shape you actually convert.
 
 
 Correctness
@@ -211,8 +222,9 @@ Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also 
 The test suite also runs real data: a Geofabrik PBF extract, osmChange diffs
 from the same update stream and history responses from the OSM API, plus a
 corpus-wide check that every fixture converts to unique, well-formed features
-and that the element path agrees with the direct path. Coverage thresholds are
-enforced by `npm test`; see [CONTRIBUTING.md](CONTRIBUTING.md).
+and that the element path agrees with the direct path. `npm test` enforces
+coverage thresholds and runs a version audit that re-checks every released
+artifact against the behaviour it claims; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 From a repository checkout, run:
 
