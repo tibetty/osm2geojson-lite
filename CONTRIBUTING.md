@@ -61,6 +61,18 @@ the invariants a consumer relies on: unique feature ids, well-formed features,
 finite coordinates, and that routing a document through `toElements` produces
 the same GeoJSON as converting it directly.
 
+Three further layers catch what fixtures cannot:
+
+- `test/fuzz.test.ts` mutates the fixtures byte by byte (seeded) and requires
+  either a plain `Error` or well-formed output; `TypeError`, `RangeError` and
+  `ReferenceError` are treated as bugs, not as bad input.
+- `test/differential.test.ts` compares feature selection with `osmtogeojson` on
+  every fixture and geometry exactly on twenty of them. Deliberate differences
+  are listed per fixture with a reason, so a new difference fails, and so does
+  one that disappears without updating the list.
+- `test/property.test.ts` generates documents and diffs and checks the same
+  invariants on the combinations no fixture covers.
+
 Coverage thresholds live in `vitest.config.ts`. They are the levels the suite
 reaches today, so dropping a code path below them fails `npm test`; raise them
 when you add tests, do not lower them to make a build pass. `src/cli.ts` is
