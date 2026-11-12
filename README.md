@@ -6,7 +6,7 @@ osm2geojson-lite
 [![NPM Version](https://img.shields.io/npm/v/osm2geojson-lite)](https://www.npmjs.com/package/osm2geojson-lite) [![Codecov](https://img.shields.io/codecov/c/github/tibetty/osm2geojson-lite/main.svg)](https://codecov.io/gh/tibetty/osm2geojson-lite/)
 
 
-A full-featured, dependency-free convertor from [OpenStreetMap](http://openstreetmap.org) [data](http://wiki.openstreetmap.org/wiki/OSM_XML) to [GeoJSON](http://www.geojson.org/), implemented in pure JavaScript. It reads every OSM data format that carries geometry - OSM XML, osmChange diffs, PBF and Overpass JSON - covers the OSM data model end to end, and converts 10-21x faster than `osmtogeojson` on the XML boundary extracts and 13-57x on the JSON ones. The margin depends on the input shape - see [Performance](#performance).
+A full-featured, dependency-free convertor from [OpenStreetMap](http://openstreetmap.org) [data](http://wiki.openstreetmap.org/wiki/OSM_XML) to [GeoJSON](http://www.geojson.org/), implemented in pure JavaScript. It reads every OSM data format that carries geometry - OSM XML, osmChange diffs, PBF and Overpass JSON - covers the OSM data model end to end, and converts 10-21x faster than `osmtogeojson` on XML documents and 13-57x faster on boundary extracts in Overpass JSON - the workload it was designed for. On element-dense extracts it sits within about 1.2x of `osmtogeojson` rather than ahead; [Performance](#performance) says which number belongs to which shape.
 
 What that covers:
 
@@ -208,9 +208,13 @@ $ npm run bench
 > your own hardware.
 >
 > **Element-dense extracts are a different story.** On a 48,472-element extract
-> (10,664 output features, 92,000 references) the same comparison is **1.1x**,
-> because both libraries then spend their time on per-feature work rather than
-> on parsing. Use the shape you actually convert.
+> (10,664 output features, 92,000 references) `osmtogeojson` converts the same
+> elements about **1.15-1.2x faster** than this library: both then spend their
+> time on per-feature work rather than on parsing. Use the shape you actually
+> convert.
+>
+> **PBF has no comparison row** because `osmtogeojson` cannot read it; that is a
+> capability difference, not a speed one.
 
 
 Correctness
