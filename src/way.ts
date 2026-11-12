@@ -93,13 +93,17 @@ export class Way extends OsmObject {
      * Replace node references by coordinates, dropping the ones that cannot be
      * resolved and marking the way tainted. Called once from `RefElements`.
      */
-    public resolveNodeRefs(lookup: (ref: any) => Node | undefined) {
+    public resolveNodeRefs(nodes: Map<any, Node>) {
         const source = this.latLngArray;
         let write = 0;
         for (let read = 0; read < source.length; read++) {
             const entry = source[read];
             if (typeof entry === 'string' || typeof entry === 'number') {
-                const node = lookup(entry);
+                let node = nodes.get(entry);
+                if (node === undefined) {
+                    // Ids arrive as strings from XML and numbers from PBF.
+                    node = nodes.get(typeof entry === 'number' ? String(entry) : Number(entry));
+                }
                 if (node && node.hasCoordinates()) {
                     node.refCount++;
                     source[write++] = node.getLatLng()!;

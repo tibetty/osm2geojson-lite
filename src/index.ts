@@ -109,10 +109,10 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
         // may already carry a complete GeoJSON geometry object.
         if (elem.geometry && typeof elem.geometry === 'object' && elem.geometry.type) {
             const output = new Output(elem.type, elem.id, refElements);
+            output.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'geometry', 'tainted'], { id: output.getCompositeId() }));
             if (elem.tags) {
                 output.addTags(elem.tags);
             }
-            output.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'geometry', 'tainted'], { id: output.getCompositeId() }));
             if (elem.tainted === true) {
                 output.tainted = true;
             }
@@ -123,10 +123,10 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
         switch (elem.type) {
             case 'node':
                 const node = new Node(elem.id as string, refElements);
+                node.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'lat', 'lon', 'tainted'], { id: node.getCompositeId() }));
                 if (elem.tags) {
                     node.addTags(elem.tags);
                 }
-                node.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'lat', 'lon', 'tainted'], { id: node.getCompositeId() }));
                 node.setLatLng(elem);
                 if (elem.tainted === true) {
                     node.tainted = true;
@@ -134,10 +134,10 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
                 break;
             case 'way':
                 const way = new Way(elem.id as string, refElements);
+                way.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'nodes', 'geometry', 'tainted'], { id: way.getCompositeId() }));
                 if (elem.tags) {
                     way.addTags(elem.tags);
                 }
-                way.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'nodes', 'geometry', 'tainted'], { id: way.getCompositeId() }));
                 if (elem.tainted === true) {
                     way.tainted = true;
                 }
@@ -158,13 +158,13 @@ function analyzeFeaturesFromJson(osm: { [k: string]: any }, refElements: RefElem
                 if (elem.bounds) {
                     relation.setBounds([parseFloat(elem.bounds.minlon), parseFloat(elem.bounds.minlat), parseFloat(elem.bounds.maxlon), parseFloat(elem.bounds.maxlat)]);
                 }
+                relation.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'bounds', 'members', 'tainted'], { id: relation.getCompositeId() }));
                 if (elem.tags) {
                     relation.addTags(elem.tags);
                 }
                 if (elem.center) {
                     relation.setCenter(elem.center);
                 }
-                relation.setProps(purgeProps(elem as { [k: string]: string }, ['id', 'type', 'tags', 'bounds', 'members', 'tainted'], { id: relation.getCompositeId() }));
                 if (elem.tainted === true) {
                     relation.tainted = true;
                 }
@@ -190,7 +190,7 @@ function analyzeFeaturesFromXml(osm: string, refElements: RefElements): void {
  */
 function ensureRelationCyclesHaveRoot(refElements: RefElements): void {
     const relations: Relation[] = [];
-    for (const value of refElements.values()) {
+    for (const value of refElements.elements()) {
         if (value instanceof Relation) {
             relations.push(value);
         }
@@ -306,7 +306,7 @@ function ensureRelationCyclesHaveRoot(refElements: RefElements): void {
  * contributed by those relations.
  */
 function releaseNonGeometryRelationMembers(refElements: RefElements): void {
-    for (const value of refElements.values()) {
+    for (const value of refElements.elements()) {
         if (!(value instanceof Relation)) {
             continue;
         }
@@ -418,7 +418,7 @@ function convert(osm: OsmInput, opts?: IOptions): FeatureCollection<GeometryObje
     // carries two features with the same id.
     const emitted = new Set<string>();
 
-    for (const v of refElements.values()) {
+    for (const v of refElements.elements()) {
         if (v.refCount > 0 && (!v.hasTag || !renderTagged || (v instanceof Way && excludeWay))) {
             continue;
         }

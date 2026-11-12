@@ -229,17 +229,16 @@ export class Relation extends OsmObject {
      * with their role, because a placeholder node would only add a coordinate-
      * less point. Both cases taint this relation.
      */
-    public resolveMembers(
-        lookupNode: (ref: any) => Node | undefined,
-        lookupWay: (ref: any) => Way | undefined,
-        lookupRelation: (ref: any) => Relation | undefined,
-    ) {
+    public resolveMembers(nodes: Map<any, Node>, ways: Map<any, Way>, relations: Map<any, Relation>) {
         for (let i = 0; i < this.relations.length; i++) {
             const entry = this.relations[i];
             if (entry instanceof Relation) {
                 continue;
             }
-            const relation = lookupRelation(entry);
+            let relation = relations.get(entry);
+            if (relation === undefined) {
+                relation = relations.get(typeof entry === 'number' ? String(entry) : Number(entry));
+            }
             if (relation) {
                 relation.refCount++;
                 this.relations[i] = relation;
@@ -254,7 +253,10 @@ export class Relation extends OsmObject {
             if (entry instanceof Way) {
                 continue;
             }
-            const way = lookupWay(entry);
+            let way = ways.get(entry);
+            if (way === undefined) {
+                way = ways.get(typeof entry === 'number' ? String(entry) : Number(entry));
+            }
             if (way) {
                 way.refCount++;
                 this.ways[i] = way;
@@ -273,7 +275,10 @@ export class Relation extends OsmObject {
                 write++;
                 continue;
             }
-            const node = lookupNode(entry);
+            let node = nodes.get(entry);
+            if (node === undefined) {
+                node = nodes.get(typeof entry === 'number' ? String(entry) : Number(entry));
+            }
             if (node && node.hasCoordinates()) {
                 node.refCount++;
                 this.nodes[write] = node;

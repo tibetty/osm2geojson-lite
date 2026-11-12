@@ -7,6 +7,8 @@ export abstract class OsmObject {
     public id: string;
     /** Set when a referenced node, way or relation could not be resolved. */
     public tainted: boolean;
+    /** Position in the owning RefElements registration order; internal. */
+    public orderIndex: number;
 
     protected refElems: RefElements;
 
@@ -25,8 +27,9 @@ export abstract class OsmObject {
         this.refCount = 0;
         this.hasTag = false;
         this.tainted = false;
+        this.orderIndex = -1;
         if (refElems && register) {
-            refElems.add(this.getCompositeId(), this);
+            refElems.add(this);
         }
     }
 
@@ -60,8 +63,8 @@ export abstract class OsmObject {
      * `props.id` must already be the composite id (see `purgeProps(…, seed)`).
      */
     public setProps(props: { [k: string]: any }) {
-        // Tags are kept in `props` too; a caller may set props after adding them.
-        this.props = Object.assign(props, this.tags);
+        // Normally called before addTags; merge only if tags already arrived.
+        this.props = this.hasTag ? Object.assign(props, this.tags) : props;
     }
 
     /**
