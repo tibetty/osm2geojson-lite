@@ -1,7 +1,7 @@
 {
   "name": "osm2geojson-lite",
   "version": "2.7.4",
-  "description": "a lightweight yet faster osm (xml, pbf or json) to geojson convertor - 4x faster than xmldom + osmtogeojson in most situations - implemented in pure JavaScript without any 3rd party dependency",
+  "description": "full-featured OpenStreetMap to GeoJSON convertor - OSM XML, osmChange, PBF and Overpass JSON, history and diff application, zero dependencies, 10-18x faster than osmtogeojson on XML",
   "author": "tibetty",
   "license": "MIT",
   "main": "dist/index.cjs",
@@ -22,7 +22,8 @@
   ],
   "scripts": {
     "build": "rolldown -c && cp src/polytags.json dist/",
-    "test": "vitest run --coverage",
+    "test": "npm run test:unit && npm run audit:versions",
+    "test:unit": "vitest run --coverage",
     "test:update": "UPDATE_SNAPSHOTS=1 vitest run test/e2e.test.ts",
     "audit:versions": "npm run build && node scripts/audit-versions.mjs",
     "bench": "vitest bench --run --reporter=verbose",

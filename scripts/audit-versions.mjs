@@ -8,8 +8,9 @@
  *   npm run audit:versions -- --from 2.7.0 # shorter range
  *   npm run audit:versions -- --local-only # only the local dist/ build
  *
- * Needs network access to install the published tarballs, so it is a manual
- * tool and not part of `npm test`. The published packages are installed into a
+ * `npm test` runs this too. It needs the network to install the published
+ * tarballs: offline it reports SKIP and audits the local build only, unless
+ * `CI` is set or `--strict` is passed, where an unreachable registry fails. The published packages are installed into a
  * cache directory under node_modules and reused while their version list stays
  * the same. The `HEAD` column runs the local `dist/` build (`npm run build`).
  *
@@ -316,6 +317,7 @@ if (argv.includes('--help') || argv.includes('-h')) {
 }
 const from = option('--from') || '2.2.0';
 const local = argv.includes('--local-only');
+const strict = argv.includes('--strict') || Boolean(process.env.CI);
 
 /* --------------------------- install & load ---------------------------- */
 const compare = (a, b) => {
@@ -353,7 +355,21 @@ function install(versions) {
     return { dir: cache, entry: (version) => path.join(cache, 'node_modules', alias(version), 'dist', 'index.mjs') };
 }
 
-const versions = local ? [] : publishedVersions();
+let versions = [];
+let skipped = '';
+if (!local) {
+    try {
+        versions = publishedVersions();
+    } catch (error) {
+        if (strict) {
+            process.stderr.write(`cannot reach the npm registry: ${error.message}\n`);
+            process.exit(1);
+        }
+        // Offline: still audit the local build, and say why the rest is missing.
+        skipped = `SKIP published versions: ${error.message.split('\n')[0]}`;
+        process.stdout.write(`${skipped}\n`);
+    }
+}
 const { dir, entry } = versions.length ? install(versions) : { dir: undefined, entry: undefined };
 
 const headDist = path.join(repo, 'dist', 'index.mjs');
@@ -431,6 +447,6 @@ for (const check of cliChecks) {
     process.stdout.write(`${check.name.padEnd(width - 1)} ${cells.join('')}\n`);
 }
 
-process.stdout.write(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${failures} gated check(s) failed.\n`);
+process.stdout.write(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${failures} gated check(s) failed.${skipped ? ' (published versions skipped)' : ''}\n`);
 process.stdout.write('ok = passes, -- = before the release that guarantees it, FAIL = regression.\n');
 process.exit(failures === 0 ? 0 : 1);
