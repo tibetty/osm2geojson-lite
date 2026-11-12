@@ -152,8 +152,10 @@ function reportConflict(conflicts: MergeConflict[], strict: boolean, id: string,
  *
  * A change only overrides what it advances: an entry whose version is not
  * newer than the base copy leaves the base intact and is reported as a
- * conflict, so a mismatched extract/diff pair cannot roll data back. Elements
- * absent from the base are creates and are appended in document order.
+ * conflict, so a mismatched extract/diff pair cannot roll data back. Deletions
+ * are the exception: an osmChange delete names the version being deleted, so a
+ * delete applies when the base is at or below that version. Elements absent
+ * from the base are creates and are appended in document order.
  */
 export function mergeResolved(base: ResolvedDocument, change: ResolvedDocument, strict: boolean = false): MergedDocument {
     const replacements = new Map<string, any>();
@@ -186,7 +188,10 @@ export function mergeResolved(base: ResolvedDocument, change: ResolvedDocument, 
 
         const deletionVersion = change.deleted.get(key);
         if (deletionVersion !== undefined) {
-            if (deletionVersion !== 0 && baseVersion >= deletionVersion) {
+            // An osmChange delete carries the version being deleted, not a new
+            // one: equality is the normal case. The base only wins when it has
+            // already moved past that version.
+            if (deletionVersion !== 0 && baseVersion > deletionVersion) {
                 reportConflict(conflicts, strict, key, deletionVersion, baseVersion);
                 elements.push(elem);
             }
