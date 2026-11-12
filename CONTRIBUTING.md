@@ -90,8 +90,10 @@ npm run audit:versions -- --local-only # only the local dist/ build
 Each check names the release it became guaranteed in. Every later release must
 still pass it, so a regression in any released artifact fails the command; older
 releases are reported as `--` for context. Published tarballs are installed once
-into `node_modules/.cache/osm2geojson-audit` and reused. This needs network
-access, so it is a manual tool rather than part of `npm test`.
+into `node_modules/.cache/osm2geojson-audit` and reused. `npm test` runs it as
+part of the suite: it needs network access, so offline it reports `SKIP` and
+audits the local build only, while CI (where `CI` is set) treats an unreachable
+registry as a failure.
 
 ### Refreshing real fixtures
 
