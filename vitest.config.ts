@@ -13,10 +13,10 @@ export default defineConfig({
             // Baselines are what the suite reaches today, so a change that stops
             // exercising a branch fails CI instead of quietly lowering coverage.
             thresholds: {
-                statements: 93,
-                branches: 86,
+                statements: 94,
+                branches: 89,
                 functions: 98,
-                lines: 93,
+                lines: 94,
             },
         },
     },

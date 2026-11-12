@@ -28,6 +28,8 @@ const MAX_BITS = 15;
 const MAX_TABLE = 1 << MAX_BITS;
 const CODE_LENGTH_TABLE = 1 << 7;
 const MOD_ADLER = 65521;
+/** Cap on the pre-allocation from `sizeHint`; a corrupt header can claim GBs. */
+const MAX_INITIAL_OUTPUT = 1 << 26;
 
 /**
  * Scratch buffers shared by every call. `inflate` is synchronous and never
@@ -182,7 +184,7 @@ export function inflate(data: Uint8Array, start: number = 0, end: number = data.
     let bitBuf = 0;
     let bitCnt = 0;
 
-    let out = new Uint8Array(Math.max(sizeHint, 1024));
+    let out = new Uint8Array(Math.max(Math.min(sizeHint, MAX_INITIAL_OUTPUT), 1024));
     let outPos = 0;
 
     /** Top up the bit buffer; bits past the end of the stream read as zero. */

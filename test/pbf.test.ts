@@ -209,6 +209,20 @@ describe('PBF corner cases', () => {
         expect(convert(file).features.map((feature: any) => feature.id)).toEqual(['node/1']);
     });
 
+    it('ignores an implausible raw_size instead of reserving gigabytes', () => {
+        const payload = new Uint8Array(1024);
+        const blob = new Writer().tag(2, 0).varint(0x7fffffff).bytes_(3, new Uint8Array(deflateSync(payload)));
+        const blobHeader = new Writer().string(1, 'OSMData').tag(3, 0).varint(blob.done().length).done();
+        const length = new Uint8Array(4);
+        new DataView(length.buffer).setInt32(0, blobHeader.length);
+        const file = new Uint8Array(4 + blobHeader.length + blob.done().length);
+        file.set(length, 0);
+        file.set(blobHeader, 4);
+        file.set(blob.done(), 4 + blobHeader.length);
+        // The hint is capped, so the decode is bounded by the real stream size.
+        expect(convert(file).features).toEqual([]);
+    });
+
     it('rejects unsupported protobuf wire types', () => {
         const bad = new Writer().tag(1, 3).done();
         const file = pbfFile([{ type: 'OSMHeader', payload: headerBlock(['OsmSchema-V0.6']) }, { type: 'OSMData', payload: bad }]);
