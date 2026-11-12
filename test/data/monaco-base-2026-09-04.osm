@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="Overpass API 0.7.62.11 87bfad18">
+<note>The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.</note>
+<meta osm_base="2026-11-12T00:58:49Z"/>
+
+  <node id="1690189832" lat="43.7379576" lon="7.4197616" version="3" timestamp="2024-12-13T10:40:31Z" changeset="160240018" uid="257555" user="rene78"/>
+  <node id="1690189834" lat="43.7380333" lon="7.4199188" version="3" timestamp="2024-12-13T10:40:31Z" changeset="160240018" uid="257555" user="rene78"/>
+  <node id="1690189838" lat="43.7380271" lon="7.4198810" version="4" timestamp="2025-07-23T22:51:32Z" changeset="169369897" uid="2708433" user="Teremys"/>
+  <node id="1690189840" lat="43.7381570" lon="7.4197138" version="5" timestamp="2025-07-23T22:51:32Z" changeset="169369897" uid="2708433" user="Teremys">
+    <tag k="entrance" v="main"/>
+    <tag k="name" v="Parvis Sainte-Devote"/>
+    <tag k="railway" v="train_station_entrance"/>
+  </node>
+  <node id="1690189848" lat="43.7382385" lon="7.4198458" version="4" timestamp="2025-07-23T17:41:00Z" changeset="169358516" uid="2708433" user="Teremys"/>
+  <node id="8762145129" lat="43.7380762" lon="7.4195773" version="2" timestamp="2025-07-23T17:41:00Z" changeset="169358516" uid="2708433" user="Teremys"/>
+  <node id="8762145130" lat="43.7381077" lon="7.4200109" version="3" timestamp="2025-07-23T17:41:00Z" changeset="169358516" uid="2708433" user="Teremys"/>
+  <node id="8762145135" lat="43.7379511" lon="7.4197697" version="2" timestamp="2024-12-13T10:40:31Z" changeset="160240018" uid="257555" user="rene78"/>
+  <node id="8762145137" lat="43.7379968" lon="7.4197235" version="2" timestamp="2024-12-13T10:40:31Z" changeset="160240018" uid="257555" user="rene78"/>
+  <node id="8762145138" lat="43.7380209" lon="7.4196809" version="2" timestamp="2024-12-13T10:40:31Z" changeset="160240018" uid="257555" user="rene78"/>
+  <node id="8762145139" lat="43.7380354" lon="7.4196047" version="3" timestamp="2025-07-23T17:41:00Z" changeset="169358516" uid="2708433" user="Teremys"/>
+  <node id="12419484952" lat="43.7379497" lon="7.4197502" version="1" timestamp="2024-12-13T10:40:31Z" changeset="160240018" uid="257555" user="rene78"/>
+  <node id="12419484954" lat="43.7380398" lon="7.4199073" version="1" timestamp="2024-12-13T10:40:31Z" changeset="160240018" uid="257555" user="rene78"/>
+  <node id="13019461738" lat="43.7380738" lon="7.4199601" version="1" timestamp="2025-07-23T17:41:00Z" changeset="169358516" uid="2708433" user="Teremys"/>
+  <node id="13019461739" lat="43.7380846" lon="7.4199768" version="1" timestamp="2025-07-23T17:41:00Z" changeset="169358516" uid="2708433" user="Teremys"/>
+  <node id="13019461740" lat="43.7382002" lon="7.4198671" version="1" timestamp="2025-07-23T17:41:00Z" changeset="169358516" uid="2708433" user="Teremys"/>
+  <node id="13019461741" lat="43.7381305" lon="7.4199588" version="2" timestamp="2025-07-23T22:51:32Z" changeset="169369897" uid="2708433" user="Teremys"/>
+  <node id="13019461742" lat="43.7381737" lon="7.4199011" version="2" timestamp="2025-07-23T22:51:32Z" changeset="169369897" uid="2708433" user="Teremys"/>
+  <way id="156780344" version="4" timestamp="2025-07-23T22:51:32Z" changeset="169369897" uid="2708433" user="Teremys">
+    <nd ref="1690189834"/>
+    <nd ref="12419484954"/>
+    <nd ref="1690189838"/>
+    <nd ref="1690189840"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="686912272" version="3" timestamp="2025-07-23T17:41:00Z" changeset="169358516" uid="2708433" user="Teremys">
+    <nd ref="1690189838"/>
+    <nd ref="1690189832"/>
+    <nd ref="12419484952"/>
+    <tag k="access" v="private"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="946562630" version="6" timestamp="2026-09-02T13:22:00Z" changeset="188419291" uid="23872480" user="NaoiseMcG">
+    <nd ref="8762145129"/>
+    <nd ref="8762145139"/>
+    <nd ref="8762145138"/>
+    <nd ref="8762145137"/>
+    <nd ref="1690189832"/>
+    <nd ref="8762145135"/>
+    <nd ref="12419484954"/>
+    <nd ref="13019461738"/>
+    <nd ref="13019461739"/>
+    <nd ref="8762145130"/>
+    <nd ref="13019461741"/>
+    <nd ref="13019461742"/>
+    <nd ref="13019461740"/>
+    <nd ref="1690189848"/>
+    <nd ref="1690189840"/>
+    <nd ref="8762145129"/>
+    <tag k="area" v="yes"/>
+    <tag k="highway" v="pedestrian"/>
+    <tag k="name" v="Parvis Sainte-Dévote"/>
+    <tag k="smoothness" v="excellent"/>
+    <tag k="source" v="Bing"/>
+    <tag k="surface" v="paving_stones"/>
+  </way>
+
+</osm>

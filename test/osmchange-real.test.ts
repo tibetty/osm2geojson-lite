@@ -39,6 +39,32 @@ describe('real osmChange diff', () => {
             .toEqual(osm2geojson(diff960, { completeFeature: true }));
     });
 
+    it('converts a diff with create sections', () => {
+        const diff = read('monaco-950.osc');
+        const features = (osm2geojson(diff, { completeFeature: true }) as any).features;
+        expect(features).toHaveLength(11);
+
+        const created = features.find((feature: any) => feature.id === 'node/14323457501');
+        expect(created.properties).toMatchObject({ tourism: 'viewpoint', version: '1' });
+        expect(created.geometry.coordinates).toEqual([7.4221198, 43.7298151]);
+
+        // The diff also creates a relation, but its member ways are not part of
+        // the diff, so it has no geometry of its own here.
+        expect(features.some((feature: any) => feature.id.startsWith('relation/'))).toBe(false);
+    });
+
+    it('decodes entities in real diff tags', () => {
+        const diff = read('monaco-950.osc');
+        const node = osm2geojson(diff, { elementId: 'node/6482565666' }) as any;
+        expect(node.properties.name).toBe("Cap d'Ail");
+        expect(node.properties.traffic_sign).toBe('city_limit');
+    });
+
+    it('reads the create diff from its gzip container', () => {
+        const gzipped = fs.readFileSync('./test/data/monaco-950.osc.gz');
+        expect(decodeInput(gzipped)).toBe(read('monaco-950.osc'));
+    });
+
     it('cannot render geometry from a diff alone when its ways lost their nodes', () => {
         // The diff modifies ways whose other nodes only exist in the base, and
         // deletes the only tagged line, so nothing is renderable in isolation.
@@ -68,6 +94,25 @@ describe('real osmChange diff', () => {
         expect(merged.elements).toHaveLength(48472);
         expect(new Set(ids).size).toBe(48472);
         expect(merged.conflicts).toHaveLength(3);
+    });
+
+    it('applies a diff to a base from the same moment with no conflicts', () => {
+        // Base reconstructed from OSM attic data at 2026-09-04T16:49Z, one
+        // minute before the diff was produced.
+        const base = read('monaco-base-2026-09-04.osm');
+        const applied = applyOsmChange(base, diff900, { ...opts, excludeWay: false, tainted: true });
+        expect(applied.conflicts).toEqual([]);
+
+        const features = (applied.geojson as any).features;
+        const ids = features.map((feature: any) => feature.id);
+        expect(ids).toContain('way/686912272');
+        expect(ids).toContain('way/946562630');
+        expect(ids).not.toContain('way/156780344');
+
+        const modified = features.find((feature: any) => feature.id === 'way/686912272');
+        expect(modified.properties.version).toBe('4');
+        expect(modified.geometry.type).toBe('LineString');
+        expect(features.find((feature: any) => feature.id === 'way/946562630').properties.version).toBe('7');
     });
 
     it('throws in strict mode naming the first stale entry', () => {

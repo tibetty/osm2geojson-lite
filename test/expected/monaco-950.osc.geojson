@@ -1,0 +1,221 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "node/1870658474",
+      "properties": {
+        "id": "node/1870658474",
+        "version": "7",
+        "timestamp": "2026-10-26T22:50:16Z",
+        "direction": "forward",
+        "highway": "give_way"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4120275,
+          43.7281818
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/2229413910",
+      "properties": {
+        "id": "node/2229413910",
+        "version": "3",
+        "timestamp": "2026-10-26T22:50:16Z",
+        "direction": "forward",
+        "highway": "give_way"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4123075,
+          43.7279118
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/2391676637",
+      "properties": {
+        "id": "node/2391676637",
+        "version": "8",
+        "timestamp": "2026-10-27T09:02:00Z",
+        "addr:city": "Monaco",
+        "addr:country": "MC",
+        "addr:housenumber": "26",
+        "addr:postcode": "98000",
+        "addr:street": "Avenue Princesse Grace",
+        "amenity": "nightclub",
+        "email": "jimmyz@sbm.mc",
+        "facebook": "https://www.facebook.com/JimmyzMonteCarloOfficial",
+        "name": "Jimmy’z Monte-Carlo",
+        "opening_hours": "We-Su 23:30-05:30",
+        "phone": "+377 98 06 70 68",
+        "start_date": "1970",
+        "website": "https://www.montecarlosbm.com/it/nightlife/jimmyz-monte-carlo",
+        "wheelchair": "no"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4385701,
+          43.747042
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/4453063926",
+      "properties": {
+        "id": "node/4453063926",
+        "version": "7",
+        "timestamp": "2026-10-26T22:50:16Z",
+        "direction": "forward",
+        "highway": "give_way"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4124099,
+          43.7288176
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/6482565666",
+      "properties": {
+        "id": "node/6482565666",
+        "version": "2",
+        "timestamp": "2026-10-26T22:50:16Z",
+        "name": "Cap d'Ail",
+        "traffic_sign": "city_limit"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4118648,
+          43.7279747
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/6482567687",
+      "properties": {
+        "id": "node/6482567687",
+        "version": "2",
+        "timestamp": "2026-10-26T22:50:16Z",
+        "name": "Cap d'Ail",
+        "source": "survey 2019",
+        "traffic_sign": "city_limit"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4134849,
+          43.7271805
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/6482706093",
+      "properties": {
+        "id": "node/6482706093",
+        "version": "2",
+        "timestamp": "2026-10-26T22:50:16Z",
+        "city_limit": "end",
+        "name": "Cap d'Ail",
+        "traffic_sign": "city_limit"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4100879,
+          43.730883
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/10197393663",
+      "properties": {
+        "id": "node/10197393663",
+        "version": "3",
+        "timestamp": "2026-10-26T22:50:16Z",
+        "direction": "forward",
+        "highway": "give_way"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4119936,
+          43.7279052
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/13135657961",
+      "properties": {
+        "id": "node/13135657961",
+        "version": "2",
+        "timestamp": "2026-10-26T22:50:16Z",
+        "direction": "forward",
+        "highway": "give_way"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4123041,
+          43.7285673
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "node/14323457501",
+      "properties": {
+        "id": "node/14323457501",
+        "version": "1",
+        "timestamp": "2026-10-27T14:59:27Z",
+        "tourism": "viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4221198,
+          43.7298151
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1570325532",
+      "properties": {
+        "id": "way/1570325532",
+        "version": "2",
+        "timestamp": "2026-10-27T16:25:27Z",
+        "highway": "footway"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.4149641,
+            43.7305498
+          ],
+          [
+            7.4149474,
+            43.7305381
+          ]
+        ]
+      }
+    }
+  ]
+}
