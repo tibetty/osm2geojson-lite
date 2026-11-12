@@ -11,8 +11,12 @@ import { inflate } from './inflate';
  * the API synchronous in both Node and browsers.
  */
 
-/** A zlib decompressor: `(data, start, end, sizeHint) => bytes`. */
-export type Inflate = (data: Uint8Array, start: number, end: number, sizeHint: number) => Uint8Array;
+/**
+ * A zlib decompressor for one PBF blob: `(compressed, sizeHint) => bytes`.
+ * `compressed` is exactly the blob payload, and `sizeHint` is its declared
+ * raw size (0 when absent).
+ */
+export type Inflate = (data: Uint8Array, sizeHint: number) => Uint8Array;
 
 const WIRE_VARINT = 0;
 const WIRE_FIXED64 = 1;
@@ -729,7 +733,7 @@ function readBlob(bytes: Uint8Array, inflateData: Inflate): Uint8Array {
     }
 
     if (zlibData) {
-        return inflateData(zlibData, 0, zlibData.length, rawSize);
+        return inflateData(zlibData, rawSize);
     }
     if (raw) {
         return raw;
@@ -740,7 +744,10 @@ function readBlob(bytes: Uint8Array, inflateData: Inflate): Uint8Array {
 /**
  * Decode an OSM PBF file into Overpass-shaped elements.
  */
-export function parseOsmPbf(data: Uint8Array, inflateData: Inflate = inflate): { elements: any[] } {
+/** The bundled decoder behind the `Inflate` signature. */
+const bundledInflate: Inflate = (data, sizeHint) => inflate(data, 0, data.length, sizeHint);
+
+export function parseOsmPbf(data: Uint8Array, inflateData: Inflate = bundledInflate): { elements: any[] } {
     const elements: any[] = [];
     const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
     let pos = 0;

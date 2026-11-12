@@ -9,14 +9,15 @@ import osm2geojson, { applyOsmChange, mergeOsmChange, toElements } from '../src/
  * every public entry point, and must produce exactly the same result.
  */
 const pbf = new Uint8Array(fs.readFileSync('./test/data/monaco.osm.pbf'));
-const zlibInflate = (data: Uint8Array, start: number, end: number) => new Uint8Array(inflateSync(data.subarray(start, end)));
+// The whole integration a user needs: the payload arrives ready to inflate.
+const zlibInflate = (data: Uint8Array) => inflateSync(data);
 
 describe('inflate strategy', () => {
     it('is used by osm2geojson and produces the same output', () => {
         const sizes: number[] = [];
-        const spy = (data: Uint8Array, start: number, end: number, sizeHint: number) => {
+        const spy = (data: Uint8Array, sizeHint: number) => {
             sizes.push(sizeHint);
-            return zlibInflate(data, start, end);
+            return zlibInflate(data);
         };
 
         const withDefault = osm2geojson(pbf, { completeFeature: true, renderTagged: true });
@@ -29,9 +30,9 @@ describe('inflate strategy', () => {
     it('is used by toElements', () => {
         let called = 0;
         const elements = toElements(pbf, {
-            inflate: (data, start, end) => {
+            inflate: (data) => {
                 called++;
-                return zlibInflate(data, start, end);
+                return zlibInflate(data);
             },
         });
         expect(called).toBeGreaterThan(0);
@@ -40,9 +41,9 @@ describe('inflate strategy', () => {
 
     it('is used by mergeOsmChange and applyOsmChange', () => {
         let called = 0;
-        const inflate = (data: Uint8Array, start: number, end: number) => {
+        const inflate = (data: Uint8Array) => {
             called++;
-            return zlibInflate(data, start, end);
+            return zlibInflate(data);
         };
         const diff = '<osmChange><modify><node id="1790048269" version="99999" lat="1" lon="2"/></modify></osmChange>';
 

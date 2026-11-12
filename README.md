@@ -91,20 +91,25 @@ Converts OSM data to GeoJSON.
 - **PBF**: OSM PBF (`.osm.pbf`) byte buffers. Blobs are inflated by a bundled synchronous zlib/DEFLATE decoder, so PBF needs neither `node:zlib` nor a third-party package. `lzma`, `bzip2`, `lz4` and `zstd` blobs, and unknown required features, are rejected with an error.
 
 On a server you can hand decompression to `node:zlib`, which is about three
-times faster than the bundled decoder (worth 2-5% of a PBF conversion):
+times faster than the bundled decoder on the decompression itself. That is only
+2-4% of a PBF conversion, and on files with many small blobs the difference can
+round to zero, so measure it on your own data before relying on it:
 
 ```js
 import { inflateSync } from 'node:zlib';
 import osm2geojson from 'osm2geojson-lite';
 
-const inflate = (data, start, end) => new Uint8Array(inflateSync(data.subarray(start, end)));
+const inflate = (block) => inflateSync(block);   // one zlib stream per PBF blob
 osm2geojson(pbf, { completeFeature: true, inflate });
 ```
 
-`inflate` is honoured by `osm2geojson`, `toElements`, `mergeOsmChange` and
-`applyOsmChange`, and applies to PBF input only. It stays opt-in so the same
-input produces the same output, and the same errors, everywhere; browsers keep
-the bundled decoder.
+`inflate` receives one compressed PBF blob and its declared raw size, and is
+honoured by `osm2geojson`, `toElements`, `mergeOsmChange` and `applyOsmChange`.
+It applies to PBF input only and stays opt-in, so the same input produces the
+same output everywhere; browsers keep the bundled decoder. Corruption then
+reports zlib's message instead of ours — the CLI does that too, since it always
+runs on Node. The CLI is the one place where the native decoder is always used,
+because it never runs in a browser.
 
 The library does not uncompress files: pass decompressed data. Handing it
 gzip/zstd bytes raises an error naming the container, and the CLI decompresses

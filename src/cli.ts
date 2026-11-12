@@ -2,6 +2,7 @@
 
 import { parseArgs } from 'node:util';
 import { readFile, writeFile } from 'node:fs/promises';
+import { inflateSync } from 'node:zlib';
 
 import osm2geojson from './index.js';
 import { decodeInput } from './cli-input.js';
@@ -42,7 +43,13 @@ async function main (positionals: Array<string>) {
 
     const data = inputFile ? await readFile(inputFile) : await readStdin();
     const osm = decodeInput(data);
-    const geojson = osm2geojson(osm, { completeFeature: true, renderTagged: true });
+    // The CLI only runs on Node, so it always uses the native decompressor.
+    // Corruption therefore reports zlib's message rather than the bundled one.
+    const geojson = osm2geojson(osm, {
+        completeFeature: true,
+        renderTagged: true,
+        inflate: (block) => inflateSync(block),
+    });
     const payload = `${JSON.stringify(geojson)}\n`;
 
     if (outputFile) {
