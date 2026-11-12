@@ -72,6 +72,32 @@ function mergeCopies(copies: any[]): any {
  * outright. A newest version that is deleted is reported and dropped.
  */
 export function resolveElementHistory(elements: any[]): ResolvedDocument {
+    // Fast path: a document whose ids are already unique and which contains no
+    // deletion is resolved as-is. The scan uses raw ids per type, so it costs no
+    // key strings; building them for 48k elements was the bulk of this call.
+    const seenByType = new Map<string, Set<any>>();
+    let needsWork = false;
+    for (const elem of elements) {
+        if (!elem || elem.type === undefined || elem.id === undefined
+            || elem.visible === false || elem.visible === 'false' || elem.action === 'delete') {
+            needsWork = true;
+            break;
+        }
+        let ids = seenByType.get(elem.type);
+        if (ids === undefined) {
+            ids = new Set();
+            seenByType.set(elem.type, ids);
+        }
+        if (ids.has(elem.id)) {
+            needsWork = true;
+            break;
+        }
+        ids.add(elem.id);
+    }
+    if (!needsWork) {
+        return { elements, deleted: new Map() };
+    }
+
     // One element in, one element out: only ids that actually repeat need an
     // array, so a plain extract allocates no per-element containers.
     const groups = new Map<string, any | any[]>();

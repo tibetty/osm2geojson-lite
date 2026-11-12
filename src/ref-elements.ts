@@ -12,6 +12,14 @@ export class RefElements extends Map<string, OsmObject> {
     /** Overrides the built-in polygon tag rules when provided. */
     public polygonTags: PolygonTags | undefined;
     private binders: LateBinder<any>[];
+    /** Ways holding unresolved node references, resolved in one pass. */
+    private pendingWays: Set<Way>;
+    /**
+     * Nodes indexed by their raw id, so resolving a way reference does not have
+     * to build a `node/<id>` string for every one of them. Kept in sync with
+     * the composite map by overriding `set`/`delete`.
+     */
+    private nodes: Map<any, Node>;
     private duplicates: Array<{ existing: OsmObject; duplicate: OsmObject }>;
     /** composite id -> newest version known to be deleted */
     private tombstones: Map<string, number>;
@@ -19,6 +27,8 @@ export class RefElements extends Map<string, OsmObject> {
     constructor() {
         super();
         this.binders = [];
+        this.pendingWays = new Set();
+        this.nodes = new Map();
         this.duplicates = [];
         this.tombstones = new Map();
         this.reportTainted = false;
@@ -65,8 +75,46 @@ export class RefElements extends Map<string, OsmObject> {
         this.set(k, v);
     }
 
+    public set(key: string, value: OsmObject): this {
+        if (value instanceof Node) {
+            this.nodes.set(value.id, value);
+        }
+        return super.set(key, value);
+    }
+
+    public delete(key: string): boolean {
+        const existing = super.get(key);
+        if (existing instanceof Node) {
+            this.nodes.delete(existing.id);
+        }
+        return super.delete(key);
+    }
+
     public addBinder(binder: LateBinder<any>) {
         this.binders.push(binder);
+    }
+
+    public addPendingWay(way: Way) {
+        this.pendingWays.add(way);
+    }
+
+    /** Look up a node by its raw id, tolerating string/number id spellings. */
+    private lookupNode(ref: any): Node | undefined {
+        const direct = this.nodes.get(ref);
+        if (direct !== undefined) {
+            return direct;
+        }
+        return this.nodes.get(typeof ref === 'number' ? String(ref) : Number(ref));
+    }
+
+    private resolvePendingWays() {
+        if (this.pendingWays.size === 0) {
+            return;
+        }
+        for (const way of this.pendingWays) {
+            way.resolveNodeRefs((ref) => this.lookupNode(ref));
+        }
+        this.pendingWays.clear();
     }
 
     /**
@@ -145,6 +193,7 @@ export class RefElements extends Map<string, OsmObject> {
 
     private removeBindersOwnedBy(owner: OsmObject) {
         this.binders = this.binders.filter((binder) => binder.getOwner() !== owner);
+        this.pendingWays.delete(owner as Way);
     }
 
     public bindAll() {
@@ -152,6 +201,7 @@ export class RefElements extends Map<string, OsmObject> {
             this.mergeDuplicates();
         }
         this.resolveHistory();
+        this.resolvePendingWays();
         if (this.binders.length === 0) {
             return;
         }

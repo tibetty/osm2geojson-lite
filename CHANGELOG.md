@@ -1,5 +1,6 @@
 Changelog:
 -----
+* 2026-11 (2.7.7): Performance: props are built once instead of copied-and-deleted then merged (the delete put the object in dictionary mode), composite ids are computed once per element, way node references resolve in bulk against a typed node index instead of one binder object and closure per reference, and history resolution takes a fast path when ids are already unique. Measured against 2.7.6: PBF -36%, usa.osm -13%, hebei.json -14%, no regression on any fixture.
 * 2026-11 (2.7.6): The CommonJS entry is callable again: from 2.7.0 the named exports made `require('osm2geojson-lite')` return `{ default, ... }`, so calling it directly threw. The CJS build now attaches the named exports to the converter function and keeps `default` pointing at it.
 * 2026-11 (2.7.4): Test depth: seeded mutation fuzzing over the fixtures, a differential harness against `osmtogeojson` (feature selection on every fixture, exact shape comparison on twenty) and a capped decompression pre-allocation so a corrupt `raw_size` cannot reserve gigabytes.
 * 2026-11 (2.7.3): Applying a diff deleted nothing: an osmChange delete names the version being deleted, so a base at that exact version now deletes (equality was treated as a conflict). Real matched base/diff pair from OSM attic data added to the suite.
