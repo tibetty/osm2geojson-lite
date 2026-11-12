@@ -2,7 +2,6 @@ import { OsmObject } from "./osm-object";
 import { Way } from "./way";
 import { Node, LatLon } from "./node";
 import { WayCollection } from "./way-collection";
-import { LateBinder } from "./late-binder";
 import { boundsToRing, first, isFiniteBounds, isFiniteCoordinate, pointInsidePolygon, ringBounds } from "./utils";
 import type { RingBounds } from "./utils";
 import type { RefElements } from "./ref-elements";
@@ -129,13 +128,14 @@ function linkInnerRings(
 }
 
 export class Relation extends OsmObject {
-    private relations: (LateBinder<Relation> | Relation)[] = [];
+    /** Members are raw refs until references are bound, then objects. */
+    private relations: (Relation | string | number)[] = [];
     private relationRoles: string[] = [];
-    private nodes: (LateBinder<Node> | Node)[] = [];
+    private nodes: (Node | string | number)[] = [];
     private nodeRoles: string[] = [];
     private bounds: number[] | undefined = undefined;
     private center: LatLon | null = null;
-    public ways: (LateBinder<Way> | Way)[] = [];
+    public ways: (Way | string | number)[] = [];
     public roles: string[] = [];
 
     constructor(id: string, refElems: RefElements, register: boolean = true) {
@@ -162,19 +162,9 @@ export class Relation extends OsmObject {
         switch (member.type) {
             // super relation, need to do combination
             case 'relation':
-                let binder = new LateBinder(this.relations, (id: string) => {
-                    const relation = this.refElems.get(`relation/${id}`) as Relation;
-                    if (relation) {
-                        relation.refCount++;
-                        return relation;
-                    }
-                    this.tainted = true;
-                    // Keep a placeholder so roles stay aligned with members.
-                    return new Relation(id, this.refElems, false);
-                }, this, [member.ref], this.relationRoles, member.role || '');
-                this.relations.push(binder);
+                this.relations.push(member.ref);
                 this.relationRoles.push(member.role || '');
-                this.refElems.addBinder(binder);
+                this.refElems.addPendingRelation(this);
                 break;
 
             case 'way':
@@ -196,19 +186,9 @@ export class Relation extends OsmObject {
                     this.ways.push(way);
                     this.roles.push(member.role);
                 } else {
-                    let binder = new LateBinder(this.ways, (nid) => {
-                        const way = this.refElems.get(`way/${nid}`) as Way;
-                        if (way) {
-                            way.refCount++;
-                            return way;
-                        }
-                        this.tainted = true;
-                        // Keep a placeholder so `roles` stays aligned with `ways`.
-                        return new Way(nid, this.refElems, false);
-                    }, this, [member.ref], this.roles, member.role);
-                    this.ways.push(binder);
+                    this.ways.push(member.ref);
                     this.roles.push(member.role);
-                    this.refElems.addBinder(binder);
+                    this.refElems.addPendingRelation(this);
                 }
                 break;
 
@@ -233,20 +213,78 @@ export class Relation extends OsmObject {
                     this.nodes.push(node);
                     this.nodeRoles.push(member.role || '');
                 } else {
-                    let binder = new LateBinder(this.nodes, (id) => {
-                        const nn = this.refElems.get(`node/${id}`) as Node;
-                        if (nn && nn.hasCoordinates()) {
-                            nn.refCount++;
-                            return nn;
-                        }
-                        this.tainted = true;
-                    }, this, [member.ref], this.nodeRoles, member.role || '');
-                    this.nodes.push(binder);
+                    this.nodes.push(member.ref);
                     this.nodeRoles.push(member.role || '');
-                    this.refElems.addBinder(binder);
+                    this.refElems.addPendingRelation(this);
                 }
                 break;
         }
+    }
+
+    /**
+     * Replace unresolved member references with the objects they point at.
+     *
+     * Unresolvable ways and relations become placeholders so the role arrays
+     * stay aligned with the member arrays; unresolvable nodes are dropped along
+     * with their role, because a placeholder node would only add a coordinate-
+     * less point. Both cases taint this relation.
+     */
+    public resolveMembers(
+        lookupNode: (ref: any) => Node | undefined,
+        lookupWay: (ref: any) => Way | undefined,
+        lookupRelation: (ref: any) => Relation | undefined,
+    ) {
+        for (let i = 0; i < this.relations.length; i++) {
+            const entry = this.relations[i];
+            if (entry instanceof Relation) {
+                continue;
+            }
+            const relation = lookupRelation(entry);
+            if (relation) {
+                relation.refCount++;
+                this.relations[i] = relation;
+            } else {
+                this.tainted = true;
+                this.relations[i] = new Relation(entry as string, this.refElems, false);
+            }
+        }
+
+        for (let i = 0; i < this.ways.length; i++) {
+            const entry = this.ways[i];
+            if (entry instanceof Way) {
+                continue;
+            }
+            const way = lookupWay(entry);
+            if (way) {
+                way.refCount++;
+                this.ways[i] = way;
+            } else {
+                this.tainted = true;
+                this.ways[i] = new Way(entry as string, this.refElems, false);
+            }
+        }
+
+        let write = 0;
+        for (let read = 0; read < this.nodes.length; read++) {
+            const entry = this.nodes[read];
+            if (entry instanceof Node) {
+                this.nodes[write] = entry;
+                this.nodeRoles[write] = this.nodeRoles[read];
+                write++;
+                continue;
+            }
+            const node = lookupNode(entry);
+            if (node && node.hasCoordinates()) {
+                node.refCount++;
+                this.nodes[write] = node;
+                this.nodeRoles[write] = this.nodeRoles[read];
+                write++;
+            } else {
+                this.tainted = true;
+            }
+        }
+        this.nodes.length = write;
+        this.nodeRoles.length = write;
     }
 
     private constructStringGeometry(ws: WayCollection): MultiLineString | null {
@@ -439,7 +477,9 @@ export class Relation extends OsmObject {
             // relation (the cause of duplicated rings in issue #48). A way
             // shared by two sub-relations must still contribute once per
             // sub-relation, otherwise legitimate geometry would be dropped.
-            const seen = new Set<string>();
+            // A map of role sets avoids building a `way/role` string per member,
+            // which the profile showed as one of the hotter paths.
+            const seen = new Map<Way, Set<string>>();
             const addDirect = (way: Way, role: string) => {
                 if (!way) {
                     relation.tainted = true;
@@ -448,11 +488,14 @@ export class Relation extends OsmObject {
                 if (way.tainted) {
                     relation.tainted = true;
                 }
-                const key = way.getCompositeId() + '\n' + role;
-                if (seen.has(key)) {
+                let seenRoles = seen.get(way);
+                if (seenRoles === undefined) {
+                    seenRoles = new Set();
+                    seen.set(way, seenRoles);
+                } else if (seenRoles.has(role)) {
                     return;
                 }
-                seen.add(key);
+                seenRoles.add(role);
                 ways.push(way);
                 roles.push(role);
             };

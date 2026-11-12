@@ -30,13 +30,20 @@ export abstract class OsmObject {
         }
     }
 
+    /**
+     * Tags also land in `props`, which is what a feature exposes. Merging them
+     * per feature at output time allocated one object per feature; copying them
+     * here allocates nothing, and `getProps` can hand the object out as-is.
+     */
     public addTags(tags: { [k: string]: string }) {
         this.tags = Object.assign(this.tags, tags);
+        Object.assign(this.props, tags);
         this.hasTag = true;
     }
 
     public addTag(k: string, v: string) {
         this.tags[k] = v;
+        this.props[k] = v;
         this.hasTag = true;
     }
 
@@ -53,7 +60,8 @@ export abstract class OsmObject {
      * `props.id` must already be the composite id (see `purgeProps(…, seed)`).
      */
     public setProps(props: { [k: string]: any }) {
-        this.props = props;
+        // Tags are kept in `props` too; a caller may set props after adding them.
+        this.props = Object.assign(props, this.tags);
     }
 
     /**
@@ -84,11 +92,10 @@ export abstract class OsmObject {
     }
 
     public getProps(): { [k: string]: any } {
-        const props = Object.assign({}, this.props, this.tags);
         if (this.tainted && this.refElems && this.refElems.reportTainted) {
-            props['@tainted'] = true;
+            return Object.assign({}, this.props, { '@tainted': true });
         }
-        return props;
+        return this.props;
     }
 
     public abstract toFeatureArray(): Array<Feature<any, any>>;
