@@ -79,6 +79,20 @@ when you add tests, do not lower them to make a build pass. `src/cli.ts` is
 excluded because it only runs in a child process (`test/cli.test.ts`, which
 skips when `dist/` is missing).
 
+### Auditing released versions
+
+```sh
+npm run audit:versions                  # every release from 2.2.0 to the latest
+npm run audit:versions -- --from 2.7.0 # a shorter range
+npm run audit:versions -- --local-only # only the local dist/ build
+```
+
+Each check names the release it became guaranteed in. Every later release must
+still pass it, so a regression in any released artifact fails the command; older
+releases are reported as `--` for context. Published tarballs are installed once
+into `node_modules/.cache/osm2geojson-audit` and reused. This needs network
+access, so it is a manual tool rather than part of `npm test`.
+
 ### Refreshing real fixtures
 
 Fixtures are frozen on purpose; refresh them deliberately and update the
