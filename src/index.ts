@@ -1,11 +1,13 @@
 import { purgeProps } from './utils';
 import { parseOsmXml, parseOsmXmlElements } from './osm-xml';
 import { parseOsmPbf } from './pbf';
+import type { Inflate } from './pbf';
 import { detectCompression } from './compressed';
 import { mergeResolved, resolveElementHistory } from './elements';
 import type { MergeConflict, MergedDocument } from './elements';
 
 export type { MergeConflict, MergedDocument } from './elements';
+export type { Inflate } from './pbf';
 import { LatLon, Node } from './node';
 import { Way } from './way';
 import type { PolygonTags } from './way';
@@ -52,6 +54,13 @@ export interface IOptions {
      * @default undefined (built-in rules)
      */
     polygonTags?: PolygonTags;
+    /**
+     * Replaces the bundled zlib decompressor for PBF input. On the server,
+     * `node:zlib` is about three times faster than the bundled one, which is
+     * worth 2-3% of a conversion; browsers have no alternative.
+     * @default bundled inflater
+     */
+    inflate?: Inflate;
     /**
      * Used by `applyOsmChange` and `mergeOsmChange`. When `true`, a change entry
      * whose version does not advance the base version throws instead of being
@@ -369,7 +378,7 @@ function releaseNonGeometryRelationMembers(refElements: RefElements): void {
     }
 }
 
-function analyzeInput(osm: OsmInput, refElements: RefElements): void {
+function analyzeInput(osm: OsmInput, refElements: RefElements, inflateData?: Inflate): void {
     let format = detectFormat(osm);
     let document = osm;
 
@@ -388,7 +397,7 @@ function analyzeInput(osm: OsmInput, refElements: RefElements): void {
         if (compression) {
             throw new Error(`${compression} input is not supported by the library, decompress it first (the CLI does this automatically)`);
         }
-        analyzeFeaturesFromJson(parseOsmPbf(bytes), refElements);
+        analyzeFeaturesFromJson(parseOsmPbf(bytes, inflateData), refElements);
     }
 }
 
@@ -400,7 +409,7 @@ function convert(osm: OsmInput, opts?: IOptions): FeatureCollection<GeometryObje
     refElements.polygonTags = polygonTags;
     let featureArray: Feature<any, any>[] = [];
 
-    analyzeInput(osm, refElements);
+    analyzeInput(osm, refElements, opts === undefined ? undefined : opts.inflate);
 
     refElements.bindAll();
 
@@ -443,7 +452,7 @@ function convert(osm: OsmInput, opts?: IOptions): FeatureCollection<GeometryObje
 };
 
 /** Read any supported input into raw element objects, without resolving them. */
-function readElements(osm: OsmInput): any[] {
+function readElements(osm: OsmInput, opts?: IOptions): any[] {
     let format = detectFormat(osm);
     let document = osm;
 
@@ -465,7 +474,7 @@ function readElements(osm: OsmInput): any[] {
         if (compression) {
             throw new Error(`${compression} input is not supported by the library, decompress it first (the CLI does this automatically)`);
         }
-        return parseOsmPbf(bytes).elements;
+        return parseOsmPbf(bytes, opts === undefined ? undefined : opts.inflate).elements;
     }
     return [];
 }
@@ -478,8 +487,8 @@ function readElements(osm: OsmInput): any[] {
  * current state of the document. Use this to inspect or transform OSM data
  * before converting it with `osm2geojson`.
  */
-export function toElements(osm: OsmInput): any[] {
-    return resolveElementHistory(readElements(osm)).elements;
+export function toElements(osm: OsmInput, opts?: IOptions): any[] {
+    return resolveElementHistory(readElements(osm, opts)).elements;
 }
 
 /**
@@ -491,8 +500,8 @@ export function toElements(osm: OsmInput): any[] {
  * Pass `{ strict: true }` to throw on the first conflict instead.
  */
 export function mergeOsmChange(base: OsmInput, change: OsmInput, opts?: IOptions): MergedDocument {
-    const baseDocument = resolveElementHistory(readElements(base));
-    const changeDocument = resolveElementHistory(readElements(change));
+    const baseDocument = resolveElementHistory(readElements(base, opts));
+    const changeDocument = resolveElementHistory(readElements(change, opts));
     return mergeResolved(baseDocument, changeDocument, opts !== undefined && opts.strict === true);
 }
 

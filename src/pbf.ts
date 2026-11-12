@@ -11,6 +11,9 @@ import { inflate } from './inflate';
  * the API synchronous in both Node and browsers.
  */
 
+/** A zlib decompressor: `(data, start, end, sizeHint) => bytes`. */
+export type Inflate = (data: Uint8Array, start: number, end: number, sizeHint: number) => Uint8Array;
+
 const WIRE_VARINT = 0;
 const WIRE_FIXED64 = 1;
 const WIRE_BYTES = 2;
@@ -684,7 +687,7 @@ function parseBlobHeader(bytes: Uint8Array): BlobHeader {
     return header;
 }
 
-function readBlob(bytes: Uint8Array): Uint8Array {
+function readBlob(bytes: Uint8Array, inflateData: Inflate): Uint8Array {
     const reader = new Reader(bytes);
     let rawSize = 0;
     let raw: Uint8Array | undefined;
@@ -726,7 +729,7 @@ function readBlob(bytes: Uint8Array): Uint8Array {
     }
 
     if (zlibData) {
-        return inflate(zlibData, 0, zlibData.length, rawSize);
+        return inflateData(zlibData, 0, zlibData.length, rawSize);
     }
     if (raw) {
         return raw;
@@ -737,7 +740,7 @@ function readBlob(bytes: Uint8Array): Uint8Array {
 /**
  * Decode an OSM PBF file into Overpass-shaped elements.
  */
-export function parseOsmPbf(data: Uint8Array): { elements: any[] } {
+export function parseOsmPbf(data: Uint8Array, inflateData: Inflate = inflate): { elements: any[] } {
     const elements: any[] = [];
     const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
     let pos = 0;
@@ -757,7 +760,7 @@ export function parseOsmPbf(data: Uint8Array): { elements: any[] } {
         if (pos + blobHeader.datasize > data.length) {
             throw new Error('truncated PBF blob');
         }
-        const payload = readBlob(data.subarray(pos, pos + blobHeader.datasize));
+        const payload = readBlob(data.subarray(pos, pos + blobHeader.datasize), inflateData);
         pos += blobHeader.datasize;
 
         if (blobHeader.type === 'OSMData') {
