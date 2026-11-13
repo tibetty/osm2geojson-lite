@@ -7,11 +7,30 @@
   "main": "dist/index.cjs",
   "type": "module",
   "types": "dist/index.d.ts",
+  "module": "dist/index.mjs",
+  "browser": "dist/index.mjs",
+  "unpkg": "dist/index.mjs",
+  "jsdelivr": "dist/index.mjs",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./xml": {
+      "types": "./dist/xml.d.ts",
+      "import": "./dist/xml.mjs",
+      "require": "./dist/xml.cjs"
+    },
+    "./json": {
+      "types": "./dist/json.d.ts",
+      "import": "./dist/json.mjs",
+      "require": "./dist/json.cjs"
+    },
+    "./pbf": {
+      "types": "./dist/pbf.d.ts",
+      "import": "./dist/pbf.mjs",
+      "require": "./dist/pbf.cjs"
     }
   },
   "files": [
@@ -79,5 +98,6 @@
     "multilinestring",
     "polygon",
     "multipolygon"
-  ]
+  ],
+  "sideEffects": false
 }

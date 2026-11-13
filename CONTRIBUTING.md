@@ -21,7 +21,7 @@ npm ci
 |---|---|
 | `npm test` | Run the full test suite with coverage |
 | `npx tsc --noEmit` | Type-check |
-| `npm run build` | Build `dist/` |
+| `npm run build` | Build `dist/` (entries `index`, `xml`, `json` and `pbf`) |
 | `npm run bench` | Compare against `osm2geojson-ultra` and `osmtogeojson` |
 | `npm run valid` | Build, serve the repo on port 3000 and open the playground |
 
@@ -78,6 +78,15 @@ reaches today, so dropping a code path below them fails `npm test`; raise them
 when you add tests, do not lower them to make a build pass. `src/cli.ts` is
 excluded because it only runs in a child process (`test/cli.test.ts`, which
 skips when `dist/` is missing).
+
+### Bundle tests
+
+`npm run build` emits four entries: `index` (auto-detecting) and `xml`, `json`,
+`pbf` (one reader each, built from `src/entries/`). `test/entries.test.ts` reads
+`dist/` and skips without a build; it asserts that each format entry converts
+its own format exactly like the default entry, rejects the others, keeps the
+excluded parser's code out of its bundle (string markers) and stays under a
+size ceiling. Raising a ceiling needs a size measurement in the PR.
 
 ### Auditing released versions
 

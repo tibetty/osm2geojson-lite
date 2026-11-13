@@ -45,6 +45,34 @@ callable:
     let geojson = osm2geojson(osm, opts);
 ```
 
+### Format entry points
+
+The default entry detects the format at runtime, so it carries every parser. When the
+format is known up front, import the matching entry and the other parsers stay out of
+the bundle:
+
+```js
+    import osm2geojson from 'osm2geojson-lite/pbf';
+
+    let geojson = osm2geojson(pbfBytes, opts);
+```
+
+Every entry exposes the same API - `default`, `toElements`, `mergeOsmChange` and
+`applyOsmChange` - in ESM and CommonJS. An entry is strict: it throws for a format it
+does not read and names the entry that does, instead of half-converting. Mixed formats
+stay on the default entry; applying an XML osmChange to a PBF base needs both readers.
+
+| Entry                      | Reads                     | Minified | gzip     |
+| -------------------------- | ------------------------- | -------- | -------- |
+| `osm2geojson-lite`         | XML, JSON, PBF (detected) | 48.2 KiB | 14.8 KiB |
+| `osm2geojson-lite/xml`     | XML and osmChange         | 36.0 KiB | 10.8 KiB |
+| `osm2geojson-lite/json`    | OSM/Overpass JSON         | 27.7 KiB | 8.4 KiB  |
+| `osm2geojson-lite/pbf`     | OSM PBF                   | 39.7 KiB | 12.4 KiB |
+
+Sizes are the published `dist/*.mjs` builds in 2.8.0, minified. The package declares
+`"sideEffects": false`, so a bundler also drops helpers the app never calls (for
+example `mergeOsmChange`).
+
 ### In the Browser
 
 Modern browsers load the ESM build directly via `<script type="module">`. Import it from a CDN (e.g. [esm.sh](https://esm.sh) or [jsDelivr](https://www.jsdelivr.com)):
@@ -56,6 +84,9 @@ Modern browsers load the ESM build directly via `<script type="module">`. Import
         const geojson = osm2geojson(osm, opts);
     </script>
 ```
+
+Per-format entries resolve on the same CDNs (`https://esm.sh/osm2geojson-lite/pbf`).
+Published bundles are minified, and a pinned version is served as immutable cache.
 
 ### In the command line
 ```sh

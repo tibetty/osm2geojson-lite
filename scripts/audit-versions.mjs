@@ -289,6 +289,29 @@ const checks = [
         },
     },
     {
+        name: '2.8.0: format entries are complete and strict',
+        since: '2.8.0',
+        run: (module, cjs) => {
+            const dir = path.dirname(cjs);
+            const load = (name) => {
+                try { return createRequire(import.meta.url)(path.join(dir, `${name}.cjs`)); } catch { return undefined; }
+            };
+            const entries = { xml: load('xml'), json: load('json'), pbf: load('pbf') };
+            if (!Object.values(entries).every((entry) => typeof entry === 'function' && typeof entry.toElements === 'function')) return false;
+            const xmlInput = '<osm><node id="1" lat="0" lon="0"/></osm>';
+            const jsonInput = { elements: [{ type: 'node', id: 1, lat: 0, lon: 0 }] };
+            const rejects = (entry, input) => {
+                try { entry(input, opts); return false; } catch (error) { return /does not read/.test(error.message); }
+            };
+            return rejects(entries.xml, jsonInput)
+                && rejects(entries.xml, bytes('monaco.osm.pbf'))
+                && rejects(entries.json, xmlInput)
+                && rejects(entries.pbf, xmlInput)
+                && entries.xml(xmlInput, { completeFeature: true }).features.length === 1
+                && entries.json(jsonInput, { completeFeature: true }).features.length === 1;
+        },
+    },
+    {
         name: '2.7.4: implausible raw_size stays bounded',
         since: '2.7.4',
         run: (m) => {
