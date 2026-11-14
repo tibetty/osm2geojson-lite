@@ -19,11 +19,22 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The check below compares package.json with the previous commit.
+          fetch-depth: 2
 
       - name: Check if version has been updated
         id: check
-        uses: EndBug/version-check@v3
-          
+        run: |
+          before=$(git show HEAD~1:package.json 2>/dev/null | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).version' || true)
+          after=$(node -p 'require("./package.json").version')
+          echo "package.json version: ${before:-<none>} -> ${after}"
+          if [ -n "${before}" ] && [ "${before}" = "${after}" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
     outputs:
       publish: ${{ steps.check.outputs.changed }}
 
