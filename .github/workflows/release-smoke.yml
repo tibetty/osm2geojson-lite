@@ -1,7 +1,8 @@
 name: Release smoke test
 
-# Temporary: validates the release-only steps of release.yml without publishing
-# or pushing a tag. Not merged; deleted after the run.
+# Exercises the release-only steps of release.yml without publishing to npm and
+# without pushing a tag: dispatch this before changing release.yml, or when a
+# release has to be retried by hand.
 
 on:
   workflow_dispatch:
