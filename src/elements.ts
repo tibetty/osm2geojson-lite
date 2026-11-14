@@ -21,7 +21,7 @@ export interface MergedDocument {
     conflicts: MergeConflict[];
 }
 
-export interface ResolvedDocument {
+interface ResolvedDocument {
     elements: any[];
     /** Elements deleted at their newest version: composite id -> version. */
     deleted: Map<string, number>;

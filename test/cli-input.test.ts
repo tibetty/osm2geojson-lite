@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { gzipSync, zstdCompressSync } from 'node:zlib';
 import osm2geojson from '../src/index';
-import { decodeInput, decompress, looksLikeText } from '../src/cli-input';
+import { decodeInput, decompress } from '../src/cli-input';
 import { detectCompression } from '../src/compressed';
 
 const XML = '<osm><node id="1" lat="0" lon="0"><tag k="name" v="a"/></node></osm>';
@@ -32,8 +32,9 @@ describe('CLI input', () => {
     });
 
     it('detects text after a UTF-8 BOM and leading whitespace', () => {
-        expect(looksLikeText(Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(XML)]))).toBe(true);
-        expect(looksLikeText(Buffer.from('\n\t ' + XML))).toBe(true);
+        const withBom = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(XML)]);
+        expect(decodeInput(withBom)).toBe('\ufeff' + XML);
+        expect(decodeInput(Buffer.from('\n\t ' + XML))).toBe('\n\t ' + XML);
     });
 
     it('decompresses gzip and zstd to text', () => {

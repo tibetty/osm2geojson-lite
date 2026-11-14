@@ -8,7 +8,7 @@
  * so this module stays usable in the browser build.
  */
 
-export type Compression = 'gzip' | 'zstd' | 'bzip2' | 'xz';
+type Compression = 'gzip' | 'zstd' | 'bzip2' | 'xz';
 
 function startsWith(data: Uint8Array, magic: number[]): boolean {
     if (data.length < magic.length) {

@@ -36,8 +36,8 @@ describe('Node', () => {
     it('accepts numeric coordinates and includes tags and props', () => {
         const node = new Node('7', new RefElements());
         node.setLatLng({ lat: -3, lon: 4 });
-        node.addTag('name', 'test');
-        node.addProps({ version: 2 });
+        node.addTags({ name: 'test' });
+        node.addProp('version', 2);
         const [feature] = node.toFeatureArray();
         expect(feature.geometry).toEqual({ type: 'Point', coordinates: [4, -3] });
         expect(feature.properties).toEqual({ id: 'node/7', version: 2, name: 'test' });

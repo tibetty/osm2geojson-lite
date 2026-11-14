@@ -3,13 +3,13 @@ import { gunzipSync, zstdDecompressSync } from 'node:zlib';
 import { detectCompression } from './compressed';
 
 /** Input accepted by `osm2geojson`: text for XML/JSON, bytes for PBF. */
-export type CliInput = string | Uint8Array;
+type CliInput = string | Uint8Array;
 
 /**
  * PBF is a binary container while XML and JSON start with '<' or '{'.
  * Sniffing the content instead of the extension keeps stdin working.
  */
-export function looksLikeText(data: Uint8Array): boolean {
+function looksLikeText(data: Uint8Array): boolean {
     let i = 0;
     if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
         i = 3;

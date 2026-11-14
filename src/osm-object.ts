@@ -12,13 +12,11 @@ export abstract class OsmObject {
 
     protected refElems: RefElements;
 
-    private type: string;
     private compositeId: string;
     protected tags: { [k: string]: string };
     private props: { [k: string]: any };
 
     constructor(type: string, id: string, refElems: RefElements, register: boolean = true) {
-        this.type = type;
         this.id = id;
         this.refElems = refElems;
         this.tags = {};
@@ -44,18 +42,8 @@ export abstract class OsmObject {
         this.hasTag = true;
     }
 
-    public addTag(k: string, v: string) {
-        this.tags[k] = v;
-        this.props[k] = v;
-        this.hasTag = true;
-    }
-
     public addProp(k: string, v: any) {
         this.props[k] = v;
-    }
-
-    public addProps(props: { [k: string]: any }) {
-        this.props = Object.assign(this.props, props);
     }
 
     /**

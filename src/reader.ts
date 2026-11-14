@@ -19,7 +19,7 @@ export interface Reader {
 export type Readers = Partial<Record<Format, Reader>>;
 
 /** Binary input is OSM PBF; text input is OSM XML or OSM/Overpass JSON. */
-export function isBinary(o: OsmInput): boolean {
+function isBinary(o: OsmInput): boolean {
     return o instanceof Uint8Array || o instanceof ArrayBuffer;
 }
 
