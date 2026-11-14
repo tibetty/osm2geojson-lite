@@ -134,6 +134,15 @@ Maintainers:
 3. Merge the generated version PR.
 4. `release.yml` publishes to npm via trusted publishing and creates the tag/release.
 
+The release job is idempotent: the publish step skips a version that is already
+on the registry, and the tag step skips a tag that already exists, so a run that
+failed after either step can be retried with **Run workflow** on `release.yml`.
+It is safe to re-run at any commit whose `package.json` differs from its parent.
+
+Before changing `release.yml`, dispatch the **Release smoke test** workflow: it
+runs the release-only steps (npm pack, tag computation, tag creation and push,
+archive) without publishing anything or keeping a tag.
+
 ## Community
 
 - Use the issue templates.
