@@ -68,6 +68,13 @@ jobs:
           test -n "${{ steps.tag_version.outputs.new_tag }}"
           test "${{ steps.tag_version.outputs.new_tag }}" = "v${{ steps.next-version.outputs.version }}"
 
+      - name: Create and delete a throwaway tag
+        run: |
+          tag="smoke-${GITHUB_RUN_ID}"
+          git tag "${tag}"
+          git push origin "${tag}"
+          git push origin --delete "${tag}"
+
       - name: Prepare archive
         run: zip -r dist dist
 
