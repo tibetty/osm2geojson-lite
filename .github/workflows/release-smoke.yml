@@ -34,12 +34,16 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish dry run
-        run: npm publish --access public --dry-run
-
       - name: Get version
         id: package-version
         run: echo "current-version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+
+      - name: Publish dry run
+        run: |
+          # `--dry-run` still refuses a version that is already on the registry,
+          # so pack a throwaway prerelease instead of the released one.
+          npm version "0.0.0-smoke.$(date +%s)" --no-git-tag-version --allow-same-version
+          npm publish --access public --dry-run
 
       - name: Tag commit (dry run)
         id: tag_version
