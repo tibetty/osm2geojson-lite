@@ -69,14 +69,24 @@ jobs:
 
       - name: Publish NPM package
         run: |
-          npm publish --access public
+          version=$(node -p 'require("./package.json").version')
+          if npm view "osm2geojson-lite@${version}" version >/dev/null 2>&1; then
+            echo "osm2geojson-lite@${version} is already published; skipping the upload."
+          else
+            npm publish --access public
+          fi
 
       - name: Tag commit and push
         id: tag_version
-        uses: mathieudutour/github-tag-action@v7
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ steps.package-version.outputs.current-version }}
+        run: |
+          tag="v${{ steps.package-version.outputs.current-version }}"
+          echo "new_tag=${tag}" >> "$GITHUB_OUTPUT"
+          if [ -n "$(git ls-remote --tags origin "refs/tags/${tag}")" ]; then
+            echo "${tag} already exists; skipping the tag push."
+          else
+            git tag "${tag}"
+            git push origin "${tag}"
+          fi
 
       - name: Create Archive
         run: |
