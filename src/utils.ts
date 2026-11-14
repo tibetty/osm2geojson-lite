@@ -187,17 +187,3 @@ export function pointInsidePolygon(pt: number[], polygon: number[][], xIdx?: num
     }
     return result;
 };
-
-export function strArrayArrayToFloat(el: string[][]): number[][] {
-    return el.map(strArrayToFloat);
-}
-
-export function strArrayToFloat(el: string[]): number[] {
-    return el.map(parseFloat);
-}
-
-
-
-
-
-

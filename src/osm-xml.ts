@@ -77,7 +77,6 @@ interface Frame {
     groupCoords?: number[][];
 }
 
-const LT = 60;
 const GT = 62;
 const SLASH = 47;
 const BANG = 33;

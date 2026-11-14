@@ -12,8 +12,6 @@ import {
     purgeProps,
     ringBounds,
     ringDirection,
-    strArrayArrayToFloat,
-    strArrayToFloat,
 } from '../src/utils';
 
 describe('purgeProps', () => {
@@ -162,12 +160,5 @@ describe('pointInsidePolygon', () => {
     it('supports explicit x/y indices', () => {
         const latLon = [[0, 0], [0, 2], [2, 2], [2, 0], [0, 0]];
         expect(pointInsidePolygon([1, 1], latLon, 1, 0)).toBe(true);
-    });
-});
-
-describe('string coordinate conversion', () => {
-    it('converts one and two-dimensional string arrays', () => {
-        expect(strArrayToFloat(['1.5', '2', '-3e2'])).toEqual([1.5, 2, -300]);
-        expect(strArrayArrayToFloat([['1', '2'], ['3.5', '4']])).toEqual([[1, 2], [3.5, 4]]);
     });
 });

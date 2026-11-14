@@ -213,7 +213,7 @@ function applyInfo(target: any, context: BlockContext, info: { [k: string]: numb
     }
 }
 
-function parseInfo(bytes: Uint8Array, context: BlockContext): { [k: string]: number } {
+function parseInfo(bytes: Uint8Array): { [k: string]: number } {
     const reader = new Reader(bytes);
     const info: { [k: string]: number } = {};
     while (!reader.atEnd()) {
@@ -268,7 +268,7 @@ function parseNode(bytes: Uint8Array, context: BlockContext): any {
                 appendVarints(vals, reader.message(tag));
                 break;
             case 4:
-                info = parseInfo(reader.message(tag), context);
+                info = parseInfo(reader.message(tag));
                 break;
             case 8:
                 lat = zigzag(reader.varint());
@@ -455,7 +455,7 @@ function parseWay(bytes: Uint8Array, context: BlockContext): any {
                 appendVarints(vals, reader.message(tag));
                 break;
             case 4:
-                info = parseInfo(reader.message(tag), context);
+                info = parseInfo(reader.message(tag));
                 break;
             case 8:
                 appendVarints(refs, reader.message(tag));
@@ -526,7 +526,7 @@ function parseRelation(bytes: Uint8Array, context: BlockContext): any {
                 appendVarints(vals, reader.message(tag));
                 break;
             case 4:
-                info = parseInfo(reader.message(tag), context);
+                info = parseInfo(reader.message(tag));
                 break;
             case 8:
                 appendVarints(roles, reader.message(tag));

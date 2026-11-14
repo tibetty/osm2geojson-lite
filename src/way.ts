@@ -5,7 +5,7 @@ import { boundsToRing, isFiniteBounds, isFiniteCoordinate, isRing, ringDirection
 import polygonTags from './polytags.json';
 import type { RefElements } from "./ref-elements";
 
-export type PolygonRule = {
+type PolygonRule = {
     ignore?: string[];
     include?: string[];
     exclude?: string[];
