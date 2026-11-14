@@ -23,6 +23,7 @@ npm ci
 | `npx tsc --noEmit` | Type-check |
 | `npm run build` | Build `dist/` (entries `index`, `xml`, `json` and `pbf`) |
 | `npm run bench` | Compare against `osm2geojson-ultra` and `osmtogeojson` |
+| `npm run footprint` | Compare app bundle sizes with `osmtogeojson` (run `npm run build` first) |
 | `npm run valid` | Build, serve the repo on port 3000 and open the playground |
 
 A CI-equivalent local check is:

@@ -64,12 +64,12 @@ stay on the default entry; applying an XML osmChange to a PBF base needs both re
 
 | Entry                      | Reads                     | Minified | gzip     |
 | -------------------------- | ------------------------- | -------- | -------- |
-| `osm2geojson-lite`         | XML, JSON, PBF (detected) | 48.2 KiB | 14.8 KiB |
-| `osm2geojson-lite/xml`     | XML and osmChange         | 36.0 KiB | 10.8 KiB |
-| `osm2geojson-lite/json`    | OSM/Overpass JSON         | 27.7 KiB | 8.4 KiB  |
-| `osm2geojson-lite/pbf`     | OSM PBF                   | 39.7 KiB | 12.4 KiB |
+| `osm2geojson-lite`         | XML, JSON, PBF (detected) | 48.1 KiB | 14.8 KiB |
+| `osm2geojson-lite/xml`     | XML and osmChange         | 35.9 KiB | 10.8 KiB |
+| `osm2geojson-lite/json`    | OSM/Overpass JSON         | 27.6 KiB | 8.4 KiB  |
+| `osm2geojson-lite/pbf`     | OSM PBF                   | 39.6 KiB | 12.4 KiB |
 
-Sizes are the published `dist/*.mjs` builds in 2.8.0, minified. The package declares
+Sizes are the published `dist/*.mjs` builds in 2.8.1, minified. The package declares
 `"sideEffects": false`, so a bundler also drops helpers the app never calls (for
 example `mergeOsmChange`).
 
@@ -246,6 +246,34 @@ $ npm run bench
 >
 > **PBF has no comparison row** because `osmtogeojson` cannot read it; that is a
 > capability difference, not a speed one.
+
+### Bundle footprint
+
+Sizes are what an application ships, measured by `npm run footprint` (rolldown
+1.2.16, minified ESM, gzip from `node:zlib`): this library's published
+`dist/*.mjs` against `osmtogeojson@3.0.0-beta.5` bundled from npm the way an app
+imports it.
+
+| Conversion                   | osm2geojson-lite       | osmtogeojson                |
+| ---------------------------- | ---------------------- | --------------------------- |
+| JSON objects → GeoJSON       | 27.6 KiB / 8.4 KiB gz  | 35.1 KiB / 11.6 KiB gz      |
+| XML text → GeoJSON (Node)    | 35.9 KiB / 10.8 KiB gz | 111.6 KiB / 35.4 KiB gz     |
+| PBF → GeoJSON                | 39.6 KiB / 12.4 KiB gz | 28.5 KiB / 7.5 KiB gz †     |
+| XML + JSON + PBF, one bundle | 48.1 KiB / 14.8 KiB gz | not available in one bundle |
+
+- **Zero dependencies against nine.** `osmtogeojson` pulls in 1.7 MiB of runtime
+  packages (`htmlparser2`, `JSONStream`, `@xmldom/xmldom`, `tiny-osmpbf`, …).
+  The two registry tarballs are almost the same size (~410 KiB each), so the
+  difference is the dependency tree, not the package.
+- † That figure is `osmtogeojson`'s PBF decoder dependency alone. Its converter
+  has no PBF input, in Node or in the browser, so there is no full conversion
+  path to compare against; the library's own PBF entry is one file.
+- **XML is the widest gap.** `osmtogeojson` never parses XML text: it walks a
+  DOM you pass in. Its prebuilt browser build converts Overpass JSON only
+  (an XML string throws), and its Node string path adds `htmlparser2` 3.5.1 —
+  which also needs a `util` polyfill to load in a browser-like environment.
+- The per-format entries make the first three rows possible; the default entry
+  carries all three parsers at 48.1 KiB / 14.8 KiB gz.
 
 
 Correctness

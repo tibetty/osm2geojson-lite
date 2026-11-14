@@ -46,6 +46,7 @@
     "test:update": "UPDATE_SNAPSHOTS=1 vitest run test/e2e.test.ts",
     "audit:versions": "npm run build && node scripts/audit-versions.mjs",
     "bench": "vitest bench --run --reporter=verbose",
+    "footprint": "node scripts/footprint.mjs",
     "prebench": "npm run build",
     "valid": "node scripts/serve.mjs",
     "prevalid": "npm run build"
