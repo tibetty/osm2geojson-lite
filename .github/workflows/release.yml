@@ -18,7 +18,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Check if version has been updated
         id: check
@@ -36,10 +36,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Use Node.js from nvmrc
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           registry-url: 'https://registry.npmjs.org'
           node-version-file: .nvmrc
@@ -47,7 +47,7 @@ jobs:
 
       - name: Get version
         id: package-version
-        uses: martinbeentjes/npm-get-version-action@v1.3.1
+        run: echo "current-version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
 
       - name: Install
         run: npm ci
@@ -62,7 +62,7 @@ jobs:
 
       - name: Tag commit and push
         id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
+        uses: mathieudutour/github-tag-action@v7
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           custom_tag: ${{ steps.package-version.outputs.current-version }}
