@@ -34,28 +34,39 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish dry run
-        run: npm publish --access public --dry-run
-
       - name: Get version
         id: package-version
         run: echo "current-version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+
+      - name: Compute the next patch version
+        id: next-version
+        run: |
+          next=$(node -p 'const [a, b, c] = require("./package.json").version.split(".").map(Number); `${a}.${b}.${c + 1}`')
+          echo "version=${next}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish dry run
+        run: |
+          # `--dry-run` still refuses a version that is already on the registry,
+          # so pack a throwaway prerelease instead of the released one.
+          npm version "0.0.0-smoke.$(date +%s)" --no-git-tag-version --allow-same-version
+          npm publish --access public --dry-run --tag smoke
 
       - name: Tag commit (dry run)
         id: tag_version
         uses: mathieudutour/github-tag-action@v7
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: 2.8.2
+          custom_tag: ${{ steps.next-version.outputs.version }}
           dry_run: true
 
       - name: Assert tag output
         run: |
           echo "current-version: ${{ steps.package-version.outputs.current-version }}"
+          echo "next-version:    ${{ steps.next-version.outputs.version }}"
           echo "new_tag:         ${{ steps.tag_version.outputs.new_tag }}"
           echo "new_version:     ${{ steps.tag_version.outputs.new_version }}"
           test -n "${{ steps.tag_version.outputs.new_tag }}"
-          test "${{ steps.tag_version.outputs.new_tag }}" = "v2.8.2"
+          test "${{ steps.tag_version.outputs.new_tag }}" = "v${{ steps.next-version.outputs.version }}"
 
       - name: Prepare archive
         run: zip -r dist dist
