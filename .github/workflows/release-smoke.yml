@@ -1,0 +1,64 @@
+name: Release smoke test
+
+# Exercises the release-only steps of release.yml without publishing to npm and
+# without pushing a tag: dispatch this before changing release.yml, or when a
+# release has to be retried by hand.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+  attestations: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js from nvmrc
+        uses: actions/setup-node@v7
+        with:
+          registry-url: 'https://registry.npmjs.org'
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish dry run
+        run: npm publish --access public --dry-run
+
+      - name: Get version
+        id: package-version
+        run: echo "current-version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+
+      - name: Tag commit (dry run)
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v7
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: 2.8.2
+          dry_run: true
+
+      - name: Assert tag output
+        run: |
+          echo "current-version: ${{ steps.package-version.outputs.current-version }}"
+          echo "new_tag:         ${{ steps.tag_version.outputs.new_tag }}"
+          echo "new_version:     ${{ steps.tag_version.outputs.new_version }}"
+          test -n "${{ steps.tag_version.outputs.new_tag }}"
+          test "${{ steps.tag_version.outputs.new_tag }}" = "v2.8.2"
+
+      - name: Prepare archive
+        run: zip -r dist dist
+
+      - name: Assert archive
+        run: unzip -l dist.zip | tail -3
