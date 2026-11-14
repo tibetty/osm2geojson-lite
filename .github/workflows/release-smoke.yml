@@ -1,7 +1,7 @@
 name: Release smoke test
 
-# Exercises the release-only steps of release.yml without publishing to npm and
-# without pushing a tag: dispatch this before changing release.yml, or when a
+# Mirrors the release-only steps of release.yml without publishing to npm and
+# without keeping a tag: dispatch this before changing release.yml, or when a
 # release has to be retried by hand.
 
 on:
@@ -20,6 +20,20 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Check if version has been updated
+        id: check
+        run: |
+          before=$(git show HEAD~1:package.json 2>/dev/null | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).version' || true)
+          after=$(node -p 'require("./package.json").version')
+          echo "package.json version: ${before:-<none>} -> ${after}"
+          if [ -n "${before}" ] && [ "${before}" = "${after}" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Use Node.js from nvmrc
         uses: actions/setup-node@v7
@@ -38,12 +52,6 @@ jobs:
         id: package-version
         run: echo "current-version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
 
-      - name: Compute the next patch version
-        id: next-version
-        run: |
-          next=$(node -p 'const [a, b, c] = require("./package.json").version.split(".").map(Number); `${a}.${b}.${c + 1}`')
-          echo "version=${next}" >> "$GITHUB_OUTPUT"
-
       - name: Publish dry run
         run: |
           # `--dry-run` still refuses a version that is already on the registry,
@@ -51,29 +59,33 @@ jobs:
           npm version "0.0.0-smoke.$(date +%s)" --no-git-tag-version --allow-same-version
           npm publish --access public --dry-run --tag smoke
 
-      - name: Tag commit (dry run)
+      - name: Tag commit and push (same step as release.yml)
         id: tag_version
-        uses: mathieudutour/github-tag-action@v7
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ steps.next-version.outputs.version }}
-          dry_run: true
-
-      - name: Assert tag output
         run: |
-          echo "current-version: ${{ steps.package-version.outputs.current-version }}"
-          echo "next-version:    ${{ steps.next-version.outputs.version }}"
-          echo "new_tag:         ${{ steps.tag_version.outputs.new_tag }}"
-          echo "new_version:     ${{ steps.tag_version.outputs.new_version }}"
-          test -n "${{ steps.tag_version.outputs.new_tag }}"
-          test "${{ steps.tag_version.outputs.new_tag }}" = "v${{ steps.next-version.outputs.version }}"
+          tag="v${{ steps.package-version.outputs.current-version }}"
+          echo "new_tag=${tag}" >> "$GITHUB_OUTPUT"
+          if [ -n "$(git ls-remote --tags origin "refs/tags/${tag}")" ]; then
+            echo "${tag} already exists; skipping the tag push."
+          else
+            git tag "${tag}"
+            git push origin "${tag}"
+          fi
 
-      - name: Create and delete a throwaway tag
+      - name: Exercise the missing-tag branch
         run: |
+          # The step above takes its skip branch for an already-released version;
+          # run the create-and-push branch against a throwaway tag.
           tag="smoke-${GITHUB_RUN_ID}"
           git tag "${tag}"
           git push origin "${tag}"
           git push origin --delete "${tag}"
+
+      - name: Assert tag output
+        run: |
+          echo "changed:         ${{ steps.check.outputs.changed }}"
+          echo "current-version: ${{ steps.package-version.outputs.current-version }}"
+          echo "new_tag:         ${{ steps.tag_version.outputs.new_tag }}"
+          test "${{ steps.tag_version.outputs.new_tag }}" = "v${{ steps.package-version.outputs.current-version }}"
 
       - name: Prepare archive
         run: zip -r dist dist
