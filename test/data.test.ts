@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import osm2geojson, { toElements } from '../src/index';
+import { pointInsidePolygon } from '../src/utils';
 
 /**
  * Corpus-wide invariants. Every fixture is converted with three option sets and
@@ -18,6 +19,40 @@ const optionSets: Array<{ name: string, opts: any }> = [
     { name: 'completeFeature+renderTagged+tainted', opts: { completeFeature: true, renderTagged: true, excludeWay: false, tainted: true } },
     { name: 'default', opts: {} },
 ];
+
+/**
+ * Ring relationships that must hold for every polygon in the corpus.
+ *
+ * - every ring is closed;
+ * - a hole is inside its own outer ring;
+ * - within one polygon, no hole sits inside another hole.
+ *
+ * The last rule is what #138 broke: attaching an island's hole to the outermost
+ * ring put it inside that ring's hole, in the same polygon. A hole inside another
+ * polygon's hole is *not* wrong - that is what "island within a hole" looks like.
+ */
+function assertRingRelationships(geometry: any, label: string): void {
+    if (geometry === null || geometry === undefined) {
+        return;
+    }
+    const polygons: number[][][][] = geometry.type === 'Polygon'
+        ? [geometry.coordinates]
+        : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
+
+    polygons.forEach((polygon, index) => {
+        for (let ring = 0; ring < polygon.length; ring++) {
+            const points = polygon[ring];
+            expect(points[0], `${label}: polygon ${index} ring ${ring} is not closed`).toEqual(points[points.length - 1]);
+            if (ring === 0) {
+                continue;
+            }
+            expect(pointInsidePolygon(points[0], polygon[0]), `${label}: hole ${index}/${ring} is outside its own outer ring`).toBe(true);
+            for (let other = 1; other < ring; other++) {
+                expect(pointInsidePolygon(points[0], polygon[other]), `${label}: hole ${index}/${ring} sits inside hole ${index}/${other} of the same polygon`).toBe(false);
+            }
+        }
+    });
+}
 
 const GEOMETRY_TYPES = ['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon', 'GeometryCollection'];
 
@@ -60,6 +95,7 @@ function assertFeature(feature: any, file: string): void {
     } else if (feature.geometry.coordinates) {
         assertFiniteCoordinates(feature.geometry.coordinates, file);
     }
+    assertRingRelationships(feature.geometry, `${file} ${feature.id}`);
 }
 
 describe('fixture corpus', () => {
