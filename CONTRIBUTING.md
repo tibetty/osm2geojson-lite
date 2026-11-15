@@ -127,7 +127,21 @@ recorded numbers in the same commit.
 
 ## Releasing
 
-Maintainers:
+Not every merge is a release. A version bump publishes to npm, so it is reserved
+for changes a consumer can observe.
+
+| change | action |
+| --- | --- |
+| behaviour, API, types, dist, export map | bump and release |
+| `test/data`, `test/expected`, test-only code | merge only - no npm release, no changelog entry |
+| docs, comments, CI, workflow tweaks | merge only |
+| performance with identical output | bump and release (the artifact changed) |
+
+A test-only change that needs the corpus on `main` is just a PR and a merge; the
+fixtures are not part of the published package (`files` is `dist`, README and
+LICENSE).
+
+When a release is warranted, maintainers:
 
 1. Merge the fix/feature PR.
 2. Run the **Create version bump PR** workflow (`patch`/`minor`/`major`).
