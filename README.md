@@ -57,6 +57,13 @@ the bundle:
     let geojson = osm2geojson(pbfBytes, opts);
 ```
 
+The helpers come from the same entry, so every function you import reads the format
+that entry supports:
+
+```js
+    import { toElements, mergeOsmChange, applyOsmChange } from 'osm2geojson-lite/pbf';
+```
+
 Every entry exposes the same API - `default`, `toElements`, `mergeOsmChange` and
 `applyOsmChange` - in ESM and CommonJS. An entry is strict: it throws for a format it
 does not read and names the entry that does, instead of half-converting. Mixed formats
@@ -64,12 +71,12 @@ stay on the default entry; applying an XML osmChange to a PBF base needs both re
 
 | Entry                      | Reads                     | Minified | gzip     |
 | -------------------------- | ------------------------- | -------- | -------- |
-| `osm2geojson-lite`         | XML, JSON, PBF (detected) | 48.1 KiB | 14.8 KiB |
-| `osm2geojson-lite/xml`     | XML and osmChange         | 35.9 KiB | 10.8 KiB |
-| `osm2geojson-lite/json`    | OSM/Overpass JSON         | 27.6 KiB | 8.4 KiB  |
-| `osm2geojson-lite/pbf`     | OSM PBF                   | 39.6 KiB | 12.4 KiB |
+| `osm2geojson-lite`         | XML, JSON, PBF (detected) | 48.5 KiB | 14.9 KiB |
+| `osm2geojson-lite/xml`     | XML and osmChange         | 36.2 KiB | 10.9 KiB |
+| `osm2geojson-lite/json`    | OSM/Overpass JSON         | 28.0 KiB | 8.5 KiB  |
+| `osm2geojson-lite/pbf`     | OSM PBF                   | 40.0 KiB | 12.5 KiB |
 
-Sizes are the published `dist/*.mjs` builds in 2.8.1, minified. The package declares
+Sizes are the published `dist/*.mjs` builds in 2.8.4, minified. The package declares
 `"sideEffects": false`, so a bundler also drops helpers the app never calls (for
 example `mergeOsmChange`).
 
@@ -105,6 +112,11 @@ API
 ### `osm2geojson(osm, opts)`
 
 Converts OSM data to GeoJSON.
+
+This is the default entry, which detects the input format. If you know the format up
+front, import the matching one - `osm2geojson-lite/xml`, `/json` or `/pbf` - and the
+other parsers stay out of your bundle; each exports this same function plus the
+helpers below. See [Format entry points](#format-entry-points).
 
 * `osm`: OSM XML or osmChange XML in a string, OSM/Overpass JSON as an object or a string, or OSM PBF as a `Uint8Array` / `ArrayBuffer`
 * `opts?`: optional, the options object, right now supports below properties/fields:
