@@ -267,6 +267,73 @@ describe('large multipolygon inner-ring assignment', () => {
     });
 });
 
+describe('nested island inner rings (#138)', () => {
+    const square = (min: number, max: number) => [
+        { lat: min, lon: min }, { lat: min, lon: max },
+        { lat: max, lon: max }, { lat: max, lon: min }, { lat: min, lon: min },
+    ];
+
+    const nested = (order: number[]) => ({
+        elements: [{
+            type: 'relation', id: 1, tags: { type: 'multipolygon', natural: 'wood' },
+            members: order.map((n) => ({ type: 'way', ref: n, role: n % 2 === 0 ? 'outer' : 'inner', geometry: square(n === 10 ? 0 : n === 11 ? 1 : n === 12 ? 2 : 3, n === 10 ? 7 : n === 11 ? 6 : n === 12 ? 5 : 4) })),
+        }],
+    });
+
+    const bbox = (ring: number[][]) => ring.reduce(
+        ([minX, minY, maxX, maxY], [x, y]) => [Math.min(minX, x), Math.min(minY, y), Math.max(maxX, x), Math.max(maxY, y)],
+        [Infinity, Infinity, -Infinity, -Infinity],
+    );
+
+    const geometryOf = (elements: any) => (json(elements.elements) as any).features.find((f: any) => f.id === 'relation/1').geometry;
+
+    it('assigns an island hole to the island, not to the outermost ring', () => {
+        const geometry = geometryOf(nested([10, 11, 12, 13]));
+        expect(geometry.type).toBe('MultiPolygon');
+        expect(geometry.coordinates).toHaveLength(2);
+        const [outer, island] = geometry.coordinates;
+        expect(outer).toHaveLength(2);
+        expect(island).toHaveLength(2);
+        expect(bbox(outer[0])).toEqual([0, 0, 7, 7]);
+        expect(bbox(outer[1])).toEqual([1, 1, 6, 6]);
+        expect(bbox(island[0])).toEqual([2, 2, 5, 5]);
+        expect(bbox(island[1])).toEqual([3, 3, 4, 4]);
+    });
+
+    it('does not depend on member order', () => {
+        // Polygons are emitted in outer-ring order, so compare the assignment
+        // itself: each outer with its holes, sorted, independent of member order.
+        const assignment = (elements: any) => geometryOf(elements).coordinates
+            .map((polygon: number[][][]) => polygon.map((ring) => bbox(ring).join(',')))
+            .sort();
+        expect(assignment(nested([12, 13, 10, 11]))).toEqual(assignment(nested([10, 11, 12, 13])));
+        expect(assignment(nested([10, 13, 12, 11]))).toEqual(assignment(nested([10, 11, 12, 13])));
+    });
+
+    it('picks the innermost ring through the grid path as well', () => {
+        // 17 nested outers x 17 inner rings = 289 pairs, above the 256 cutoff
+        // that switches linkInnerRings to the uniform grid.
+        const members: any[] = [];
+        const squareRing = (min: number, max: number) => [
+            { lat: min, lon: min }, { lat: min, lon: max },
+            { lat: max, lon: max }, { lat: max, lon: min }, { lat: min, lon: min },
+        ];
+        for (let k = 0; k < 17; k++) {
+            members.push({ type: 'way', ref: 100 + k, role: 'outer', geometry: squareRing(k, 100 - k) });
+            members.push({ type: 'way', ref: 200 + k, role: 'inner', geometry: squareRing(k + 0.25, 100 - k - 0.25) });
+        }
+        const geometry = geometryOf({ elements: [{ type: 'relation', id: 1, tags: { type: 'multipolygon' }, members }] });
+        expect(geometry.type).toBe('MultiPolygon');
+        expect(geometry.coordinates).toHaveLength(17);
+        for (let k = 0; k < 17; k++) {
+            const polygon = geometry.coordinates[k];
+            expect(polygon).toHaveLength(2);
+            expect(bbox(polygon[0])).toEqual([k, k, 100 - k, 100 - k]);
+            expect(bbox(polygon[1])).toEqual([k + 0.25, k + 0.25, 100 - k - 0.25, 100 - k - 0.25]);
+        }
+    });
+});
+
 describe('relation flattening corner cases', () => {
     it('handles a three-relation cycle', () => {
         const result = json([

@@ -13,7 +13,28 @@ type WaysAndRoles = {
 };
 
 /**
- * Assign each inner ring to the first outer ring that contains it.
+ * Absolute area of a closed ring (shoelace formula).
+ *
+ * Used to rank the outer rings that contain an inner ring: the smallest one is
+ * the innermost, which is where a hole belongs when rings are nested
+ * ("island within a hole", OSM multipolygon).
+ */
+function ringArea(ring: number[][]): number {
+    let area = 0;
+    const n = ring.length;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+        area += (ring[j][0] * ring[i][1]) - (ring[i][0] * ring[j][1]);
+    }
+    return Math.abs(area) / 2;
+}
+
+/**
+ * Assign each inner ring to the innermost outer ring that contains it.
+ *
+ * "Innermost" is the smallest containing outer ring by area. Taking the first
+ * containing ring instead made the result depend on member order: with an outer
+ * ring listed before an island inside its hole, the island's hole was attached
+ * to the outer ring, producing a hole nested inside another hole (#138).
  *
  * Small relations use the straightforward pairwise loop. Large ones use a
  * uniform grid over the outer rings so the candidate set is bounded by the
@@ -32,19 +53,26 @@ function linkInnerRings(
         return;
     }
 
+    const outerAreas: number[] = outerRings.map(ringArea);
+
     if (outerCount <= 1 || innerCount <= 1 || outerCount * innerCount <= 256) {
         for (let i = 0; i < innerCount; i++) {
             const ring = innerRings[i];
             const pt = first(ring);
+            let best = -1;
+            let bestArea = Infinity;
             for (let idx = 0; idx < outerCount; idx++) {
                 const b = outerBounds[idx];
                 if (pt[0] < b.minX || pt[0] > b.maxX || pt[1] < b.minY || pt[1] > b.maxY) {
                     continue;
                 }
-                if (pointInsidePolygon(pt, outerRings[idx])) {
-                    compositePolygons[idx].push(ring);
-                    break;
+                if (outerAreas[idx] < bestArea && pointInsidePolygon(pt, outerRings[idx])) {
+                    bestArea = outerAreas[idx];
+                    best = idx;
                 }
+            }
+            if (best >= 0) {
+                compositePolygons[best].push(ring);
             }
         }
         return;
@@ -112,17 +140,21 @@ function linkInnerRings(
             }
         }
 
-        // Preserve the original first-outer-wins behaviour.
-        const sorted = [...candidates].sort((a, b) => a - b);
-        for (const idx of sorted) {
+        // The innermost containing ring wins, not the first one found.
+        let best = -1;
+        let bestArea = Infinity;
+        for (const idx of candidates) {
             const outer = outerBounds[idx];
             if (pt[0] < outer.minX || pt[0] > outer.maxX || pt[1] < outer.minY || pt[1] > outer.maxY) {
                 continue;
             }
-            if (pointInsidePolygon(pt, outerRings[idx])) {
-                compositePolygons[idx].push(ring);
-                break;
+            if (outerAreas[idx] < bestArea && pointInsidePolygon(pt, outerRings[idx])) {
+                bestArea = outerAreas[idx];
+                best = idx;
             }
+        }
+        if (best >= 0) {
+            compositePolygons[best].push(ring);
         }
     }
 }
