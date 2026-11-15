@@ -113,8 +113,17 @@ recorded numbers in the same commit.
 - Indonesia boundary (`test/data/indonesia.json`): Overpass `rel(304751); out geom;`
   — one 186-way outer loop plus two enclave rings, so it exercises stitching at
   scale rather than nesting
-- Lake Toba (`rel(306034)`) and other Overpass relations follow the same shape if
-  more ring coverage is wanted
+- Ring-heavy relations, all fetched with `out geom`:
+  - Lake Toba `rel(306034)` — one lake ring with island holes (19 after merging)
+  - Baarle-Nassau `rel(47798)` — Dutch municipality around Belgian enclaves
+    (9 polygons, 22 holes)
+  - Baarle-Hertog `rel(53137)` — Belgian exclaves (25 polygons, 8 holes)
+
+  These three are breadth, not regression tests: converting them with the 2.8.2
+  code produces byte-identical output, because in each of them an inner ring lies
+  in exactly one outer ring. The nested-island case that #138 broke needs outsides
+  that nest, which real relations rarely contain - that is why
+  `test/data/nested-island.json` is synthetic.
 - PBF: `https://download.geofabrik.de/europe/monaco-latest.osm.pbf`
 - Diffs: `https://download.geofabrik.de/europe/monaco-updates/000/004/<sequence>.osc.gz`
 - History: `https://api.openstreetmap.org/api/0.6/{type}/{id}/history`
