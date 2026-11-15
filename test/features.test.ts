@@ -310,6 +310,29 @@ describe('nested island inner rings (#138)', () => {
         expect(assignment(nested([10, 13, 12, 11]))).toEqual(assignment(nested([10, 11, 12, 13])));
     });
 
+    it('settles overlapping outers deterministically when neither contains the other', () => {
+        // Two outers overlap without nesting, so containment cannot order them:
+        // the smaller bounding box wins, and member order must not matter.
+        const big = square(0, 10);
+        const small = square(5, 12);
+        const hole = [{ lat: 6, lon: 6 }, { lat: 6, lon: 7 }, { lat: 7, lon: 7 }, { lat: 7, lon: 6 }, { lat: 6, lon: 6 }];
+        const geometryFor = (order: number[]) => geometryOf({
+            elements: [{
+                type: 'relation', id: 1, tags: { type: 'multipolygon' },
+                members: order.map((ref) => ({ type: 'way', ref, role: ref === 1 ? 'inner' : 'outer', geometry: ref === 1 ? hole : ref === 2 ? big : small })),
+            }],
+        });
+        const described = (geometry: any) => geometry.coordinates
+            .map((polygon: number[][][]) => polygon.map((ring) => bbox(ring).join(',')).join(' | '))
+            .sort();
+        expect(described(geometryFor([1, 2, 3]))).toEqual(described(geometryFor([1, 3, 2])));
+        // The hole belongs to the 5..12 outer, whose bounds are the smaller.
+        const withHole = geometryFor([1, 2, 3]).coordinates
+            .filter((polygon: number[][][]) => polygon.length === 2)
+            .map((polygon: number[][][]) => polygon.map((ring) => bbox(ring).join(',')));
+        expect(withHole).toEqual([['5,5,12,12', '6,6,7,7']]);
+    });
+
     it('picks the innermost ring through the grid path as well', () => {
         // 17 nested outers x 17 inner rings = 289 pairs, above the 256 cutoff
         // that switches linkInnerRings to the uniform grid.
