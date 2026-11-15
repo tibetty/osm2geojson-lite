@@ -141,6 +141,11 @@ A test-only change that needs the corpus on `main` is just a PR and a merge; the
 fixtures are not part of the published package (`files` is `dist`, README and
 LICENSE).
 
+Documentation follows the same rule, with one consequence worth knowing: npm renders
+the package page from the README inside the published tarball, so a README merged
+without a release keeps the previous wording on npm until the next release that
+warrants one. That is accepted - docs are corrected in `main` and ride along.
+
 When a release is warranted, maintainers:
 
 1. Merge the fix/feature PR.
