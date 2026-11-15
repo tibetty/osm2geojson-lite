@@ -110,6 +110,11 @@ registry as a failure.
 Fixtures are frozen on purpose; refresh them deliberately and update the
 recorded numbers in the same commit.
 
+- Indonesia boundary (`test/data/indonesia.json`): Overpass `rel(304751); out geom;`
+  — one 186-way outer loop plus two enclave rings, so it exercises stitching at
+  scale rather than nesting
+- Lake Toba (`rel(306034)`) and other Overpass relations follow the same shape if
+  more ring coverage is wanted
 - PBF: `https://download.geofabrik.de/europe/monaco-latest.osm.pbf`
 - Diffs: `https://download.geofabrik.de/europe/monaco-updates/000/004/<sequence>.osc.gz`
 - History: `https://api.openstreetmap.org/api/0.6/{type}/{id}/history`
