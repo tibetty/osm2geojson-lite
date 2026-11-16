@@ -193,8 +193,18 @@ When a release is warranted, maintainers:
 1. Merge the fix/feature PR.
 2. Run the **Create version bump PR** workflow (`patch`/`minor`/`major`).
 3. Merge the generated version PR.
-4. `release.yml` runs `npm test` on the merge commit, then publishes to npm via
-   trusted publishing and creates the tag/release.
+4. `release.yml` builds and runs `npm test` on the merge commit, waits for
+   approval on the `npm-publish` environment, then publishes to npm via trusted
+   publishing and creates the tag/release.
+
+The publish step runs behind the `npm-publish` environment: its required
+reviewers are the maintainers and **Prevent self-review** is on, so a release
+triggered by one maintainer's merge needs the other to approve it. The
+environment name must also be set as the **Environment name** on the package's
+trusted publisher at npmjs.com (package → Settings → Trusted publishing). If the
+two disagree the OIDC exchange fails with `404 ... could not be found`, which
+reads like a missing package rather than a claim mismatch, so rename it in both
+places or in neither.
 
 The release job is idempotent: the publish step skips a version that is already
 on the registry, and the tag step skips a tag that already exists, so a run that
@@ -208,7 +218,9 @@ through, including the version audit.
 
 Before changing `release.yml`, dispatch the **Release smoke test** workflow: it
 runs the release-only steps (npm pack, tag computation, tag creation and push,
-archive) without publishing anything or keeping a tag.
+archive) without publishing anything or keeping a tag. It cannot cover the
+environment approval or the OIDC exchange: a dry run never authenticates against
+the registry.
 
 ## Community
 
