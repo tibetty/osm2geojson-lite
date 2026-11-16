@@ -1,9 +1,20 @@
+/**
+ * Synthetic diff documents, one merge rule each; the real diffs are
+ * `test/data/monaco-*.osc` and the provenance rule is in
+ * `test/support/osm-document.ts`.
+ */
 import { describe, it, expect } from 'vitest';
 import osm2geojson, { applyOsmChange, mergeOsmChange, toElements } from '../src/index';
 import { sampleFile } from './pbf-encoder';
+import { assertValidOsmDocument } from './support/osm-document';
 
 const opts = { completeFeature: true, renderTagged: true, excludeWay: false };
-const apply = (base: any, change: any, extra?: any) => applyOsmChange(base, change, { ...opts, ...extra }).geojson as any;
+const apply = (base: any, change: any, extra?: any) => {
+    if (base && Array.isArray(base.elements)) {
+        assertValidOsmDocument(base.elements, 'apply-change.test.ts base');
+    }
+    return applyOsmChange(base, change, { ...opts, ...extra }).geojson as any;
+};
 
 const base = {
     elements: [

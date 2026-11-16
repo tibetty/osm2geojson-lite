@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import osm2geojson, { toElements } from '../src/index';
 import { pointInsidePolygon } from '../src/utils';
+import { assertValidOsmDocument } from './support/osm-document';
 
 /**
  * Corpus-wide invariants. Every fixture is converted with three option sets and
@@ -101,6 +102,25 @@ function assertFeature(feature: any, file: string): void {
 describe('fixture corpus', () => {
     it('is not empty', () => {
         expect(fixtures.length).toBeGreaterThan(20);
+    });
+
+    // The validator that guards the synthetic documents also has to accept real
+    // captures; otherwise a rule tighter than OSM itself would silently narrow
+    // what the synthetic layer may express. This is that calibration.
+    for (const file of fixtures) {
+        it(`keeps ${file} within the shapes OSM can produce`, () => {
+            assertValidOsmDocument(toElements(readFixture(file)), file);
+        });
+    }
+
+    // The same Overpass `convert ... ::geom=geom()` response, once as XML and
+    // once as JSON. The XML derived-geometry path (`<point>`, bare `<vertex>`,
+    // `<group>`) is only reached by this capture, and it must agree with the
+    // JSON path, which feeds the same elements through the same analyser.
+    it('converts derived-geometry XML exactly like its JSON twin', () => {
+        const opts = { completeFeature: true };
+        expect(osm2geojson(readFixture('overpass-derived-geometry.osm'), opts))
+            .toEqual(osm2geojson(readFixture('overpass-derived-geometry.json'), opts));
     });
 
     for (const { name, opts } of optionSets) {

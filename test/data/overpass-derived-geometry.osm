@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="Overpass API 0.7.62.11 87bfad18">
+<note>The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.</note>
+<meta osm_base="2026-11-16T10:31:36Z"/>
+
+  <item id="1">
+    <point lat="43.7307203" lon="7.4102100"/>
+    <tag k="_osm_type" v="node"/>
+  </item>
+  <item id="2">
+    <vertex lat="43.7304897" lon="7.4103295"/>
+    <vertex lat="43.7305481" lon="7.4104763"/>
+    <vertex lat="43.7305285" lon="7.4104912"/>
+    <vertex lat="43.7305549" lon="7.4105578"/>
+    <vertex lat="43.7305399" lon="7.4105692"/>
+    <vertex lat="43.7305816" lon="7.4106741"/>
+    <vertex lat="43.7305615" lon="7.4106894"/>
+    <vertex lat="43.7306024" lon="7.4107925"/>
+    <vertex lat="43.7305645" lon="7.4108213"/>
+    <vertex lat="43.7303971" lon="7.4103999"/>
+    <vertex lat="43.7304897" lon="7.4103295"/>
+    <tag k="addr:country" v="MC"/>
+    <tag k="building" v="yes"/>
+    <tag k="source" v="Bing"/>
+    <tag k="_osm_type" v="way"/>
+  </item>
+  <item id="3">
+    <vertex lat="43.7307014" lon="7.4126765"/>
+    <vertex lat="43.7307271" lon="7.4125972"/>
+    <vertex lat="43.7307045" lon="7.4124678"/>
+    <vertex lat="43.7306900" lon="7.4123770"/>
+    <vertex lat="43.7307236" lon="7.4123186"/>
+    <vertex lat="43.7308886" lon="7.4121973"/>
+    <vertex lat="43.7309083" lon="7.4121472"/>
+    <vertex lat="43.7309091" lon="7.4120822"/>
+    <vertex lat="43.7308975" lon="7.4120202"/>
+    <vertex lat="43.7308803" lon="7.4119395"/>
+    <vertex lat="43.7307683" lon="7.4116261"/>
+    <vertex lat="43.7307421" lon="7.4113450"/>
+    <vertex lat="43.7306850" lon="7.4111303"/>
+    <vertex lat="43.7306308" lon="7.4110090"/>
+    <vertex lat="43.7305901" lon="7.4109112"/>
+    <vertex lat="43.7305231" lon="7.4107935"/>
+    <vertex lat="43.7303507" lon="7.4103461"/>
+    <vertex lat="43.7302991" lon="7.4102542"/>
+    <vertex lat="43.7300667" lon="7.4099363"/>
+    <vertex lat="43.7300154" lon="7.4098910"/>
+    <vertex lat="43.7296991" lon="7.4096444"/>
+    <vertex lat="43.7293949" lon="7.4094183"/>
+    <tag k="highway" v="residential"/>
+    <tag k="motor_vehicle" v="private"/>
+    <tag k="name" v="Route de l'Hôpital"/>
+    <tag k="source" v="cadastre-dgi-fr source : Direction Générale des Impôts - Cadastre. Mise à jour : 2014"/>
+    <tag k="_osm_type" v="way"/>
+  </item>
+  <item id="4">
+    <group>
+      <vertex lat="43.7325570" lon="7.4109200"/>
+      <vertex lat="43.7325930" lon="7.4109650"/>
+      <vertex lat="43.7325830" lon="7.4109880"/>
+      <vertex lat="43.7326230" lon="7.4110330"/>
+      <vertex lat="43.7326750" lon="7.4109490"/>
+      <vertex lat="43.7326480" lon="7.4109150"/>
+      <vertex lat="43.7326820" lon="7.4108570"/>
+      <vertex lat="43.7326350" lon="7.4108020"/>
+      <vertex lat="43.7326370" lon="7.4108000"/>
+      <vertex lat="43.7325860" lon="7.4106960"/>
+      <vertex lat="43.7325270" lon="7.4107460"/>
+      <vertex lat="43.7325430" lon="7.4107830"/>
+      <vertex lat="43.7325080" lon="7.4108110"/>
+      <vertex lat="43.7325570" lon="7.4109200"/>
+    </group>
+    <group>
+      <vertex lat="43.7325770" lon="7.4108500"/>
+      <vertex lat="43.7325990" lon="7.4108340"/>
+      <vertex lat="43.7326210" lon="7.4108380"/>
+      <vertex lat="43.7326300" lon="7.4108530"/>
+      <vertex lat="43.7325930" lon="7.4108830"/>
+      <vertex lat="43.7325770" lon="7.4108500"/>
+    </group>
+    <tag k="building" v="yes"/>
+    <tag k="type" v="multipolygon"/>
+    <tag k="_osm_type" v="relation"/>
+  </item>
+
+</osm>

@@ -1,7 +1,16 @@
+/**
+ * Synthetic history documents, one resolution rule each; the real captures are
+ * `test/data/history-*.osm` and the provenance rule is in
+ * `test/support/osm-document.ts`.
+ */
 import { describe, it, expect } from 'vitest';
 import osm2geojson from '../src/index';
+import { assertValidOsmDocument } from './support/osm-document';
 
-const json = (elements: any[], opts?: any) => osm2geojson({ elements }, { completeFeature: true, ...opts }) as any;
+const json = (elements: any[], opts?: any) => {
+    assertValidOsmDocument(elements, 'history.test.ts');
+    return osm2geojson({ elements }, { completeFeature: true, ...opts }) as any;
+};
 const xml = (osm: string, opts?: any) => osm2geojson(osm, { completeFeature: true, ...opts }) as any;
 
 describe('history resolution (JSON)', () => {

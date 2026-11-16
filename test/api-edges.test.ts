@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import osm2geojson, { applyOsmChange, mergeOsmChange, toElements } from '../src/index';
 
-/** Input handling and public API edges that fixtures do not reach. */
+/**
+ * Input handling and public API edges that fixtures do not reach.
+ *
+ * Documents here are synthetic and mostly malformed on purpose - that is the
+ * point of the file - so the OSM-shape validator is not applied; the
+ * provenance rule is in `test/support/osm-document.ts`.
+ */
 
 describe('input handling', () => {
     it('returns an empty collection for input it cannot recognise', () => {

@@ -1,3 +1,9 @@
+/**
+ * The round-trip cases read the real corpus; the inline documents are
+ * synthetic XML, which `assertValidOsmDocument` cannot check without parsing
+ * them through the same code under test. The provenance rule is in
+ * `test/support/osm-document.ts`.
+ */
 import fs from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import osm2geojson from '../src/index';

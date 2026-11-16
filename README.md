@@ -295,9 +295,10 @@ Correctness
 Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also quite representative) in the `data` subfolders under `test` and `bench` directories, which also outperforms `osmtogeojson`.
 
 The test suite also runs real data: a Geofabrik PBF extract, osmChange diffs
-from the same update stream and history responses from the OSM API, plus a
-corpus-wide check that every fixture converts to unique, well-formed features
-and that the element path agrees with the direct path. `npm test` enforces
+from the same update stream, history responses from the OSM API and an Overpass
+derived-geometry response in both XML and JSON, plus a corpus-wide check that
+every fixture converts to unique, well-formed features and that the element path
+agrees with the direct path. `npm test` enforces
 coverage thresholds and runs a version audit that re-checks every released
 artifact against the behaviour it claims; see [CONTRIBUTING.md](CONTRIBUTING.md).
 

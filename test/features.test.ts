@@ -1,7 +1,15 @@
+/**
+ * Synthetic documents, one rule each; `test/data` holds the real captures and
+ * `test/support/osm-document.ts` states the provenance rule.
+ */
 import { describe, it, expect } from 'vitest';
 import osm2geojson from '../src/index';
+import { assertValidOsmDocument } from './support/osm-document';
 
-const json = (elements: any[], opts?: any) => osm2geojson({ elements }, { completeFeature: true, ...opts }) as any;
+const json = (elements: any[], opts?: any) => {
+    assertValidOsmDocument(elements, 'features.test.ts');
+    return osm2geojson({ elements }, { completeFeature: true, ...opts }) as any;
+};
 
 describe('Overpass derived geometries', () => {
     it('uses a GeoJSON geometry object carried by a JSON element', () => {
@@ -251,7 +259,7 @@ describe('large multipolygon inner-ring assignment', () => {
             addSquare(offset, true);
         }
         // This inner ring is outside every outer ring and must be left unassigned.
-        addSquare(1000, true);
+        addSquare(80, true);
         elements.push({ type: 'relation', id: 1, tags: { type: 'multipolygon' }, members });
 
         const result = json(elements);
@@ -267,6 +275,9 @@ describe('large multipolygon inner-ring assignment', () => {
     });
 });
 
+// Constructed, not captured: real relations rarely nest, which is why #138
+// needs this shape. It follows the Baarle enclaves (rel/47798, rel/53137), but
+// no real relation contains the nesting that broke it.
 describe('nested island inner rings (#138)', () => {
     const square = (min: number, max: number) => [
         { lat: min, lon: min }, { lat: min, lon: max },
@@ -341,9 +352,11 @@ describe('nested island inner rings (#138)', () => {
             { lat: min, lon: min }, { lat: min, lon: max },
             { lat: max, lon: max }, { lat: max, lon: min }, { lat: min, lon: min },
         ];
+        // Shifted into the valid coordinate range: the shape is invented, but
+        // OSM could carry it, so the document stays inside the data model.
         for (let k = 0; k < 17; k++) {
-            members.push({ type: 'way', ref: 100 + k, role: 'outer', geometry: squareRing(k, 100 - k) });
-            members.push({ type: 'way', ref: 200 + k, role: 'inner', geometry: squareRing(k + 0.25, 100 - k - 0.25) });
+            members.push({ type: 'way', ref: 100 + k, role: 'outer', geometry: squareRing(k - 50, 50 - k) });
+            members.push({ type: 'way', ref: 200 + k, role: 'inner', geometry: squareRing(k - 50 + 0.25, 50 - k - 0.25) });
         }
         const geometry = geometryOf({ elements: [{ type: 'relation', id: 1, tags: { type: 'multipolygon' }, members }] });
         expect(geometry.type).toBe('MultiPolygon');
@@ -351,8 +364,8 @@ describe('nested island inner rings (#138)', () => {
         for (let k = 0; k < 17; k++) {
             const polygon = geometry.coordinates[k];
             expect(polygon).toHaveLength(2);
-            expect(bbox(polygon[0])).toEqual([k, k, 100 - k, 100 - k]);
-            expect(bbox(polygon[1])).toEqual([k + 0.25, k + 0.25, 100 - k - 0.25, 100 - k - 0.25]);
+            expect(bbox(polygon[0])).toEqual([k - 50, k - 50, 50 - k, 50 - k]);
+            expect(bbox(polygon[1])).toEqual([k - 49.75, k - 49.75, 49.75 - k, 49.75 - k]);
         }
     });
 });

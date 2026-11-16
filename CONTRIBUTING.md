@@ -57,6 +57,18 @@ Two layers, both required for new behaviour:
   `test/pbf-real.test.ts`, `test/osmchange-real.test.ts` and
   `test/history-real.test.ts` are recorded from those committed files.
 
+Synthetic documents have to stay inside the OSM data model - a fixture that no
+source could produce locks in behaviour for input that never occurs.
+`assertValidOsmDocument` (`test/support/osm-document.ts`) runs through the JSON
+helpers in `features`, `overpass`, `duplicates`, `history` and `apply-change`,
+and over the whole real corpus in `test/data.test.ts`, so a rule stricter than
+OSM itself fails on real data. A document that is deliberately outside the model
+- an invalid coordinate, an out-of-order bound - passes
+`{ outsideOsmModel: true }` and says why in a comment. The same module states the
+provenance convention: synthetic documents are constructed, so a case that
+mirrors a real object names it, and a case no real object can produce says so
+(for example the nested islands behind #138).
+
 `test/data.test.ts` sweeps the whole corpus with three option sets and asserts
 the invariants a consumer relies on: unique feature ids, well-formed features,
 finite coordinates, and that routing a document through `toElements` produces
@@ -124,6 +136,22 @@ recorded numbers in the same commit.
   in exactly one outer ring. The nested-island case that #138 broke needs outsides
   that nest, which real relations rarely contain - that is why
   `test/data/nested-island.json` is synthetic.
+- Overpass derived geometry (`test/data/overpass-derived-geometry.{osm,json}`),
+  the only real witnesses for the derived XML paths:
+
+  ```text
+  [out:xml];
+  (node(624443328);way(257071677);way(335197685);relation(1939701););
+  convert item ::=::,::geom=geom(),_osm_type=type();
+  out geom;
+  ```
+
+  The same query with `[out:json]` produced the `.json` twin; both must convert
+  identically, which `test/data.test.ts` asserts. In XML the geometry arrives
+  as `<point>` (node), bare `<vertex>` (ways) and `<group>` (the multipolygon
+  relation). A `<linestring>` element cannot be produced from an OSM object -
+  Overpass emits it only for a geometry built with `lstr()` - so that shape has
+  no real capture and stays synthetic.
 - PBF: `https://download.geofabrik.de/europe/monaco-latest.osm.pbf`
 - Diffs: `https://download.geofabrik.de/europe/monaco-updates/000/004/<sequence>.osc.gz`
 - History: `https://api.openstreetmap.org/api/0.6/{type}/{id}/history`

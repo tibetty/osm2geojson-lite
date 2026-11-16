@@ -1,3 +1,8 @@
+/**
+ * Synthetic osmChange documents, one section rule each; the real diffs are
+ * `test/data/monaco-*.osc` and the provenance rule is in
+ * `test/support/osm-document.ts`.
+ */
 import { describe, it, expect } from 'vitest';
 import osm2geojson from '../src/index';
 
