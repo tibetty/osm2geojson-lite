@@ -193,12 +193,18 @@ When a release is warranted, maintainers:
 1. Merge the fix/feature PR.
 2. Run the **Create version bump PR** workflow (`patch`/`minor`/`major`).
 3. Merge the generated version PR.
-4. `release.yml` publishes to npm via trusted publishing and creates the tag/release.
+4. `release.yml` runs `npm test` on the merge commit, then publishes to npm via
+   trusted publishing and creates the tag/release.
 
 The release job is idempotent: the publish step skips a version that is already
 on the registry, and the tag step skips a tag that already exists, so a run that
 failed after either step can be retried with **Run workflow** on `release.yml`.
 It is safe to re-run at any commit whose `package.json` differs from its parent.
+
+The test step is a gate, not a duplicate of CI. `CI` and `Release` both trigger
+on the same push and run in parallel, so without it a version bump merged into a
+red `main` would publish anyway. It runs the same `npm test` the PR went
+through, including the version audit.
 
 Before changing `release.yml`, dispatch the **Release smoke test** workflow: it
 runs the release-only steps (npm pack, tag computation, tag creation and push,
