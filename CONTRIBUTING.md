@@ -206,6 +206,26 @@ two disagree the OIDC exchange fails with `404 ... could not be found`, which
 reads like a missing package rather than a claim mismatch, so rename it in both
 places or in neither.
 
+The two sides can be compared without publishing:
+
+```sh
+npm trust list osm2geojson-lite --json
+```
+
+```json
+{
+  "type": "github",
+  "file": "release.yml",
+  "repository": "tibetty/osm2geojson-lite",
+  "environment": "npm-publish",
+  "permissions": ["createPackage", "createStagedPackage"]
+}
+```
+
+`createPackage` is the permission `npm publish` needs. `createStagedPackage` is
+the stage queue, which this repository does not use: the environment approval is
+the human gate, so a second one on npmjs.com would be redundant.
+
 The release job is idempotent: the publish step skips a version that is already
 on the registry, and the tag step skips a tag that already exists, so a run that
 failed after either step can be retried with **Run workflow** on `release.yml`.
