@@ -48,6 +48,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Run tests
+        run: npm test
+
       - name: Get version
         id: package-version
         run: echo "current-version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"

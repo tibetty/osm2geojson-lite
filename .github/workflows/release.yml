@@ -67,6 +67,13 @@ jobs:
         run: |
           npm run build
 
+      # Publishing cannot be undone, and CI is not a dependency of this
+      # workflow: both start on the same push and run in parallel, so a red
+      # `main` would otherwise publish anyway. Gate the upload on the suite CI
+      # runs.
+      - name: Run tests
+        run: npm test
+
       - name: Publish NPM package
         run: |
           version=$(node -p 'require("./package.json").version')
