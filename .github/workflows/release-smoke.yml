@@ -2,7 +2,9 @@ name: Release smoke test
 
 # Mirrors the release-only steps of release.yml without publishing to npm and
 # without keeping a tag: dispatch this before changing release.yml, or when a
-# release has to be retried by hand.
+# release has to be retried by hand. The `npm-publish` environment gate and the
+# OIDC exchange cannot be exercised here - a dry run never contacts the
+# registry for authentication.
 
 on:
   workflow_dispatch:

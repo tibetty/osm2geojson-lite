@@ -1,9 +1,7 @@
 name: Release
 
 permissions:
-  id-token: write  # Required for trusted publishing
-  contents: write
-  attestations: write
+  contents: read
 
 on:
   push:
@@ -39,7 +37,7 @@ jobs:
       publish: ${{ steps.check.outputs.changed }}
 
   release:
-    name: Release
+    name: Build and test
     needs: release-check
     if: ${{ needs.release-check.outputs.publish == 'true' }}
     runs-on: ubuntu-latest
@@ -52,13 +50,8 @@ jobs:
       - name: Use Node.js from nvmrc
         uses: actions/setup-node@v7
         with:
-          registry-url: 'https://registry.npmjs.org'
           node-version-file: .nvmrc
           cache: npm
-
-      - name: Get version
-        id: package-version
-        run: echo "current-version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
 
       - name: Install
         run: npm ci
@@ -73,6 +66,54 @@ jobs:
       # runs.
       - name: Run tests
         run: npm test
+
+      # The upload lives in its own job so the approval gate sits *after* the
+      # tests: a reviewer is only asked once the suite is green.
+      - name: Upload the tested build
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish
+    needs: release
+    runs-on: ubuntu-latest
+    # Required reviewers on this environment are the human gate before the
+    # upload. The environment name must also be configured on the npm trusted
+    # publisher: a mismatch fails the OIDC exchange with a misleading 404.
+    environment:
+      name: npm-publish
+      url: https://www.npmjs.com/package/osm2geojson-lite
+    permissions:
+      id-token: write  # Required for trusted publishing
+      contents: write
+      attestations: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js from nvmrc
+        uses: actions/setup-node@v7
+        with:
+          registry-url: 'https://registry.npmjs.org'
+          node-version-file: .nvmrc
+          cache: npm
+
+      # The bytes that passed the suite, not a second build.
+      - name: Download the tested build
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      - name: Get version
+        id: package-version
+        run: echo "current-version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
 
       - name: Publish NPM package
         run: |
