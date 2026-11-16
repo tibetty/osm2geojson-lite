@@ -21,14 +21,27 @@ const expectOk = (result: ReturnType<typeof run>) => {
 
 const xml = '<osm><node id="1" lat="0" lon="0"><tag k="name" v="a"/></node></osm>';
 
+/**
+ * Run `body` against a scratch path and remove it whether or not the body
+ * throws: a failing assertion must not leave files behind in `test/expected`.
+ */
+function withScratchFile<T>(path: string, body: (path: string) => T): T {
+    try {
+        return body(path);
+    } finally {
+        fs.rmSync(path, { force: true });
+    }
+}
+
 describe.skipIf(!built)('CLI', () => {
     it('converts a file to a file', () => {
         const output = 'test/expected/.cli-out.json';
-        const result = run(['test/data/node.osm', output]);
-        expectOk(result);
-        const geojson = JSON.parse(fs.readFileSync(output, 'utf-8'));
-        expect(geojson.type).toBe('FeatureCollection');
-        fs.rmSync(output);
+        withScratchFile(output, (path) => {
+            const result = run(['test/data/node.osm', path]);
+            expectOk(result);
+            const geojson = JSON.parse(fs.readFileSync(path, 'utf-8'));
+            expect(geojson.type).toBe('FeatureCollection');
+        });
     });
 
     it('reads stdin and writes stdout', () => {
@@ -39,12 +52,12 @@ describe.skipIf(!built)('CLI', () => {
     });
 
     it('decompresses gzip input', () => {
-        const gzipped = 'test/expected/.cli-in.osm.gz';
-        fs.writeFileSync(gzipped, gzipSync(xml));
-        const result = run([gzipped]);
-        fs.rmSync(gzipped);
-        expectOk(result);
-        expect(JSON.parse(result.stdout.toString()).features).toHaveLength(1);
+        withScratchFile('test/expected/.cli-in.osm.gz', (gzipped) => {
+            fs.writeFileSync(gzipped, gzipSync(xml));
+            const result = run([gzipped]);
+            expectOk(result);
+            expect(JSON.parse(result.stdout.toString()).features).toHaveLength(1);
+        });
     });
 
     it('converts a real PBF extract', () => {
@@ -62,12 +75,12 @@ describe.skipIf(!built)('CLI', () => {
     });
 
     it('fails with a hint for bzip2 input', () => {
-        const bzip2 = 'test/expected/.cli-in.osm.bz2';
-        fs.writeFileSync(bzip2, Buffer.from('BZh91AY&SY'));
-        const result = run([bzip2]);
-        fs.rmSync(bzip2);
-        expect(result.status).toBe(1);
-        expect(result.stderr.toString()).toContain('bzip2 input is not supported');
+        withScratchFile('test/expected/.cli-in.osm.bz2', (bzip2) => {
+            fs.writeFileSync(bzip2, Buffer.from('BZh91AY&SY'));
+            const result = run([bzip2]);
+            expect(result.status).toBe(1);
+            expect(result.stderr.toString()).toContain('bzip2 input is not supported');
+        });
     });
 
     it('prints help', () => {
