@@ -1,7 +1,17 @@
+/**
+ * Synthetic documents, one output mode each; `test/data` holds the real
+ * captures and `test/support/osm-document.ts` states the provenance rule.
+ */
 import { describe, expect, it } from 'vitest';
 import osm2geojson from '../src/index';
+import { assertValidOsmDocument } from './support/osm-document';
 
-const json = (elements: any[], opts?: any) => osm2geojson({ elements }, { completeFeature: true, ...opts }) as any;
+const json = (elements: any[], opts?: any) => {
+    // `outsideOsmModel` belongs to the fixture validator, not to the converter.
+    const { outsideOsmModel, ...conversion } = opts || {};
+    assertValidOsmDocument(elements, 'overpass.test.ts', { outsideOsmModel });
+    return osm2geojson({ elements }, { completeFeature: true, ...conversion }) as any;
+};
 const xml = (source: string, opts?: any) => osm2geojson(source, { completeFeature: true, ...opts }) as any;
 
 describe('Overpass output modes', () => {
@@ -149,17 +159,19 @@ describe('coordinate validation', () => {
     });
 
     it('ignores invalid bounds and centers', () => {
+        // Deliberately outside the OSM data model: Overpass never returns these,
+        // but a hand-written document can, so the defensive path is tested here.
         const jsonWay = json([{
             type: 'way', id: 1, tags: { highway: 'path' },
             center: { lat: 'bad', lon: 0 },
             bounds: { minlat: 'bad', minlon: 0, maxlat: 1, maxlon: 1 },
-        }], { tainted: true });
+        }], { tainted: true, outsideOsmModel: true });
         expect(jsonWay.features).toEqual([]);
 
         const jsonRelation = json([{
             type: 'relation', id: 2, tags: { type: 'route' },
             center: { lat: Number.NaN, lon: 0 },
-        }], { tainted: true });
+        }], { tainted: true, outsideOsmModel: true });
         expect(jsonRelation.features).toEqual([]);
 
         const xmlWay = xml('<osm><way id="1"><center lat="bad" lon="0"/>'
@@ -184,7 +196,7 @@ describe('coordinate validation', () => {
                 center: { lat: 'bad', lon: 0 },
                 members: [{ type: 'way', ref: 3, role: '' }],
             },
-        ], { tainted: true });
+        ], { tainted: true, outsideOsmModel: true });
         const relation = result.features.find((f: any) => f.id === 'relation/4');
         expect(relation).toBeDefined();
         expect(relation.properties['@tainted']).toBe(true);

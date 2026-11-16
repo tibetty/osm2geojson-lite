@@ -1,14 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import osm2geojson from '../src/index';
+import { assertValidOsmDocument } from './support/osm-document';
 
 /**
  * Duplicate handling: Overpass can return the same element twice (skeleton and
  * geometry, or a derived object and a placeholder). These cases exercise every
  * branch of `RefElements` duplicate resolution, including the order-sensitive
  * ones, because the wrong binder being dropped silently loses geometry.
+ *
+ * Synthetic documents; the provenance rule is in `test/support/osm-document.ts`.
  */
 
-const json = (elements: any[], opts?: any) => osm2geojson({ elements }, { completeFeature: true, ...opts }) as any;
+const json = (elements: any[], opts?: any) => {
+    assertValidOsmDocument(elements, 'duplicates.test.ts');
+    return osm2geojson({ elements }, { completeFeature: true, ...opts }) as any;
+};
 
 describe('duplicate resolution', () => {
     it('drops the duplicate binders of a way that already has coordinates', () => {

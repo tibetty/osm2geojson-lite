@@ -54,6 +54,14 @@ const KNOWN_DIFFERENCES: Record<string, { oursOnly?: string[], theirsOnly?: stri
         typeDifferences: { 'way/105582213': 'LineString/Polygon' },
         reason: 'partial extract: three of four ring nodes are missing, so we emit a tainted degenerate line where they close a degenerate polygon',
     },
+    'overpass-derived-geometry.osm': {
+        oursOnly: ['item/1', 'item/2', 'item/3', 'item/4'],
+        reason: 'derived elements from `convert ... ::geom` are features here; the reference drops a user-defined element type',
+    },
+    'overpass-derived-geometry.json': {
+        oursOnly: ['item/1', 'item/2', 'item/3', 'item/4'],
+        reason: 'derived elements from `convert ... ::geom` are features here; the reference drops a user-defined element type',
+    },
 };
 
 /** Fixtures where both implementations must agree on coordinates, exactly. */

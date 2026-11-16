@@ -1,3 +1,9 @@
+/**
+ * Synthetic PBF documents built with `pbf-encoder.ts`. They are encoded bytes,
+ * so `assertValidOsmDocument` cannot inspect them; the real capture is
+ * `test/data/monaco.osm.pbf` and the provenance rule is in
+ * `test/support/osm-document.ts`.
+ */
 import { describe, it, expect } from 'vitest';
 import osm2geojson from '../src/index';
 import { deflateSync } from 'node:zlib';

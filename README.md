@@ -222,7 +222,7 @@ your own shape.
 
 ### Benchmarks
 
-1. Workloads are the boundary XML and JSON of four administrative areas (zhucheng, hebei, tokyodo, usa). Each file holds **one relation** with its member geometry inlined, so these measure boundary flattening plus XML tokenising, not an element-dense conversion.
+1. Workloads are the boundary XML and JSON of four administrative areas (zhucheng, hebei, tokyodo, usa). Each file holds **one relation** with its member geometry inlined, so these measure boundary flattening plus XML tokenising, not an element-dense conversion. The `monaco merged · element-dense` row covers the other shape: `monaco.osm.pbf` merged with a real diff, 48,472 elements and 10,664 features.
 2. The benchmark is written with [Vitest's `bench`](https://vitest.dev/guide/features.html#benchmarking), which warms up and then samples each conversion many times, comparing this library against [`osm2geojson-ultra`](https://www.npmjs.com/package/osm2geojson-ultra) (which uses the `txml` parser) and `osmtogeojson` (+ `xmldom` for XML).
 ```
 $ npm run bench
@@ -252,7 +252,9 @@ $ npm run bench
 >
 > **Element-dense extracts are the closest case.** Given the same 48,472
 > elements (10,664 output features, 92,000 references) the two are within about
-> 10% of each other, this library around 7% ahead. Both spend their time on
+> 10% of each other, this library around 7% ahead. That is the
+> `monaco merged · element-dense` row of `npm run bench`, reproducible from the
+> committed `monaco.osm.pbf` and `monaco-900.osc`. Both spend their time on
 > per-feature work rather than on parsing there, so the boundary numbers above
 > are not representative of it. Use the shape you actually convert.
 >
@@ -295,9 +297,10 @@ Correctness
 Up until now, `osm2geojson-lite` behaves pretty well with all the samples (also quite representative) in the `data` subfolders under `test` and `bench` directories, which also outperforms `osmtogeojson`.
 
 The test suite also runs real data: a Geofabrik PBF extract, osmChange diffs
-from the same update stream and history responses from the OSM API, plus a
-corpus-wide check that every fixture converts to unique, well-formed features
-and that the element path agrees with the direct path. `npm test` enforces
+from the same update stream, history responses from the OSM API and an Overpass
+derived-geometry response in both XML and JSON, plus a corpus-wide check that
+every fixture converts to unique, well-formed features and that the element path
+agrees with the direct path. `npm test` enforces
 coverage thresholds and runs a version audit that re-checks every released
 artifact against the behaviour it claims; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
