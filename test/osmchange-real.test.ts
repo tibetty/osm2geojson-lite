@@ -25,7 +25,7 @@ describe('real osmChange diff', () => {
         const monaco = features.find((feature: any) => feature.id === 'node/6684051501');
         expect(monaco.geometry).toEqual({ type: 'Point', coordinates: [7.4276832, 43.7323492] });
         expect(monaco.properties).toMatchObject({
-            version: '34',
+            version: 34,
             'name:ja': 'モナコ',
             'name:ar': 'موناكو',
             'name:ko': '모나코',
@@ -45,7 +45,7 @@ describe('real osmChange diff', () => {
         expect(features).toHaveLength(11);
 
         const created = features.find((feature: any) => feature.id === 'node/14323457501');
-        expect(created.properties).toMatchObject({ tourism: 'viewpoint', version: '1' });
+        expect(created.properties).toMatchObject({ tourism: 'viewpoint', version: 1 });
         expect(created.geometry.coordinates).toEqual([7.4221198, 43.7298151]);
 
         // The diff also creates a relation, but its member ways are not part of
@@ -110,9 +110,9 @@ describe('real osmChange diff', () => {
         expect(ids).not.toContain('way/156780344');
 
         const modified = features.find((feature: any) => feature.id === 'way/686912272');
-        expect(modified.properties.version).toBe('4');
+        expect(modified.properties.version).toBe(4);
         expect(modified.geometry.type).toBe('LineString');
-        expect(features.find((feature: any) => feature.id === 'way/946562630').properties.version).toBe('7');
+        expect(features.find((feature: any) => feature.id === 'way/946562630').properties.version).toBe(7);
     });
 
     it('throws in strict mode naming the first stale entry', () => {

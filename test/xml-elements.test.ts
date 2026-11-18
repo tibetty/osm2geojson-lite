@@ -27,7 +27,7 @@ describe('XML to elements', () => {
         expect(element).toEqual({
             type: 'node',
             id: 7,
-            version: '3',
+            version: 3,
             user: 'alice',
             lat: 1.5,
             lon: 2.5,
@@ -42,7 +42,7 @@ describe('XML to elements', () => {
             <way id="12"><center lat="1" lon="2"/><bounds minlat="0" minlon="1" maxlat="2" maxlon="3"/></way>
         </osm>`;
         const elements = parseOsmXmlElements(xml);
-        expect(elements[0]).toMatchObject({ type: 'way', id: 10, version: '2', nodes: [1, 2] });
+        expect(elements[0]).toMatchObject({ type: 'way', id: 10, version: 2, nodes: [1, 2] });
         expect(elements[1]).toMatchObject({ type: 'way', id: 11, geometry: [{ lat: '0', lon: '1' }, { lat: '1', lon: '2' }] });
         expect(elements[2]).toMatchObject({
             type: 'way', id: 12,
@@ -60,16 +60,16 @@ describe('XML to elements', () => {
         </relation></osm>`;
         const [relation] = parseOsmXmlElements(xml);
         expect(relation.members).toEqual([
-            { type: 'way', ref: '10', role: 'outer' },
-            { type: 'node', ref: '1', role: 'label' },
-            { type: 'relation', ref: '21', role: 'sub' },
+            { type: 'way', ref: 10, role: 'outer' },
+            { type: 'node', ref: 1, role: 'label' },
+            { type: 'relation', ref: 21, role: 'sub' },
         ]);
         expect(relation.tags).toEqual({ type: 'multipolygon' });
     });
 
     it('marks osmChange deletions instead of dropping them', () => {
         const change = '<osmChange><delete><node id="3" version="4"/></delete></osmChange>';
-        expect(parseOsmXmlElements(change)).toEqual([{ type: 'node', id: 3, version: '4', action: 'delete' }]);
+        expect(parseOsmXmlElements(change)).toEqual([{ type: 'node', id: 3, version: 4, action: 'delete' }]);
     });
 
     it('marks visible=false elements', () => {

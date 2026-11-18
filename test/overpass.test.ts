@@ -81,11 +81,11 @@ describe('Overpass output modes', () => {
             + '</relation></osm>';
         const feature = xml(source).features.find((f: any) => f.id === 'relation/9');
         expect(feature.properties).toMatchObject({
-            version: '3',
+            version: 3,
             timestamp: '2026-01-01T00:00:00Z',
-            changeset: '7',
+            changeset: 7,
             user: 'alice',
-            uid: '1',
+            uid: 1,
             type: 'route',
         });
         expect(feature.geometry).toEqual({
@@ -272,7 +272,7 @@ describe('duplicate input elements', () => {
             + '</osm>';
         const feature = xml(source).features[0];
         expect(feature.geometry).toEqual({ type: 'Point', coordinates: [1, 1] });
-        expect(feature.properties).toMatchObject({ name: 'new', version: '2' });
+        expect(feature.properties).toMatchObject({ name: 'new', version: 2 });
         expect(feature.properties.amenity).toBeUndefined();
     });
 });

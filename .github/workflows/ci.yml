@@ -9,6 +9,11 @@ on:
 jobs:          
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest supported major (package.json engines) and the one in .nvmrc.
+        node-version: ['22', '24']
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -16,7 +21,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
       - name: Install dependencies
@@ -31,6 +36,7 @@ jobs:
         run: |
           npm run test
       - name: Upload coverage
+        if: matrix.node-version == '24'
         uses: codecov/codecov-action@v7
         with:
           fail_ci_if_error: true

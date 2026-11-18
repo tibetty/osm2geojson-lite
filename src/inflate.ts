@@ -166,8 +166,10 @@ function adler32(data: Uint8Array, length: number): number {
  * @param start offset of the zlib header
  * @param end offset just past the stream, including its 4-byte Adler-32 trailer
  * @param sizeHint expected decompressed size, used to size the output buffer
+ * @param maxSize largest output accepted; a stream that inflates past it is
+ * rejected before the buffer grows, so a small payload cannot exhaust memory
  */
-export function inflate(data: Uint8Array, start: number = 0, end: number = data.length, sizeHint: number = 0): Uint8Array {
+export function inflate(data: Uint8Array, start: number = 0, end: number = data.length, sizeHint: number = 0, maxSize: number = Infinity): Uint8Array {
     const cmf = data[start];
     const flg = data[start + 1];
     if ((cmf & 0x0f) !== 8) {
@@ -184,7 +186,7 @@ export function inflate(data: Uint8Array, start: number = 0, end: number = data.
     let bitBuf = 0;
     let bitCnt = 0;
 
-    let out = new Uint8Array(Math.max(Math.min(sizeHint, MAX_INITIAL_OUTPUT), 1024));
+    let out = new Uint8Array(Math.max(Math.min(sizeHint, MAX_INITIAL_OUTPUT, maxSize), 1024));
     let outPos = 0;
 
     /** Top up the bit buffer; bits past the end of the stream read as zero. */
@@ -197,10 +199,14 @@ export function inflate(data: Uint8Array, start: number = 0, end: number = data.
 
     /** Enlarge the output buffer; `outPos` is a local in the hot loop. */
     const grow = (needed: number) => {
+        if (needed > maxSize) {
+            throw new Error(`deflate output exceeds ${maxSize} bytes`);
+        }
         let size = out.length;
         while (size < needed) {
             size *= 2;
         }
+        size = Math.min(size, Math.max(maxSize, needed));
         const grown = new Uint8Array(size);
         grown.set(out);
         out = grown;

@@ -1,4 +1,4 @@
-import { gunzipSync, zstdDecompressSync } from 'node:zlib';
+import * as zlib from 'node:zlib';
 
 import { detectCompression } from './compressed';
 
@@ -28,9 +28,13 @@ function looksLikeText(data: Uint8Array): boolean {
 export function decompress(data: Buffer): Buffer {
     switch (detectCompression(data)) {
         case 'gzip':
-            return gunzipSync(data);
+            return zlib.gunzipSync(data);
         case 'zstd':
-            return zstdDecompressSync(data);
+            // Added in Node.js 22.15; the library itself supports any Node 22.
+            if (typeof zlib.zstdDecompressSync !== 'function') {
+                throw new Error(`zstd input needs Node.js 22.15 or later (running ${process.versions.node}), decompress it first (e.g. unzstd)`);
+            }
+            return zlib.zstdDecompressSync(data);
         case 'bzip2':
             throw new Error('bzip2 input is not supported, decompress it first (e.g. bunzip2)');
         case 'xz':

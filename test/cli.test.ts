@@ -44,6 +44,26 @@ describe.skipIf(!built)('CLI', () => {
         });
     });
 
+    it('maps --keep-ways, --tainted and --element to the options', () => {
+        const relation = '<osm><node id="1" lat="0" lon="0"/><node id="2" lat="0" lon="1"/>'
+            + '<way id="10"><nd ref="1"/><nd ref="2"/><nd ref="3"/><tag k="highway" v="path"/></way>'
+            + '<relation id="20"><member type="way" ref="10" role=""/><tag k="type" v="route"/></relation></osm>';
+        const ids = (args: string[]) => JSON.parse(run(args, relation).stdout.toString()).features.map((f: any) => f.id);
+        expect(ids([])).toEqual(['relation/20']);
+        expect(ids(['--keep-ways'])).toEqual(['way/10', 'relation/20']);
+
+        const tainted = JSON.parse(run(['--tainted'], relation).stdout.toString());
+        expect(tainted.features[0].properties['@tainted']).toBe(true);
+
+        const single = run(['--element', 'way/10'], relation);
+        expectOk(single);
+        expect(JSON.parse(single.stdout.toString())).toMatchObject({ type: 'Feature', id: 'way/10' });
+
+        const missing = run(['--element', 'way/99'], relation);
+        expect(missing.status).toBe(1);
+        expect(missing.stderr.toString()).toContain('way/99 is not in the input');
+    });
+
     it('reads stdin and writes stdout', () => {
         const result = run([], xml);
         expectOk(result);

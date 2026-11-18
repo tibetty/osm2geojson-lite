@@ -6,9 +6,9 @@
       "id": "node/196017733",
       "properties": {
         "id": "node/196017733",
-        "version": "3",
+        "version": 3,
         "timestamp": "2010-10-21T18:05:42Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -23,9 +23,9 @@
       "id": "node/196017747",
       "properties": {
         "id": "node/196017747",
-        "version": "4",
+        "version": 4,
         "timestamp": "2014-12-26T07:20:22Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -40,9 +40,9 @@
       "id": "node/196017762",
       "properties": {
         "id": "node/196017762",
-        "version": "4",
+        "version": 4,
         "timestamp": "2014-12-26T07:20:22Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -57,9 +57,9 @@
       "id": "node/196017768",
       "properties": {
         "id": "node/196017768",
-        "version": "4",
+        "version": 4,
         "timestamp": "2014-12-26T07:20:22Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -74,9 +74,9 @@
       "id": "node/196017780",
       "properties": {
         "id": "node/196017780",
-        "version": "4",
+        "version": 4,
         "timestamp": "2014-12-26T07:20:22Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -91,9 +91,9 @@
       "id": "node/196017806",
       "properties": {
         "id": "node/196017806",
-        "version": "4",
+        "version": 4,
         "timestamp": "2014-12-26T07:20:22Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -108,9 +108,9 @@
       "id": "node/196017819",
       "properties": {
         "id": "node/196017819",
-        "version": "4",
+        "version": 4,
         "timestamp": "2014-12-26T07:20:22Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -125,9 +125,9 @@
       "id": "node/196017848",
       "properties": {
         "id": "node/196017848",
-        "version": "4",
+        "version": 4,
         "timestamp": "2014-12-26T07:20:22Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -142,9 +142,9 @@
       "id": "node/196017940",
       "properties": {
         "id": "node/196017940",
-        "version": "4",
+        "version": 4,
         "timestamp": "2014-12-26T07:20:22Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -159,9 +159,9 @@
       "id": "node/196041737",
       "properties": {
         "id": "node/196041737",
-        "version": "6",
+        "version": 6,
         "timestamp": "2016-10-19T23:49:48Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -176,9 +176,9 @@
       "id": "node/196042012",
       "properties": {
         "id": "node/196042012",
-        "version": "4",
+        "version": 4,
         "timestamp": "2016-11-28T11:07:55Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -193,9 +193,9 @@
       "id": "node/196042162",
       "properties": {
         "id": "node/196042162",
-        "version": "9",
+        "version": 9,
         "timestamp": "2010-05-23T23:09:33Z",
-        "changeset": "0"
+        "changeset": 0
       },
       "geometry": {
         "type": "Point",
@@ -210,9 +210,9 @@
       "id": "node/207689592",
       "properties": {
         "id": "node/207689592",
-        "version": "20",
+        "version": 20,
         "timestamp": "2018-12-20T16:32:28Z",
-        "changeset": "0",
+        "changeset": 0,
         "addr:postcode": "790-8571",
         "admin_level": "7",
         "capital": "4",
@@ -259,9 +259,9 @@
       "id": "node/691563006",
       "properties": {
         "id": "node/691563006",
-        "version": "4",
+        "version": 4,
         "timestamp": "2014-11-28T13:24:14Z",
-        "changeset": "0",
+        "changeset": 0,
         "name": "松前町",
         "place": "town",
         "name:en": "Masaki",
@@ -280,9 +280,9 @@
       "id": "relation/4050234",
       "properties": {
         "id": "relation/4050234",
-        "version": "3",
+        "version": 3,
         "timestamp": "2015-02-28T07:40:38Z",
-        "changeset": "0",
+        "changeset": 0,
         "name": "松前町",
         "type": "boundary",
         "source": "KSJ2/N03",
@@ -2286,9 +2286,9 @@
       "id": "relation/12578",
       "properties": {
         "id": "relation/12578",
-        "version": "18",
+        "version": 18,
         "timestamp": "2015-04-30T05:03:46Z",
-        "changeset": "0",
+        "changeset": 0,
         "ref": "38",
         "name": "徳島県道38号沖ノ洲徳島本町線 (Tokushima Prefectural Road 38)",
         "type": "route",

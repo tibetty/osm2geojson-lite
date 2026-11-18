@@ -135,3 +135,12 @@ describe('inflate rejects bad input', () => {
         expect(() => inflate(compressed, 0, compressed.length, 4096)).toThrow();
     });
 });
+
+describe('inflate output cap', () => {
+    it('rejects a stream that inflates past the cap before allocating it', () => {
+        // 4 MiB of zeros compresses to about 4 KiB: the shape of a zip bomb.
+        const compressed = new Uint8Array(deflateSync(new Uint8Array(4 * 1024 * 1024)));
+        expect(() => inflate(compressed, 0, compressed.length, 0, 1024 * 1024)).toThrow(/exceeds 1048576 bytes/);
+        expect(inflate(compressed, 0, compressed.length, 0, 4 * 1024 * 1024)).toHaveLength(4 * 1024 * 1024);
+    });
+});

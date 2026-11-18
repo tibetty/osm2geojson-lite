@@ -6,7 +6,7 @@
       "id": "node/1870658474",
       "properties": {
         "id": "node/1870658474",
-        "version": "7",
+        "version": 7,
         "timestamp": "2026-10-26T22:50:16Z",
         "direction": "forward",
         "highway": "give_way"
@@ -24,7 +24,7 @@
       "id": "node/2229413910",
       "properties": {
         "id": "node/2229413910",
-        "version": "3",
+        "version": 3,
         "timestamp": "2026-10-26T22:50:16Z",
         "direction": "forward",
         "highway": "give_way"
@@ -42,7 +42,7 @@
       "id": "node/2391676637",
       "properties": {
         "id": "node/2391676637",
-        "version": "8",
+        "version": 8,
         "timestamp": "2026-10-27T09:02:00Z",
         "addr:city": "Monaco",
         "addr:country": "MC",
@@ -72,7 +72,7 @@
       "id": "node/4453063926",
       "properties": {
         "id": "node/4453063926",
-        "version": "7",
+        "version": 7,
         "timestamp": "2026-10-26T22:50:16Z",
         "direction": "forward",
         "highway": "give_way"
@@ -90,7 +90,7 @@
       "id": "node/6482565666",
       "properties": {
         "id": "node/6482565666",
-        "version": "2",
+        "version": 2,
         "timestamp": "2026-10-26T22:50:16Z",
         "name": "Cap d'Ail",
         "traffic_sign": "city_limit"
@@ -108,7 +108,7 @@
       "id": "node/6482567687",
       "properties": {
         "id": "node/6482567687",
-        "version": "2",
+        "version": 2,
         "timestamp": "2026-10-26T22:50:16Z",
         "name": "Cap d'Ail",
         "source": "survey 2019",
@@ -127,7 +127,7 @@
       "id": "node/6482706093",
       "properties": {
         "id": "node/6482706093",
-        "version": "2",
+        "version": 2,
         "timestamp": "2026-10-26T22:50:16Z",
         "city_limit": "end",
         "name": "Cap d'Ail",
@@ -146,7 +146,7 @@
       "id": "node/10197393663",
       "properties": {
         "id": "node/10197393663",
-        "version": "3",
+        "version": 3,
         "timestamp": "2026-10-26T22:50:16Z",
         "direction": "forward",
         "highway": "give_way"
@@ -164,7 +164,7 @@
       "id": "node/13135657961",
       "properties": {
         "id": "node/13135657961",
-        "version": "2",
+        "version": 2,
         "timestamp": "2026-10-26T22:50:16Z",
         "direction": "forward",
         "highway": "give_way"
@@ -182,7 +182,7 @@
       "id": "node/14323457501",
       "properties": {
         "id": "node/14323457501",
-        "version": "1",
+        "version": 1,
         "timestamp": "2026-10-27T14:59:27Z",
         "tourism": "viewpoint"
       },
@@ -199,7 +199,7 @@
       "id": "way/1570325532",
       "properties": {
         "id": "way/1570325532",
-        "version": "2",
+        "version": 2,
         "timestamp": "2026-10-27T16:25:27Z",
         "highway": "footway"
       },

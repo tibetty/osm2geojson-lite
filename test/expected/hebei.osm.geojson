@@ -33199,8 +33199,7 @@
       "properties": {
         "id": "node/3051635970",
         "role": "admin_centre",
-        "ref": "3051635970",
-        "tags": {}
+        "ref": 3051635970
       },
       "geometry": {
         "type": "Point",
@@ -33216,8 +33215,7 @@
       "properties": {
         "id": "node/244080467",
         "role": "label",
-        "ref": "244080467",
-        "tags": {}
+        "ref": 244080467
       },
       "geometry": {
         "type": "Point",

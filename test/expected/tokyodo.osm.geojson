@@ -59109,8 +59109,7 @@
       "properties": {
         "id": "node/265018692",
         "role": "admin_centre",
-        "ref": "265018692",
-        "tags": {}
+        "ref": 265018692
       },
       "geometry": {
         "type": "Point",
@@ -59126,8 +59125,7 @@
       "properties": {
         "id": "node/4351358847",
         "role": "label",
-        "ref": "4351358847",
-        "tags": {}
+        "ref": 4351358847
       },
       "geometry": {
         "type": "Point",

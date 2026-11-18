@@ -6,7 +6,7 @@
       "id": "node/6684051501",
       "properties": {
         "id": "node/6684051501",
-        "version": "34",
+        "version": 34,
         "timestamp": "2026-11-06T15:52:40Z",
         "ISO3166-1:alpha2": "MC",
         "flag": "File:Flag of Monaco.svg",
@@ -85,7 +85,7 @@
       "id": "node/14354106001",
       "properties": {
         "id": "node/14354106001",
-        "version": "1",
+        "version": 1,
         "timestamp": "2026-11-06T10:06:56Z",
         "addr:city": "Monaco",
         "addr:housenumber": "9",

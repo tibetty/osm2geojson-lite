@@ -193,7 +193,7 @@ const checks = [
         since: '2.5.0',
         run: (m) => {
             const feature = m.default(read('history-node-1690189834.osm'), { completeFeature: true }).features[0];
-            return feature && feature.properties.version === '4' && feature.geometry.coordinates[1] === 43.7380349;
+            return feature && Number(feature.properties.version) === 4 && feature.geometry.coordinates[1] === 43.7380349;
         },
     },
     {
@@ -309,6 +309,63 @@ const checks = [
                 && rejects(entries.pbf, xmlInput)
                 && entries.xml(xmlInput, { completeFeature: true }).features.length === 1
                 && entries.json(jsonInput, { completeFeature: true }).features.length === 1;
+        },
+    },
+    {
+        name: '3.0.0: PBF metadata matches the OSM API',
+        since: '3.0.0',
+        run: (m) => {
+            const elements = m.toElements(bytes('monaco.osm.pbf'));
+            const way = elements.find((e) => e.type === 'way' && e.id === 4097656);
+            const node = elements.find((e) => e.type === 'node' && e.id === 1790048269);
+            return way.version === 19 && way.timestamp === '2026-10-26T09:20:31.000Z' && node.version === 66;
+        },
+    },
+    {
+        name: '3.0.0: history ranks version 10 above version 9',
+        since: '3.0.0',
+        run: (m) => {
+            const deleted = m.toElements({ elements: [
+                { type: 'node', id: 1, version: 9, lat: 0, lon: 0 },
+                { type: 'node', id: 1, version: 10, visible: false },
+            ] });
+            const xml = m.default('<osm><node id="1" version="1" lat="1" lon="1"/><node id="1" version="3" lat="3" lon="3"/><node id="1" version="2" lat="2" lon="2"/></osm>', { completeFeature: true });
+            return deleted.length === 0 && xml.features[0].geometry.coordinates[0] === 3;
+        },
+    },
+    {
+        name: '3.0.0: touching outer rings stay separate polygons',
+        since: '3.0.0',
+        run: (m) => {
+            const node = (id, lon, lat) => ({ type: 'node', id, lon, lat });
+            const geometry = m.default({ elements: [
+                node(1, 1, 1), node(2, 0, 1), node(3, 0, 0), node(4, 1, 0), node(5, 2, 1), node(6, 2, 2), node(7, 1, 2),
+                { type: 'way', id: 10, nodes: [1, 2, 3, 4, 1] },
+                { type: 'way', id: 11, nodes: [1, 5, 6, 7, 1] },
+                { type: 'relation', id: 100, tags: { type: 'multipolygon', landuse: 'grass' }, members: [
+                    { type: 'way', ref: 10, role: 'outer' }, { type: 'way', ref: 11, role: 'outer' }] },
+            ] });
+            return geometry.type === 'MultiPolygon' && geometry.coordinates.length === 2;
+        },
+    },
+    {
+        name: '3.0.0: a closed way is an area when any polygon rule applies',
+        since: '3.0.0',
+        run: (m) => {
+            const feature = m.default({ elements: [
+                { type: 'node', id: 1, lat: 0, lon: 0 }, { type: 'node', id: 2, lat: 0, lon: 1 }, { type: 'node', id: 3, lat: 1, lon: 1 },
+                { type: 'way', id: 10, nodes: [1, 2, 3, 1], tags: { amenity: 'fountain', barrier: 'kerb' } },
+            ] }, { completeFeature: true }).features[0];
+            return feature.geometry.type === 'Polygon';
+        },
+    },
+    {
+        name: '3.0.0: XML and JSON agree on input detection and types',
+        since: '3.0.0',
+        run: (m) => {
+            const json = JSON.stringify({ elements: [{ type: 'node', id: 1, lat: 0, lon: 0, tags: { note: '<osm>' } }] });
+            const xml = m.default('<osm><node id="1" version="3" lat="0" lon="0"><tag k="a" v="b"/></node></osm>', { completeFeature: true });
+            return m.default(json, { completeFeature: true }).features.length === 1 && xml.features[0].properties.version === 3;
         },
     },
     {

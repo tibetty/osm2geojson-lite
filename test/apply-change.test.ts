@@ -30,7 +30,7 @@ describe('toElements', () => {
         const xml = '<osm><node id="1" version="2" lat="1" lon="2"><tag k="name" v="a"/></node></osm>';
         const json = '<osm><node id="1" version="2" lat="1" lon="2"><tag k="name" v="a"/></node></osm>';
         expect(toElements(xml)).toEqual(toElements(json));
-        expect(toElements(xml)[0]).toMatchObject({ type: 'node', id: 1, version: '2', lat: 1, lon: 2 });
+        expect(toElements(xml)[0]).toMatchObject({ type: 'node', id: 1, version: 2, lat: 1, lon: 2 });
     });
 
     it('collapses versions and drops deleted elements', () => {
@@ -54,7 +54,7 @@ describe('mergeOsmChange', () => {
         const change = '<osmChange><modify><node id="1" version="2" lat="5" lon="6"/></modify></osmChange>';
         const merged = mergeOsmChange(base, change);
         const node = merged.elements.find((element) => element.id === 1);
-        expect(node).toMatchObject({ type: 'node', id: 1, version: '2', lat: 5, lon: 6 });
+        expect(node).toMatchObject({ type: 'node', id: 1, version: 2, lat: 5, lon: 6 });
         expect(Object.keys(node.tags || {})).toHaveLength(0);
         expect(merged.conflicts).toEqual([]);
 
@@ -100,7 +100,7 @@ describe('applyOsmChange', () => {
         const change = '<osmChange><modify><node id="1" version="2" lat="5" lon="6"><tag k="name" v="new"/></node></modify></osmChange>';
         const node = apply(base, change).features.find((f: any) => f.id === 'node/1');
         expect(node.geometry).toEqual({ type: 'Point', coordinates: [6, 5] });
-        expect(node.properties).toMatchObject({ id: 'node/1', name: 'new', version: '2' });
+        expect(node.properties).toMatchObject({ id: 'node/1', name: 'new', version: 2 });
     });
 
     it('applies a delete and taints the way that referenced the element', () => {
@@ -147,7 +147,7 @@ describe('applyOsmChange', () => {
         </osmChange>`;
         const node = applyOsmChange(base, change, { ...opts, elementId: 'node/1' }).geojson as any;
         expect(node.geometry.coordinates).toEqual([2, 2]);
-        expect(node.properties.version).toBe('3');
+        expect(node.properties.version).toBe(3);
     });
 
     it('applies an osmChange to an XML base', () => {
@@ -165,7 +165,7 @@ describe('applyOsmChange', () => {
         const change = '<osmChange><modify><node id="1" version="4" lat="9" lon="9"/></modify></osmChange>';
         const node = applyOsmChange(sampleFile(), change, { ...opts, elementId: 'node/1' }).geojson as any;
         expect(node.geometry.coordinates).toEqual([9, 9]);
-        expect(node.properties.version).toBe('4');
+        expect(node.properties.version).toBe(4);
     });
 
     it('does not merge base tags into a modified element', () => {
@@ -173,7 +173,7 @@ describe('applyOsmChange', () => {
         const change = '<osmChange><modify><node id="1" version="2" lat="5" lon="6"/></modify></osmChange>';
         const node = applyOsmChange(base, change, { ...opts, elementId: 'node/1' }).geojson as any;
         expect(node.properties.name).toBeUndefined();
-        expect(node.properties.version).toBe('2');
+        expect(node.properties.version).toBe(2);
     });
 
     it('leaves a plain conversion unaffected by the strict flag', () => {
