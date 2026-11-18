@@ -11,6 +11,7 @@ import {
     STRINGS, Writer, denseInfo, denseNodes, headerBlock, pbfFile, primitiveBlock, relation, sampleFile, way,
 } from './pbf-encoder';
 import { toElements } from '../src/index';
+import { isoTimestamp } from '../src/pbf';
 
 const convert = (osm: any, opts?: any) => osm2geojson(osm, { completeFeature: true, renderTagged: true, excludeWay: false, ...opts }) as any;
 
@@ -347,3 +348,20 @@ function denseNodesRawWithInfo(info: Writer): Writer {
     writer.packed(9, [0], true);
     return writer;
 }
+
+describe('PBF timestamp formatting', () => {
+    it('matches Date#toISOString across calendar edges and random instants', () => {
+        const edges = [
+            0, 999, 951782400000, 951868799999, 4107542400000, 4107456000000, 1577836800000,
+            253402300799999, 253402300800000, -1, -62135596800000,
+        ];
+        let state = 12345;
+        for (let i = 0; i < 20000; i++) {
+            state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+            edges.push(Math.floor((state / 4294967296) * 253402300800000));
+        }
+        for (const ms of edges) {
+            expect(isoTimestamp(ms), String(ms)).toBe(new Date(ms).toISOString());
+        }
+    });
+});
