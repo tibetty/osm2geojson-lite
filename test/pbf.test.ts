@@ -122,6 +122,27 @@ describe('PBF corner cases', () => {
         expect(convert(file).features[0].geometry.coordinates[0]).toBeCloseTo(7.123436, 5);
     });
 
+    it('reads DenseInfo versions as absolute values, not deltas', () => {
+        const nodes = [
+            { id: 1, lat: 0, lon: 0 },
+            { id: 2, lat: 0, lon: 1 },
+            { id: 3, lat: 1, lon: 1 },
+        ];
+        const versions = [3, 1, 7];
+        const info = denseInfo(nodes.map((node, index) => ({
+            version: versions[index], timestamp: 1577836800 + index, uid: 1, user: 'alice', visible: true,
+        })), STRINGS);
+        const file = pbfFile([
+            { type: 'OSMHeader', payload: headerBlock(['OsmSchema-V0.6', 'DenseNodes']) },
+            { type: 'OSMData', payload: primitiveBlock(STRINGS, denseNodes(nodes, info), [], []) },
+        ]);
+        const elements = toElements(file);
+        expect(elements.map((element: any) => element.version)).toEqual([3, 1, 7]);
+        expect(elements.map((element: any) => element.timestamp)).toEqual([
+            '2020-01-01T00:00:00.000Z', '2020-01-01T00:00:01.000Z', '2020-01-01T00:00:02.000Z',
+        ]);
+    });
+
     it('honours a custom date granularity', () => {
         const nodes = [{ id: 1, lat: 0, lon: 0 }];
         const info = denseInfo(nodes.map(() => ({ version: 2, timestamp: 1500, uid: 1, user: 'alice', visible: true })), STRINGS);

@@ -93,9 +93,13 @@ function isProgramBug(error: unknown): boolean {
 describe('mutation fuzzing', () => {
     for (const fixture of fixtures) {
         it(`survives mutations of ${fixture.name}`, () => {
-            let rejected = 0;
             let accepted = 0;
-            for (let seed = 1; seed <= 60; seed++) {
+            // Rejections past the zlib layer: the mutation reached the container
+            // or element parser. A compressed fixture rejects most mutations at
+            // the Adler-32 check, and which ones get through depends on the
+            // platform's deflate output, so accepted alone is not a stable guard.
+            let parsed = 0;
+            for (let seed = 1; seed <= 200; seed++) {
                 const mutated = mutate(createRandom(seed * 7919 + fixture.name.length), fixture.data);
                 let result: any;
                 try {
@@ -103,7 +107,9 @@ describe('mutation fuzzing', () => {
                 } catch (error) {
                     expect(isProgramBug(error), `${fixture.name} seed ${seed}: ${(error as Error).stack}`).toBe(false);
                     expect(error).toBeInstanceOf(Error);
-                    rejected++;
+                    if (!/zlib|deflate/.test((error as Error).message)) {
+                        parsed++;
+                    }
                     continue;
                 }
 
@@ -131,7 +137,7 @@ describe('mutation fuzzing', () => {
             }
             // Guard against a fixture where every mutation is rejected before it
             // reaches the parser, which would make this test vacuous.
-            expect(accepted, `${fixture.name}: every mutation was rejected`).toBeGreaterThan(0);
+            expect(accepted + parsed, `${fixture.name}: every mutation was rejected before parsing`).toBeGreaterThan(0);
         });
     }
 });
