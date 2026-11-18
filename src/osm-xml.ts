@@ -107,10 +107,27 @@ function buildDerivedGeometry(derived: Derived): GeometryObject | undefined {
     return derived.geometry;
 }
 
+/** Metadata attributes that OSM/Overpass JSON and PBF carry as numbers. */
+const NUMERIC_ATTRS: Record<string, true> = { version: true, changeset: true, uid: true };
+
+/**
+ * XML attributes are text; give the numeric metadata the type the JSON and
+ * PBF readers produce, so a feature's properties do not depend on the format.
+ */
+function attrValue(name: string, value: string): string | number {
+    if (NUMERIC_ATTRS[name] === true && value !== '') {
+        const number = Number(value);
+        if (Number.isFinite(number)) {
+            return number;
+        }
+    }
+    return value;
+}
+
 function addNodeProps(node: Node, attrs: Record<string, string>) {
     for (const k in attrs) {
         if (k !== 'id' && k !== 'lon' && k !== 'lat') {
-            node.addProp(k, attrs[k]);
+            node.addProp(k, attrValue(k, attrs[k]));
         }
     }
 }
@@ -118,7 +135,7 @@ function addNodeProps(node: Node, attrs: Record<string, string>) {
 function addWayProps(way: Way, attrs: Record<string, string>) {
     for (const k in attrs) {
         if (k !== 'id') {
-            way.addProp(k, attrs[k]);
+            way.addProp(k, attrValue(k, attrs[k]));
         }
     }
 }
@@ -126,7 +143,7 @@ function addWayProps(way: Way, attrs: Record<string, string>) {
 function addDerivedProps(output: Output, attrs: Record<string, string>) {
     for (const k in attrs) {
         if (k !== 'id' && k !== 'type') {
-            output.addProp(k, attrs[k]);
+            output.addProp(k, attrValue(k, attrs[k]));
         }
     }
 }
@@ -146,7 +163,7 @@ function addElementAttrs(element: { [k: string]: any }, attrs: Record<string, st
         if (k === 'id' || (skipLatLon && (k === 'lat' || k === 'lon'))) {
             continue;
         }
-        element[k] = attrs[k];
+        element[k] = attrValue(k, attrs[k]);
     }
 }
 
@@ -304,7 +321,7 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
             } else {
                 for (const k in frame.attrs) {
                     if (k !== 'id') {
-                        relation!.addProp(k, frame.attrs![k]);
+                        relation!.addProp(k, attrValue(k, frame.attrs![k]));
                     }
                 }
                 if (frame.tags) {
@@ -348,15 +365,16 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
             const member: { [k: string]: any } = {
                 type: attrs.type,
                 role: attrs.role ? attrs.role : '',
-                ref: attrs.ref,
+                ref: toId(attrs.ref),
             };
             if (attrs.lat && attrs.lon) {
+                // `out geom` node members: the fields of the JSON shape, and
+                // no tags (a member element carries none).
                 member.lat = attrs.lat;
                 member.lon = attrs.lon;
-                member.tags = {};
                 for (const k in attrs) {
-                    if (k !== 'type' && k !== 'lat' && k !== 'lon') {
-                        member[k] = attrs[k];
+                    if (k !== 'type' && k !== 'lat' && k !== 'lon' && k !== 'ref' && k !== 'role') {
+                        member[k] = attrValue(k, attrs[k]);
                     }
                 }
             }

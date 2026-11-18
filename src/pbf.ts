@@ -18,6 +18,9 @@ const WIRE_FIXED32 = 5;
 
 const MEMBER_TYPES = ['node', 'way', 'relation'];
 
+/** fileformat.proto caps an uncompressed blob at 32 MiB. */
+const MAX_BLOB_SIZE = 32 * 1024 * 1024;
+
 /** Required features this reader implements; anything else is rejected. */
 const SUPPORTED_FEATURES = ['OsmSchema-V0.6', 'DenseNodes', 'HistoricalInformation'];
 
@@ -727,7 +730,7 @@ function readBlob(bytes: Uint8Array): Uint8Array {
     }
 
     if (zlibData) {
-        return inflate(zlibData, 0, zlibData.length, rawSize);
+        return inflate(zlibData, 0, zlibData.length, rawSize, MAX_BLOB_SIZE);
     }
     if (raw) {
         return raw;

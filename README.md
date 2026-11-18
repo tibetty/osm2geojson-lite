@@ -99,7 +99,14 @@ Published bundles are minified, and a pinned version is served as immutable cach
 ```sh
     npx osm2geojson-lite --help
     npx osm2geojson-lite monaco.osm.pbf monaco.geojson
+    npx osm2geojson-lite --tainted --keep-ways monaco.osm.pbf monaco.geojson
+    npx osm2geojson-lite --element relation/393226 < monaco.osm.pbf
 ```
+
+The CLI emits every tagged feature (`completeFeature` and `renderTagged`).
+`--keep-ways` sets `excludeWay: false`, `--tainted` sets `tainted: true` and
+`--element TYPE/ID` sets `elementId`, so only that feature is written. zstd input
+needs Node.js 22.15 or later.
 
 The CLI reads the input as bytes, decompresses gzip (`.gz`) and zstd (`.zst`)
 containers, and sniffs whether the payload is text (XML/JSON) or binary (PBF),

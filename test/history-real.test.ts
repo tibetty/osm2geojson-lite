@@ -17,8 +17,8 @@ describe('real history extracts', () => {
         expect(features).toHaveLength(1);
         expect(features[0].id).toBe('node/1690189834');
         expect(features[0].properties).toMatchObject({
-            version: '4',
-            changeset: '188535382',
+            version: 4,
+            changeset: 188535382,
             user: 'GanKonMalade',
         });
         expect(features[0].geometry.coordinates).toEqual([7.4198951, 43.7380349]);
@@ -34,7 +34,7 @@ describe('real history extracts', () => {
         const xml = read('history-node-6684051501.osm');
         const elements = toElements(xml);
         expect(elements).toHaveLength(1);
-        expect(elements[0]).toMatchObject({ type: 'node', id: 6684051501, version: '34' });
+        expect(elements[0]).toMatchObject({ type: 'node', id: 6684051501, version: 34 });
 
         const [feature] = (osm2geojson(xml, opts) as any).features;
         expect(feature.properties).toMatchObject({ name: 'Monaco', 'name:ja': 'モナコ' });
@@ -47,6 +47,6 @@ describe('real history extracts', () => {
         const xml = read('history-way-156780344.osm');
         expect(osm2geojson(xml, { elementId: 'way/156780344' })).toBeUndefined();
         expect((osm2geojson(read('history-node-1690189834.osm'), { elementId: 'node/1690189834' }) as any).properties.version)
-            .toBe('4');
+            .toBe(4);
     });
 });

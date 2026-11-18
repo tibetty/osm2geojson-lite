@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { gzipSync, zstdCompressSync } from 'node:zlib';
 import osm2geojson from '../src/index';
-import { decodeInput, decompress } from '../src/cli-input';
+import { decodeInput, decompress, zstdContentSize } from '../src/cli-input';
 import { detectCompression } from '../src/compressed';
 
 const XML = '<osm><node id="1" lat="0" lon="0"><tag k="name" v="a"/></node></osm>';
@@ -80,6 +80,16 @@ describe('CLI input corner cases', () => {
     it('surfaces a truncated zstd container', () => {
         const zst = Buffer.from(zstdCompressSync(XML));
         expect(() => decodeInput(zst.subarray(0, zst.length - 8))).toThrow();
+    });
+
+    it('reads the content size a zstd frame declares', () => {
+        // Node 22 returns a truncated stream's partial output instead of
+        // throwing; the declared size is what catches it there.
+        for (const size of [10, 255, 256, 300, 70000, 1 << 20]) {
+            const payload = Buffer.alloc(size, 'a');
+            expect(zstdContentSize(zstdCompressSync(payload)), `size ${size}`).toBe(size);
+        }
+        expect(zstdContentSize(Buffer.from([0x28, 0xb5, 0x2f]))).toBeUndefined();
     });
 
     it('does not treat a gzip payload that starts with "<" as compressed text twice', () => {

@@ -12,8 +12,14 @@ function printHelp () {
         'Gzip (.gz) and zstd (.zst) input is decompressed automatically.',
         '',
         'Usage:',
-        '  npx osm2geojson-lite INPUT_FILE OUTPUT_FILE',
-        '  npx osm2geojson-lite < INPUT_FILE > OUTPUT_FILE',
+        '  npx osm2geojson-lite [options] INPUT_FILE OUTPUT_FILE',
+        '  npx osm2geojson-lite [options] < INPUT_FILE > OUTPUT_FILE',
+        '',
+        'Options:',
+        '  --keep-ways         also emit tagged ways that relations already use',
+        '  --tainted           mark features with missing references as @tainted',
+        '  --element TYPE/ID   output only that feature, e.g. --element way/123',
+        '  -h, --help          show this help',
         '',
     ].join('\n'))
 }
@@ -37,12 +43,27 @@ function writeStdout (payload: string): Promise<void> {
     });
 }
 
-async function main (positionals: Array<string>) {
+interface CliOptions {
+    'keep-ways'?: boolean;
+    tainted?: boolean;
+    element?: string;
+}
+
+async function main (positionals: Array<string>, options: CliOptions) {
     const [inputFile, outputFile] = positionals;
 
     const data = inputFile ? await readFile(inputFile) : await readStdin();
     const osm = decodeInput(data);
-    const geojson = osm2geojson(osm, { completeFeature: true, renderTagged: true });
+    const geojson = osm2geojson(osm, {
+        completeFeature: true,
+        renderTagged: true,
+        excludeWay: !options['keep-ways'],
+        tainted: options.tainted === true,
+        elementId: options.element,
+    });
+    if (geojson === undefined) {
+        throw new Error(`${options.element} is not in the input or has no geometry`);
+    }
     const payload = `${JSON.stringify(geojson)}\n`;
 
     if (outputFile) {
@@ -60,6 +81,15 @@ const { values, positionals } = parseArgs({
             short: 'h',
             type: 'boolean',
         },
+        'keep-ways': {
+            type: 'boolean',
+        },
+        tainted: {
+            type: 'boolean',
+        },
+        element: {
+            type: 'string',
+        },
     },
 });
 
@@ -69,7 +99,7 @@ if (values.help)
 }
 else
 {
-    main(positionals).catch(err => {
+    main(positionals, values).catch(err => {
         process.stderr.write(`${err.stack}\n`);
         process.exit(1);
     })

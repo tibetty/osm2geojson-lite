@@ -83,3 +83,34 @@ describe('public API edges', () => {
         expect(merged.elements[0]).toMatchObject({ version: 5 });
     });
 });
+
+describe('format detection and cross-format parity', () => {
+    it('reads a JSON string whose tag values mention <osm as JSON', () => {
+        const document = JSON.stringify({ elements: [
+            { type: 'node', id: 1, lat: 0, lon: 0, tags: { note: 'see <osm> in the wiki' } },
+        ] });
+        const result = osm2geojson(document, { completeFeature: true }) as any;
+        expect(result.features).toHaveLength(1);
+        expect(result.features[0].properties.note).toBe('see <osm> in the wiki');
+    });
+
+    it('still reads XML after a byte order mark, a declaration and whitespace', () => {
+        const xml = '﻿\n  <?xml version="1.0"?><osm><node id="1" lat="0" lon="0"><tag k="a" v="b"/></node></osm>';
+        expect((osm2geojson(xml, { completeFeature: true }) as any).features).toHaveLength(1);
+    });
+
+    it('gives XML metadata the same types as JSON', () => {
+        const xml = '<osm><node id="1" version="3" changeset="7" uid="9" user="u" lat="1" lon="2"><tag k="a" v="b"/></node>'
+            + '<relation id="2"><member type="node" ref="5" role="stop" lat="1" lon="2"/><tag k="type" v="route"/></relation></osm>';
+        const json = { elements: [
+            { type: 'node', id: 1, version: 3, changeset: 7, uid: 9, user: 'u', lat: 1, lon: 2, tags: { a: 'b' } },
+            { type: 'relation', id: 2, tags: { type: 'route' }, members: [{ type: 'node', ref: 5, role: 'stop', lat: 1, lon: 2 }] },
+        ] };
+        const opts = { completeFeature: true, renderTagged: true };
+        const fromXml = osm2geojson(xml, opts) as any;
+        expect(fromXml).toEqual(osm2geojson(json, opts));
+        expect(fromXml.features[0].properties).toEqual({ id: 'node/1', version: 3, changeset: 7, uid: 9, user: 'u', a: 'b' });
+        // An `out geom` member node carries no tags of its own.
+        expect(fromXml.features.find((f: any) => f.id === 'node/5').properties).toEqual({ id: 'node/5', ref: 5, role: 'stop' });
+    });
+});

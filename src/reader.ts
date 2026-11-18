@@ -31,10 +31,16 @@ export function detectFormat(o: OsmInput): 'json' | 'xml' | 'json-raw' | 'pbf' |
         return 'json';
     }
     if (typeof o === 'string') {
-        if (o.indexOf('<osm') >= 0) {
+        // Decide on the first significant character: a JSON document may
+        // carry `<osm` inside a tag value.
+        let i = o.charCodeAt(0) === 0xfeff ? 1 : 0;
+        while (i < o.length && (o[i] === ' ' || o[i] === '\t' || o[i] === '\n' || o[i] === '\r')) {
+            i++;
+        }
+        if (o[i] === '<' && o.indexOf('<osm', i) >= 0) {
             return 'xml';
         }
-        if (o.trim().startsWith('{')) {
+        if (o[i] === '{') {
             return 'json-raw';
         }
     }

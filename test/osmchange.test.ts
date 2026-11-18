@@ -32,7 +32,7 @@ describe('osmChange', () => {
 
         const way = result.features.find((f: any) => f.id === 'way/20');
         expect(way.geometry).toEqual({ type: 'LineString', coordinates: [[2, 1], [3, 1]] });
-        expect(way.properties).toMatchObject({ id: 'way/20', highway: 'path', version: '1' });
+        expect(way.properties).toMatchObject({ id: 'way/20', highway: 'path', version: 1 });
     });
 
     it('skips the whole subtree of a deleted element', () => {

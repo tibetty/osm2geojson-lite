@@ -4,6 +4,9 @@
   "description": "full-featured OpenStreetMap to GeoJSON convertor - OSM XML, osmChange, PBF and Overpass JSON, history and diff application, zero dependencies, 10-18x faster than osmtogeojson on XML",
   "author": "tibetty",
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "main": "dist/index.cjs",
   "type": "module",
   "types": "dist/index.d.ts",
