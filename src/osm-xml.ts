@@ -1,9 +1,4 @@
 import type { GeometryObject } from "geojson";
-import { Node } from "./node";
-import { Output } from "./output";
-import { RefElements } from "./ref-elements";
-import { Relation } from "./relation";
-import { Way } from "./way";
 import { decodeEntities } from "./xml-entities";
 
 /**
@@ -12,8 +7,8 @@ import { decodeEntities } from "./xml-entities";
  * Generic XML parsers build a full `$tag`/`$innerNodes` tree and dispatch
  * events for every element. That is flexible but allocates an object per
  * `<nd>`/`<tag>` and re-scans children in the converters. OSM XML has a small,
- * well-known vocabulary, so this scanner applies the element's effect directly
- * to the `Node`/`Way`/`Relation` being built.
+ * well-known vocabulary, so this scanner writes each element straight into the
+ * Overpass JSON element shape the other readers produce.
  *
  * Unknown elements are skipped (including their subtree).
  */
@@ -57,10 +52,8 @@ interface Frame {
     type?: string;
     attrs?: Record<string, string>;
     tags?: Record<string, string>;
-    relation?: Relation;
-    way?: Way;
-    member?: { geometry: { lat: string, lon: string }[], nodes: string[] };
-    /** Emit mode: way node references, way coordinates and relation members. */
+    member?: { geometry: { lat: string, lon: string }[], nodes: Array<number | string> };
+    /** Way node references, way coordinates and relation members. */
     nodes?: number[];
     coords?: { lat: string, lon: string }[];
     members?: Array<{ [k: string]: any }>;
@@ -124,30 +117,6 @@ function attrValue(name: string, value: string): string | number {
     return value;
 }
 
-function addNodeProps(node: Node, attrs: Record<string, string>) {
-    for (const k in attrs) {
-        if (k !== 'id' && k !== 'lon' && k !== 'lat') {
-            node.addProp(k, attrValue(k, attrs[k]));
-        }
-    }
-}
-
-function addWayProps(way: Way, attrs: Record<string, string>) {
-    for (const k in attrs) {
-        if (k !== 'id') {
-            way.addProp(k, attrValue(k, attrs[k]));
-        }
-    }
-}
-
-function addDerivedProps(output: Output, attrs: Record<string, string>) {
-    for (const k in attrs) {
-        if (k !== 'id' && k !== 'type') {
-            output.addProp(k, attrValue(k, attrs[k]));
-        }
-    }
-}
-
 function isRoot(kind: Kind): boolean {
     return kind === Kind.Root || kind === Kind.Wrapper;
 }
@@ -181,182 +150,83 @@ function boundsElement(bounds: [number, number, number, number]) {
     return { minlat: bounds[1], minlon: bounds[0], maxlat: bounds[3], maxlon: bounds[2] };
 }
 
-function finish(frame: Frame, parent: Frame | undefined, refElements: RefElements | undefined, elements: any[] | undefined): void {
+function finish(frame: Frame, parent: Frame | undefined, elements: any[]): void {
     switch (frame.kind) {
         case Kind.Node: {
             const attrs = frame.attrs!;
-            if (elements) {
-                const element: { [k: string]: any } = { type: 'node', id: toId(frame.id!) };
-                addElementAttrs(element, attrs, true);
-                if (attrs.lat !== undefined && attrs.lon !== undefined) {
-                    element.lat = Number(attrs.lat);
-                    element.lon = Number(attrs.lon);
-                }
-                if (frame.tags) {
-                    element.tags = frame.tags;
-                }
-                if (frame.hasDerived) {
-                    addElementDerived(element, frame);
-                }
-                elements.push(element);
-                return;
+            const element: { [k: string]: any } = { type: 'node', id: toId(frame.id!) };
+            addElementAttrs(element, attrs, true);
+            if (attrs.lat !== undefined && attrs.lon !== undefined) {
+                element.lat = Number(attrs.lat);
+                element.lon = Number(attrs.lon);
+            }
+            if (frame.tags) {
+                element.tags = frame.tags;
             }
             if (frame.hasDerived) {
-                const output = new Output('node', frame.id!, refElements!);
-                addDerivedProps(output, attrs);
-                if (frame.tags) {
-                    output.addTags(frame.tags);
-                }
-                const geometry = buildDerivedGeometry(frame.derived!);
-                if (geometry) {
-                    output.setGeometry(geometry);
-                }
-                if (frame.derivedInvalid) {
-                    output.tainted = true;
-                }
-            } else {
-                const node = new Node(frame.id!, refElements!);
-                addNodeProps(node, attrs);
-                node.setLatLng({ lat: attrs.lat, lon: attrs.lon });
-                if (frame.tags) {
-                    node.addTags(frame.tags);
-                }
+                addElementDerived(element, frame);
             }
+            elements.push(element);
             return;
         }
 
         case Kind.Way: {
-            const way = frame.way;
-            if (elements) {
-                const element: { [k: string]: any } = { type: 'way', id: toId(frame.id!) };
-                addElementAttrs(element, frame.attrs!, false);
-                if (frame.tags) {
-                    element.tags = frame.tags;
-                }
-                if (frame.hasDerived) {
-                    addElementDerived(element, frame);
-                } else {
-                    if (frame.nodes && frame.nodes.length > 0) {
-                        element.nodes = frame.nodes;
-                    }
-                    if (frame.coords && frame.coords.length > 0) {
-                        element.geometry = frame.coords;
-                    }
-                    if (frame.center) {
-                        element.center = frame.center;
-                    }
-                    if (frame.bounds && !frame.hasNd) {
-                        element.bounds = boundsElement(frame.bounds);
-                    }
-                }
-                elements.push(element);
-                return;
+            const element: { [k: string]: any } = { type: 'way', id: toId(frame.id!) };
+            addElementAttrs(element, frame.attrs!, false);
+            if (frame.tags) {
+                element.tags = frame.tags;
             }
             if (frame.hasDerived) {
-                const output = new Output('way', frame.id!, refElements!);
-                addDerivedProps(output, frame.attrs!);
-                if (frame.tags) {
-                    output.addTags(frame.tags);
-                }
-                const geometry = buildDerivedGeometry(frame.derived!);
-                if (geometry) {
-                    output.setGeometry(geometry);
-                }
-                if (frame.derivedInvalid) {
-                    output.tainted = true;
-                }
+                addElementDerived(element, frame);
             } else {
-                refElements!.add(way!);
-                addWayProps(way!, frame.attrs!);
-                if (frame.tags) {
-                    way!.addTags(frame.tags);
+                if (frame.nodes!.length > 0) {
+                    element.nodes = frame.nodes;
+                }
+                if (frame.coords!.length > 0) {
+                    element.geometry = frame.coords;
                 }
                 if (frame.center) {
-                    way!.setCenter(frame.center);
+                    element.center = frame.center;
                 }
                 if (frame.bounds && !frame.hasNd) {
-                    way!.setBounds(frame.bounds);
+                    element.bounds = boundsElement(frame.bounds);
                 }
             }
+            elements.push(element);
             return;
         }
 
         case Kind.Relation: {
-            const relation = frame.relation;
-            if (elements) {
-                const element: { [k: string]: any } = { type: 'relation', id: toId(frame.id!) };
-                addElementAttrs(element, frame.attrs!, false);
-                if (frame.tags) {
-                    element.tags = frame.tags;
-                }
-                if (frame.hasDerived) {
-                    addElementDerived(element, frame);
-                } else {
-                    if (frame.members && frame.members.length > 0) {
-                        element.members = frame.members;
-                    }
-                    if (frame.center) {
-                        element.center = frame.center;
-                    }
-                    if (frame.bounds) {
-                        element.bounds = boundsElement(frame.bounds);
-                    }
-                }
-                elements.push(element);
-                return;
+            const element: { [k: string]: any } = { type: 'relation', id: toId(frame.id!) };
+            addElementAttrs(element, frame.attrs!, false);
+            if (frame.tags) {
+                element.tags = frame.tags;
             }
             if (frame.hasDerived) {
-                const output = new Output('relation', frame.id!, refElements!);
-                addDerivedProps(output, frame.attrs!);
-                if (frame.tags) {
-                    output.addTags(frame.tags);
-                }
-                const geometry = buildDerivedGeometry(frame.derived!);
-                if (geometry) {
-                    output.setGeometry(geometry);
-                }
-                if (frame.derivedInvalid) {
-                    output.tainted = true;
-                }
+                addElementDerived(element, frame);
             } else {
-                for (const k in frame.attrs) {
-                    if (k !== 'id') {
-                        relation!.addProp(k, attrValue(k, frame.attrs![k]));
-                    }
-                }
-                if (frame.tags) {
-                    relation!.addTags(frame.tags);
+                if (frame.members!.length > 0) {
+                    element.members = frame.members;
                 }
                 if (frame.center) {
-                    relation!.setCenter(frame.center);
+                    element.center = frame.center;
+                }
+                if (frame.bounds) {
+                    element.bounds = boundsElement(frame.bounds);
                 }
             }
+            elements.push(element);
             return;
         }
 
         case Kind.Custom: {
-            if (elements) {
-                const element: { [k: string]: any } = { type: frame.type!, id: toId(frame.id!) };
-                addElementAttrs(element, frame.attrs!, false);
-                if (frame.tags) {
-                    element.tags = frame.tags;
-                }
-                addElementDerived(element, frame);
-                elements.push(element);
-                return;
-            }
-            const output = new Output(frame.type!, frame.id!, refElements!);
-            addDerivedProps(output, frame.attrs!);
+            const element: { [k: string]: any } = { type: frame.type!, id: toId(frame.id!) };
+            addElementAttrs(element, frame.attrs!, false);
             if (frame.tags) {
-                output.addTags(frame.tags);
+                element.tags = frame.tags;
             }
-            const geometry = buildDerivedGeometry(frame.derived!);
-            if (geometry) {
-                output.setGeometry(geometry);
-            }
-            if (frame.derivedInvalid) {
-                output.tainted = true;
-            }
+            addElementDerived(element, frame);
+            elements.push(element);
             return;
         }
 
@@ -383,10 +253,8 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
             } else if (frame.member!.nodes.length > 0) {
                 member.nodes = frame.member!.nodes;
             }
-            if (parent && parent.kind === Kind.Relation && parent.members) {
-                parent.members.push(member);
-            } else if (parent && parent.kind === Kind.Relation && parent.relation) {
-                parent.relation.addMember(member);
+            if (parent && parent.kind === Kind.Relation) {
+                parent.members!.push(member);
             }
             return;
         }
@@ -434,25 +302,16 @@ function finish(frame: Frame, parent: Frame | undefined, refElements: RefElement
 
 /**
  * Parse OSM/Overpass XML into plain element objects (the Overpass JSON shape).
- *
- * Unlike `parseOsmXml`, which builds `Node`/`Way`/`Relation` objects for
- * immediate conversion, this keeps the document as data so it can be merged
- * with another document and converted later.
+ * Every format reader produces these, so history resolution and registration
+ * are shared (see `analyzeElements`).
  */
 export function parseOsmXmlElements(xml: string): any[] {
     const elements: any[] = [];
-    scan(xml, undefined, elements);
+    scan(xml, elements);
     return elements;
 }
 
-/**
- * Parse OSM/Overpass XML directly into `RefElements`.
- */
-export function parseOsmXml(xml: string, refElements: RefElements): void {
-    scan(xml, refElements, undefined);
-}
-
-function scan(xml: string, refElements: RefElements | undefined, elements: any[] | undefined): void {
+function scan(xml: string, elements: any[]): void {
     const len = xml.length;
     const stack: Frame[] = [];
     let i = 0;
@@ -473,7 +332,7 @@ function scan(xml: string, refElements: RefElements | undefined, elements: any[]
             i = gt + 1;
             const frame = stack.pop();
             if (frame) {
-                finish(frame, stack.length ? stack[stack.length - 1] : undefined, refElements, elements);
+                finish(frame, stack.length ? stack[stack.length - 1] : undefined, elements);
             }
             continue;
         }
@@ -705,17 +564,9 @@ function scan(xml: string, refElements: RefElements | undefined, elements: any[]
         const discarded = attrMode === AttrMode.Bag && attrs !== undefined &&
             (attrs.visible === 'false' || attrs.action === 'delete' || inDelete);
         if ((kind === Kind.Node || kind === Kind.Way || kind === Kind.Relation) && discarded) {
-            if (refElements) {
-                // Remember the deletion so a surviving older version is dropped
-                // when references are bound.
-                if (attrs && attrs.id) {
-                    refElements.markDeleted(`${tag}/${attrs.id}`, Number(attrs.version) || 0);
-                }
-                kind = Kind.Skip;
-            } else if (attrs) {
-                // Element mode keeps the entry: deletion is data for the merge.
-                attrs.action = 'delete';
-            }
+            // Keep the entry: a deletion is data for history resolution and
+            // for merging a diff, both of which drop it in the end.
+            attrs!.action = 'delete';
         }
         if (kind === Kind.Skip && attrMode === AttrMode.Bag && attrs && attrs.id && !discarded) {
             kind = Kind.Custom;
@@ -725,13 +576,7 @@ function scan(xml: string, refElements: RefElements | undefined, elements: any[]
             if (parent) {
                 if (parent.kind === Kind.Way) {
                     parent.hasNd = true;
-                    if (parent.way) {
-                        if (lat && lon) {
-                            parent.way.addLatLng({ lat, lon });
-                        } else if (ref) {
-                            parent.way.addNodeRef(ref);
-                        }
-                    } else if (lat && lon) {
+                    if (lat && lon) {
                         parent.coords!.push({ lat, lon });
                     } else if (ref) {
                         parent.nodes!.push(Number(ref));
@@ -740,7 +585,7 @@ function scan(xml: string, refElements: RefElements | undefined, elements: any[]
                     if (lat && lon) {
                         parent.member.geometry.push({ lat, lon });
                     } else if (ref) {
-                        parent.member.nodes.push(ref);
+                        parent.member.nodes.push(toId(ref));
                     }
                 }
             }
@@ -766,9 +611,7 @@ function scan(xml: string, refElements: RefElements | undefined, elements: any[]
                 const bounds: [number, number, number, number] = [
                     parseFloat(minlon), parseFloat(minlat), parseFloat(maxlon), parseFloat(maxlat),
                 ];
-                if (parent.kind === Kind.Relation && parent.relation) {
-                    parent.relation.setBounds(bounds);
-                } else if (parent.kind === Kind.Way || parent.kind === Kind.Relation) {
+                if (parent.kind === Kind.Way || parent.kind === Kind.Relation) {
                     parent.bounds = bounds;
                 }
             }
@@ -855,11 +698,10 @@ function scan(xml: string, refElements: RefElements | undefined, elements: any[]
                     kind,
                     id: attrs!.id,
                     attrs,
-                    way: refElements ? new Way(attrs!.id, refElements, false) : undefined,
                     derived: newDerived(),
                     hasDerived: false,
-                    nodes: refElements ? undefined : [],
-                    coords: refElements ? undefined : [],
+                    nodes: [],
+                    coords: [],
                 };
                 break;
             case Kind.Relation:
@@ -867,10 +709,9 @@ function scan(xml: string, refElements: RefElements | undefined, elements: any[]
                     kind,
                     id: attrs!.id,
                     attrs,
-                    relation: refElements ? new Relation(attrs!.id, refElements) : undefined,
                     derived: newDerived(),
                     hasDerived: false,
-                    members: refElements ? undefined : [],
+                    members: [],
                 };
                 break;
             case Kind.Member:
@@ -913,7 +754,7 @@ function scan(xml: string, refElements: RefElements | undefined, elements: any[]
 
         if (selfClose) {
             if (frame) {
-                finish(frame, parent, refElements, elements);
+                finish(frame, parent, elements);
             }
         } else if (frame) {
             stack.push(frame);

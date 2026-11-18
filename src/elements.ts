@@ -143,19 +143,18 @@ export function resolveElementHistory(elements: any[]): ResolvedDocument {
             continue;
         }
         const group = entry as any[];
-        let newest = group[0];
         let newestVersion = 0;
         for (const elem of group) {
-            if (outranks(elem, newest)) {
-                newest = elem;
-            }
             const version = elementVersion(elem);
             if (version > newestVersion) {
                 newestVersion = version;
             }
         }
 
-        if (isDeletedElement(newest)) {
+        // A deletion at the newest version wins over any copy of that version:
+        // it is the later event (osmChange `<modify>` then `<delete>` of v2),
+        // and an unversioned deletion only removes unversioned copies.
+        if (group.some((elem) => isDeletedElement(elem) && elementVersion(elem) === newestVersion)) {
             deleted.set(key, newestVersion);
             continue;
         }

@@ -237,6 +237,19 @@ describe('history corner cases', () => {
         expect(xml('<osm><node id="1" lat="1" lon="1"/><node id="1" visible="false"/></osm>').features).toEqual([]);
     });
 
+    it('lets a deletion win over a copy of the same version in every format', () => {
+        // The XML and JSON readers share one resolver, so the tie rule cannot
+        // drift between them again.
+        expect(json([
+            { type: 'node', id: 1, version: 2, lat: 1, lon: 2, tags: { name: 'kept?' } },
+            { type: 'node', id: 1, version: 2, visible: false },
+        ]).features).toEqual([]);
+        expect(toElements({ elements: [
+            { type: 'node', id: 1, lat: 1, lon: 2 },
+            { type: 'node', id: 1, visible: false },
+        ] })).toEqual([]);
+    });
+
     it('accepts adiff style deleted elements with a string flag', () => {
         expect(json([
             { type: 'node', id: 1, version: 2, lat: 1, lon: 1 },

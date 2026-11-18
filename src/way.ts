@@ -60,26 +60,6 @@ export class Way extends OsmObject {
     }
 
     /**
-     * Adopt the other copy's geometry when this copy has none. Returns true
-     * when the other copy's coordinate array was adopted, so its deferred
-     * binders must be kept.
-     */
-    public adoptCoordinatesFrom(other: Way, preferOther: boolean): boolean {
-        if (this.center === null && other.center) {
-            this.center = other.center;
-        }
-        if (this.bounds === null && other.bounds) {
-            this.bounds = other.bounds;
-        }
-        const takeOther = other.latLngArray.length > 0 && (preferOther || this.latLngArray.length === 0);
-        if (takeOther) {
-            this.latLngArray = other.latLngArray;
-            return true;
-        }
-        return false;
-    }
-
-    /**
      * Record a node reference. The reference is resolved in bulk when
      * references are bound, instead of allocating one binder object and closure
      * per reference — a way-heavy extract has tens of thousands of these.
