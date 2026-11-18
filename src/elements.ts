@@ -35,8 +35,17 @@ function elementVersion(elem: { [k: string]: any }): number {
     return Number(elem.version) || 0;
 }
 
-function elementRank(elem: { [k: string]: any }): [number, number] {
-    return [elementVersion(elem), Object.keys(elem).length];
+/**
+ * Whether `a` outranks `b`: the newer version wins, then the more complete
+ * copy. Compared numerically - `[10, n] > [9, n]` on arrays compares strings.
+ */
+function outranks(a: { [k: string]: any }, b: { [k: string]: any }): boolean {
+    const av = elementVersion(a);
+    const bv = elementVersion(b);
+    if (av !== bv) {
+        return av > bv;
+    }
+    return Object.keys(a).length > Object.keys(b).length;
 }
 
 function isDeletedElement(elem: { [k: string]: any }): boolean {
@@ -52,7 +61,7 @@ function mergeCopies(copies: any[]): any {
     let merged = copies[0];
     for (let i = 1; i < copies.length; i++) {
         const elem = copies[i];
-        const winner = elementRank(elem) > elementRank(merged) ? elem : merged;
+        const winner = outranks(elem, merged) ? elem : merged;
         const loser = winner === elem ? merged : elem;
         const next: { [k: string]: any } = { ...loser, ...winner };
         if (winner.tags || loser.tags) {
@@ -137,7 +146,7 @@ export function resolveElementHistory(elements: any[]): ResolvedDocument {
         let newest = group[0];
         let newestVersion = 0;
         for (const elem of group) {
-            if (elementRank(elem) > elementRank(newest)) {
+            if (outranks(elem, newest)) {
                 newest = elem;
             }
             const version = elementVersion(elem);

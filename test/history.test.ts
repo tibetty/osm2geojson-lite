@@ -4,7 +4,7 @@
  * `test/support/osm-document.ts`.
  */
 import { describe, it, expect } from 'vitest';
-import osm2geojson from '../src/index';
+import osm2geojson, { toElements } from '../src/index';
 import { assertValidOsmDocument } from './support/osm-document';
 
 const json = (elements: any[], opts?: any) => {
@@ -42,6 +42,35 @@ describe('history resolution (JSON)', () => {
         ]);
         expect(result.features).toHaveLength(1);
         expect(result.features[0].geometry.coordinates).toEqual([2, 1]);
+    });
+
+    it('compares versions numerically past version 9', () => {
+        // A string comparison ranks "9" above "10": the deletion at version 10
+        // would be missed and the element returned as `null`.
+        expect(json([
+            { type: 'node', id: 1, version: 9, lat: 0, lon: 0 },
+            { type: 'node', id: 1, version: 10, visible: false },
+        ]).features).toEqual([]);
+        expect(toElements({ elements: [
+            { type: 'node', id: 1, version: 9, lat: 0, lon: 0 },
+            { type: 'node', id: 1, version: 10, visible: false },
+        ] })).toEqual([]);
+
+        const revived = json([
+            { type: 'node', id: 1, version: 9, visible: false },
+            { type: 'node', id: 1, version: 10, lat: 1, lon: 2 },
+        ]);
+        expect(revived.features).toHaveLength(1);
+        expect(revived.features[0].properties.version).toBe(10);
+    });
+
+    it('prefers the more complete copy when key counts reach two digits', () => {
+        const tags = { a: '1', b: '2', c: '3', d: '4', e: '5', f: '6', g: '7', h: '8' };
+        const [element] = toElements({ elements: [
+            { type: 'node', id: 1, version: 2, lat: 0, lon: 0, user: 'skeleton' },
+            { type: 'node', id: 1, version: 2, lat: 0, lon: 0, user: 'full', uid: 7, changeset: 3, timestamp: 't', tags },
+        ] });
+        expect(element.user).toBe('full');
     });
 
     it('still merges copies of the same version', () => {
@@ -102,6 +131,16 @@ describe('history resolution (XML)', () => {
         </osm>`);
         const way = result.features.find((f: any) => f.id === 'way/10');
         expect(way.geometry.coordinates).toEqual([[1, 0], [1, 1]]);
+    });
+
+    it('keeps the newest of several out-of-order versions', () => {
+        const result = xml(`<osm>
+            <node id="1" version="1" lat="1" lon="1"/>
+            <node id="1" version="3" lat="3" lon="3"/>
+            <node id="1" version="2" lat="2" lon="2"/>
+        </osm>`);
+        expect(result.features).toHaveLength(1);
+        expect(result.features[0].geometry.coordinates).toEqual([3, 3]);
     });
 
     it('keeps an element that was revived by a newer version', () => {

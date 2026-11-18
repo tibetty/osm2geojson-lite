@@ -75,18 +75,17 @@ const SCALE = 1e7;
 
 export function denseInfo(entries: Array<{ version: number, timestamp: number, uid: number, user: string, visible: boolean }>, users: string[]): Writer {
     const writer = new Writer();
-    let version = 0;
     let timestamp = 0;
     let uid = 0;
     let user = 0;
-    const versionDeltas: number[] = [];
+    const versions: number[] = [];
     const timestampDeltas: number[] = [];
     const uidDeltas: number[] = [];
     const userDeltas: number[] = [];
     const visible: number[] = [];
     for (const entry of entries) {
-        versionDeltas.push(entry.version - version);
-        version = entry.version;
+        // `version` is the one DenseInfo field that is not delta coded.
+        versions.push(entry.version);
         timestampDeltas.push(entry.timestamp - timestamp);
         timestamp = entry.timestamp;
         uidDeltas.push(entry.uid - uid);
@@ -96,7 +95,7 @@ export function denseInfo(entries: Array<{ version: number, timestamp: number, u
         user = index;
         visible.push(entry.visible ? 1 : 0);
     }
-    writer.packed(1, versionDeltas, false);
+    writer.packed(1, versions, false);
     writer.packed(2, timestampDeltas, true);
     writer.packed(4, uidDeltas, true);
     writer.packed(5, userDeltas, true);
@@ -146,7 +145,7 @@ export function way(id: number, refs: number[], keys: number[], vals: number[], 
     writer.packed(2, keys, false);
     writer.packed(3, vals, false);
     // Info: version 1, timestamp 2020-01-01T00:00:00Z, uid 7, user_sid 2.
-    const info = new Writer().tag(1, 0).varint(version).tag(2, 0).zigzag(1577836800).tag(4, 0).varint(7).tag(5, 0).varint(2);
+    const info = new Writer().tag(1, 0).varint(version).tag(2, 0).int64(1577836800).tag(4, 0).varint(7).tag(5, 0).varint(2);
     writer.bytes_(4, info.done());
     writer.packed(8, refDeltas, true);
 

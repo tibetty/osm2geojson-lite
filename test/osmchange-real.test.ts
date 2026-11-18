@@ -77,7 +77,7 @@ describe('real osmChange diff', () => {
 
         expect(applied.geojson.features).toHaveLength(base.features.length);
         expect(applied.conflicts).toEqual([
-            { id: 'node/1690189834', changeVersion: 4, baseVersion: 6279 },
+            { id: 'node/1690189834', changeVersion: 4, baseVersion: 4 },
             { id: 'way/686912272', changeVersion: 4, baseVersion: 4 },
             { id: 'way/946562630', changeVersion: 7, baseVersion: 7 },
         ]);
@@ -117,6 +117,6 @@ describe('real osmChange diff', () => {
 
     it('throws in strict mode naming the first stale entry', () => {
         expect(() => applyOsmChange(pbf, diff900, { ...opts, strict: true }))
-            .toThrow(/stale osmChange entry for node\/1690189834: version 4 does not advance base version 6279/);
+            .toThrow(/stale osmChange entry for node\/1690189834: version 4 does not advance base version 4/);
     });
 });

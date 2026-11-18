@@ -220,7 +220,15 @@ export class RefElements {
      * insertion order; the duplicate only fills in missing data.
      */
     private mergeDuplicates() {
-        for (const { existing, duplicate } of this.duplicates) {
+        for (const entry of this.duplicates) {
+            const duplicate = entry.duplicate;
+            // An earlier entry may already have replaced the copy this one was
+            // recorded against (history v1, v3, v2): compare with the copy that
+            // is registered now, or v2 would displace v3.
+            const existing = this.get(entry.existing.getCompositeId()) || entry.existing;
+            if (existing === duplicate) {
+                continue;
+            }
             const existingVersion = existing.getVersion();
             const duplicateVersion = duplicate.getVersion();
 

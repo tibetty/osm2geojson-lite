@@ -95,7 +95,7 @@ describe('mutation fuzzing', () => {
         it(`survives mutations of ${fixture.name}`, () => {
             let rejected = 0;
             let accepted = 0;
-            for (let seed = 1; seed <= 60; seed++) {
+            for (let seed = 1; seed <= 200; seed++) {
                 const mutated = mutate(createRandom(seed * 7919 + fixture.name.length), fixture.data);
                 let result: any;
                 try {

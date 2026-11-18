@@ -50,11 +50,28 @@ describe('real PBF extract', () => {
         expect(node.geometry).toEqual({ type: 'Point', coordinates: [7.4209592, 43.7310164] });
         expect(node.properties).toMatchObject({
             id: 'node/1790048269',
-            version: 10326,
+            version: 66,
+            timestamp: '2026-08-21T21:06:18.000Z',
             'ISO3166-1:alpha2': 'MC',
             name: 'Monaco',
             capital: 'yes',
         });
+    });
+
+    it('decodes element metadata as the OSM API reports it', () => {
+        // Recorded from api.openstreetmap.org/api/0.6/way/4097656/history:
+        // version 19 was written at 2026-10-26T09:20:31Z. Ways and relations
+        // carry a plain `Info` (int64 timestamp), dense nodes a delta coded
+        // `DenseInfo` whose version is not delta coded.
+        const elements = toElements(pbf);
+        const way = elements.find((element) => element.type === 'way' && element.id === 4097656);
+        expect(way).toMatchObject({ version: 19, timestamp: '2026-10-26T09:20:31.000Z' });
+
+        const timestamps = elements.map((element) => element.timestamp).sort();
+        expect(timestamps[0] >= '2004-08-09').toBe(true);
+        expect(timestamps[timestamps.length - 1] < '2026-11-10').toBe(true);
+        const nodeVersions = elements.filter((element) => element.type === 'node').map((element) => element.version);
+        expect(Math.max(...nodeVersions)).toBeLessThan(200);
     });
 
     it('builds polygons and multi-geometries from real relations', () => {

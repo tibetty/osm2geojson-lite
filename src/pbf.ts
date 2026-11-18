@@ -223,11 +223,13 @@ function parseInfo(bytes: Uint8Array): { [k: string]: number } {
             case 1:
                 info.version = reader.varint();
                 break;
+            // `Info.timestamp` and `Info.changeset` are plain `int64`; only
+            // their `DenseInfo` counterparts are zigzag (`sint64`) and delta coded.
             case 2:
-                info.timestamp = zigzag(reader.varint());
+                info.timestamp = reader.int64();
                 break;
             case 3:
-                info.changeset = zigzag(reader.varint());
+                info.changeset = reader.int64();
                 break;
             case 4:
                 info.uid = reader.varint();
@@ -370,7 +372,7 @@ function parseDenseNodes(bytes: Uint8Array, context: BlockContext): any[] {
     let lat = 0;
     let lon = 0;
     let keyPos = 0;
-    // DenseInfo arrays are delta coded except `visible`.
+    // DenseInfo arrays are delta coded except `version` and `visible`.
     const version = denseInfo ? denseInfo.version : [];
     const timestamp = denseInfo ? denseInfo.timestamp : [];
     const changeset = denseInfo ? denseInfo.changeset : [];
@@ -401,7 +403,6 @@ function parseDenseNodes(bytes: Uint8Array, context: BlockContext): any[] {
         if (denseInfo) {
             const info: { [k: string]: number } = {};
             if (i < version.length) {
-                version[i] = (i > 0 ? version[i - 1] : 0) + version[i];
                 info.version = version[i];
             }
             if (i < timestamp.length) {
