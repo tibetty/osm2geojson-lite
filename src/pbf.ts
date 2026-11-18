@@ -170,6 +170,46 @@ function decodeUtf8(bytes: Uint8Array): string {
     return text;
 }
 
+function pad(value: number, width: number): string {
+    let text = String(value);
+    while (text.length < width) {
+        text = '0' + text;
+    }
+    return text;
+}
+
+/**
+ * `new Date(ms).toISOString()` for years 1970-9999, without a Date per call:
+ * it was the largest single cost of decoding an extract with metadata. Other
+ * values fall back to Date, which also throws on an out-of-range timestamp.
+ */
+export function isoTimestamp(ms: number): string {
+    if (!(ms >= 0 && ms < 253402300800000)) {
+        return new Date(ms).toISOString();
+    }
+    const days = Math.floor(ms / 86400000);
+    let rest = ms - days * 86400000;
+    const hours = Math.floor(rest / 3600000);
+    rest -= hours * 3600000;
+    const minutes = Math.floor(rest / 60000);
+    rest -= minutes * 60000;
+    const seconds = Math.floor(rest / 1000);
+    const millis = rest - seconds * 1000;
+
+    // Civil date from days since 1970-01-01 (Howard Hinnant's algorithm).
+    const z = days + 719468;
+    const era = Math.floor(z / 146097);
+    const doe = z - era * 146097;
+    const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+    const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+    const mp = Math.floor((5 * doy + 2) / 153);
+    const day = doy - Math.floor((153 * mp + 2) / 5) + 1;
+    const month = mp < 10 ? mp + 3 : mp - 9;
+    const year = yoe + era * 400 + (month <= 2 ? 1 : 0);
+
+    return `${pad(year, 4)}-${pad(month, 2)}-${pad(day, 2)}T${pad(hours, 2)}:${pad(minutes, 2)}:${pad(seconds, 2)}.${pad(millis, 3)}Z`;
+}
+
 interface BlockContext {
     strings: string[];
     granularity: number;
@@ -200,7 +240,7 @@ function applyInfo(target: any, context: BlockContext, info: { [k: string]: numb
         target.version = info.version;
     }
     if (info.timestamp !== undefined) {
-        target.timestamp = new Date(info.timestamp * context.dateGranularity).toISOString();
+        target.timestamp = isoTimestamp(info.timestamp * context.dateGranularity);
     }
     if (info.changeset !== undefined) {
         target.changeset = info.changeset;
