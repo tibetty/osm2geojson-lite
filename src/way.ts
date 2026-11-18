@@ -209,13 +209,14 @@ export class Way extends OsmObject {
     }
 
     /**
-     * Polygon detection is order-independent: a closed way is an area when at
-     * least one polygon tag applies, while tags such as `building=no` or
-     * `area=no` explicitly opt out.
+     * Polygon detection is order-independent: a closed way is an area when any
+     * polygon tag applies, and `area=no` opts out whatever else is tagged.
      */
     private isPolygon(): boolean {
+        if (this.tags.area === 'no') {
+            return false;
+        }
         const polygonRules = (this.refElems && this.refElems.polygonTags) || defaultPolygonRules;
-        let area = false;
         for (const key in polygonRules) {
             const value = this.tags[key];
             if (!value) {
@@ -225,17 +226,12 @@ export class Way extends OsmObject {
             if (rule.ignore && rule.ignore.indexOf(value) >= 0) {
                 continue;
             }
-            area = true;
-            if (rule.include) {
-                area = rule.include.indexOf(value) >= 0;
-            } else if (rule.exclude) {
-                area = rule.exclude.indexOf(value) < 0;
-            } else if (rule.whitelist) {
-                area = rule.whitelist.indexOf(value) >= 0;
-            } else if (rule.blacklist) {
-                area = rule.blacklist.indexOf(value) < 0;
+            const include = rule.include || rule.whitelist;
+            const exclude = rule.exclude || rule.blacklist;
+            if (include ? include.indexOf(value) >= 0 : !exclude || exclude.indexOf(value) < 0) {
+                return true;
             }
         }
-        return area;
+        return false;
     }
 }

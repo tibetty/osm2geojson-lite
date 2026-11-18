@@ -122,7 +122,10 @@ export class WayCollection {
             const way = this.ways[index];
             this.consume(index);
             const deque = new PointDeque(way, this.firstKeys[index], this.lastKeys[index]);
-            for (;;) {
+            // A string whose ends meet is a finished ring. Extending it would
+            // splice in another ring that only touches it at that node and
+            // turn two polygons into one self-touching figure-8.
+            while (deque.headKey !== deque.tailKey) {
                 const found = this.getNextWay(deque.headKey, deque.tailKey);
                 const next = found.next;
                 if (!next) {
@@ -245,9 +248,14 @@ export class WayCollection {
         return { next: headLast, mergeType: MergeType.StartEnd };
     }
 
-    public toRings(direction: string): number[][][] {
+    /**
+     * Stitch the ways into closed rings. Strings that do not close are left
+     * out; `dropped` counts them so the caller can flag the incomplete geometry.
+     */
+    public toRings(direction: string): { rings: number[][][]; dropped: number } {
         const strings = this.mergeWays();
         const rings: number[][][] = [];
+        let dropped = 0;
         for (let i = 0; i < strings.length; i++) {
             const str = strings[i];
             if (isRing(str)) {
@@ -255,8 +263,10 @@ export class WayCollection {
                     str.reverse();
                 }
                 rings.push(str);
+            } else {
+                dropped++;
             }
         }
-        return rings;
+        return { rings, dropped };
     }
 }

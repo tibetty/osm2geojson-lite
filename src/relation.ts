@@ -69,7 +69,8 @@ function innermostOuter(
 }
 
 /**
- * Assign each inner ring to the innermost outer ring that contains it.
+ * Assign each inner ring to the innermost outer ring that contains it, and
+ * return how many inner rings no outer ring contains.
  *
  * Taking the first containing ring made the result depend on member order: with
  * an outer ring listed before an island inside its hole, the island's hole was
@@ -87,11 +88,12 @@ function linkInnerRings(
     innerRings: number[][][],
     compositePolygons: number[][][][],
     outerBounds: RingBounds[],
-): void {
+): number {
     const outerCount = outerRings.length;
     const innerCount = innerRings.length;
+    let unassigned = 0;
     if (innerCount === 0) {
-        return;
+        return unassigned;
     }
 
     // Scratch list of containing outers, reused across inner rings.
@@ -113,9 +115,11 @@ function linkInnerRings(
             }
             if (containing.length > 0) {
                 compositePolygons[innermostOuter(containing, outerRings, outerBounds)].push(ring);
+            } else {
+                unassigned++;
             }
         }
-        return;
+        return unassigned;
     }
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -192,8 +196,11 @@ function linkInnerRings(
         }
         if (containing.length > 0) {
             compositePolygons[innermostOuter(containing, outerRings, outerBounds)].push(ring);
+        } else {
+            unassigned++;
         }
     }
+    return unassigned;
 }
 
 export class Relation extends OsmObject {
@@ -362,7 +369,7 @@ export class Relation extends OsmObject {
     }
 
     private constructStringGeometry(ws: WayCollection): MultiLineString | null {
-        const strings = ws ? ws.mergeWays() : [];
+        const strings = ws.mergeWays();
         if (strings.length === 0) {
             return null;
         }
@@ -374,8 +381,16 @@ export class Relation extends OsmObject {
     }
 
     private constructPolygonGeometry(ows: WayCollection, iws: WayCollection): Polygon | MultiPolygon | null {
-        const outerRings = ows ? ows.toRings('counterclockwise') : [];
-        const innerRings = iws ? iws.toRings('clockwise') : [];
+        const outer = ows.toRings('counterclockwise');
+        const inner = iws.toRings('clockwise');
+        const outerRings = outer.rings;
+        const innerRings = inner.rings;
+        // Geometry that cannot be assembled (a ring that does not close, a hole
+        // outside every outer ring) is left out; flag the feature instead of
+        // dropping it silently.
+        if (outer.dropped > 0 || inner.dropped > 0) {
+            this.tainted = true;
+        }
 
         if (outerRings.length > 0) {
             const compositePolygons: number[][][][] = [];
@@ -390,7 +405,9 @@ export class Relation extends OsmObject {
                 for (const ring of outerRings) {
                     outerBounds.push(ringBounds(ring));
                 }
-                linkInnerRings(outerRings, innerRings, compositePolygons, outerBounds);
+                if (linkInnerRings(outerRings, innerRings, compositePolygons, outerBounds) > 0) {
+                    this.tainted = true;
+                }
             }
 
             // construct the Polygon/MultiPolygon geometry
@@ -722,9 +739,11 @@ export class Relation extends OsmObject {
             if (geometry) {
                 const oldStyleWay = this.oldStyleOuterWay();
                 if (oldStyleWay) {
-                    const properties: { [k: string]: any } = oldStyleWay.getProps();
+                    // Copy before flagging: `getProps` hands out the way's own
+                    // object, which its own feature also uses.
+                    let properties: { [k: string]: any } = oldStyleWay.getProps();
                     if (this.tainted && this.refElems.reportTainted) {
-                        properties['@tainted'] = true;
+                        properties = Object.assign({}, properties, { '@tainted': true });
                     }
                     polygonFeatures.push({
                         type: 'Feature',

@@ -38,8 +38,8 @@ describe('real PBF extract', () => {
         expect(byType).toEqual({ node: 4325, way: 5313, relation: 134 });
         expect(byGeometry).toEqual({
             Point: 4325,
-            LineString: 3104,
-            Polygon: 2270,
+            LineString: 3100,
+            Polygon: 2274,
             MultiLineString: 71,
             MultiPolygon: 2,
         });

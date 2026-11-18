@@ -775,3 +775,110 @@ describe('circular relations (#36)', () => {
         expect(result.features.some((f: any) => f.id === 'relation/4')).toBe(true);
     });
 });
+
+describe('ring stitching', () => {
+    const square = (base: number, x: number, y: number) => [
+        { type: 'node', id: base + 1, lat: y, lon: x },
+        { type: 'node', id: base + 2, lat: y, lon: x - 1 },
+        { type: 'node', id: base + 3, lat: y - 1, lon: x - 1 },
+        { type: 'node', id: base + 4, lat: y - 1, lon: x },
+    ];
+
+    it('keeps two outer rings that touch at one node as separate polygons', () => {
+        // Synthetic: two closed outer ways sharing the corner node 1 (1,1).
+        const result = json([
+            ...square(0, 1, 1),
+            { type: 'node', id: 5, lat: 1, lon: 2 },
+            { type: 'node', id: 6, lat: 2, lon: 2 },
+            { type: 'node', id: 7, lat: 2, lon: 1 },
+            { type: 'way', id: 10, nodes: [1, 2, 3, 4, 1] },
+            { type: 'way', id: 11, nodes: [1, 5, 6, 7, 1] },
+            { type: 'relation', id: 100, tags: { type: 'multipolygon', landuse: 'grass' }, members: [
+                { type: 'way', ref: 10, role: 'outer' },
+                { type: 'way', ref: 11, role: 'outer' },
+            ] },
+        ]);
+        const relation = result.features.find((f: any) => f.id === 'relation/100');
+        expect(relation.geometry.type).toBe('MultiPolygon');
+        expect(relation.geometry.coordinates).toHaveLength(2);
+        for (const polygon of relation.geometry.coordinates) {
+            expect(polygon).toHaveLength(1);
+            expect(polygon[0]).toHaveLength(5);
+        }
+    });
+
+    it('flags a polygon relation whose outer ring does not close', () => {
+        const elements = [
+            ...square(0, 1, 1),
+            ...square(10, 5, 5),
+            { type: 'way', id: 10, nodes: [1, 2, 3, 4, 1] },
+            { type: 'way', id: 11, nodes: [11, 12, 13, 14] },
+            { type: 'relation', id: 100, tags: { type: 'multipolygon', landuse: 'grass' }, members: [
+                { type: 'way', ref: 10, role: 'outer' },
+                { type: 'way', ref: 11, role: 'outer' },
+            ] },
+        ];
+        const relation = json(elements, { tainted: true }).features.find((f: any) => f.id === 'relation/100');
+        expect(relation.geometry.type).toBe('Polygon');
+        expect(relation.properties['@tainted']).toBe(true);
+        expect(json(elements).features.find((f: any) => f.id === 'relation/100').properties['@tainted']).toBeUndefined();
+    });
+
+    it('flags a polygon relation whose inner ring lies outside every outer ring', () => {
+        const relation = json([
+            ...square(0, 1, 1),
+            ...square(10, 5, 5),
+            { type: 'way', id: 10, nodes: [1, 2, 3, 4, 1] },
+            { type: 'way', id: 11, nodes: [11, 12, 13, 14, 11] },
+            { type: 'relation', id: 100, tags: { type: 'multipolygon', landuse: 'grass' }, members: [
+                { type: 'way', ref: 10, role: 'outer' },
+                { type: 'way', ref: 11, role: 'inner' },
+            ] },
+        ], { tainted: true }).features.find((f: any) => f.id === 'relation/100');
+        expect(relation.geometry).toMatchObject({ type: 'Polygon' });
+        expect(relation.geometry.coordinates).toHaveLength(1);
+        expect(relation.properties['@tainted']).toBe(true);
+    });
+});
+
+describe('closed way polygon rules', () => {
+    const closed = (tags: Record<string, string>) => json([
+        { type: 'node', id: 1, lat: 0, lon: 0 },
+        { type: 'node', id: 2, lat: 0, lon: 1 },
+        { type: 'node', id: 3, lat: 1, lon: 1 },
+        { type: 'way', id: 10, nodes: [1, 2, 3, 1], tags },
+    ]).features[0].geometry.type;
+
+    it('is an area when any polygon tag applies, whatever the rule order', () => {
+        // Monaco has `amenity=fountain` + `barrier=kerb` (way/572947839); the
+        // later `barrier` rule used to overwrite the earlier `amenity` match.
+        expect(closed({ amenity: 'fountain', barrier: 'kerb' })).toBe('Polygon');
+        expect(closed({ building: 'yes', highway: 'footway' })).toBe('Polygon');
+        expect(closed({ highway: 'footway' })).toBe('LineString');
+    });
+
+    it('lets area=no opt out of every other rule', () => {
+        expect(closed({ building: 'yes', area: 'no' })).toBe('LineString');
+        expect(closed({ highway: 'pedestrian', area: 'yes' })).toBe('Polygon');
+    });
+});
+
+describe('old-style multipolygon taint', () => {
+    it('does not leak the relation taint onto the outer way feature', () => {
+        // The inner member is missing, so the relation is tainted; the way
+        // itself is complete.
+        const result = json([
+            { type: 'node', id: 1, lat: 0, lon: 0 },
+            { type: 'node', id: 2, lat: 0, lon: 10 },
+            { type: 'node', id: 3, lat: 10, lon: 10 },
+            { type: 'node', id: 4, lat: 10, lon: 0 },
+            { type: 'way', id: 10, nodes: [1, 2, 3, 4, 1], tags: { landuse: 'forest' } },
+            { type: 'relation', id: 100, tags: { type: 'multipolygon' }, members: [
+                { type: 'way', ref: 10, role: 'outer' },
+                { type: 'way', ref: 999, role: 'inner' },
+            ] },
+        ], { renderTagged: true, excludeWay: false, tainted: true });
+        const way = result.features.find((f: any) => f.id === 'way/10');
+        expect(way.properties['@tainted']).toBeUndefined();
+    });
+});
